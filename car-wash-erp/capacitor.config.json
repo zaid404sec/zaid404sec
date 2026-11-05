@@ -1,0 +1,8 @@
+{
+  "appId": "com.washdesk.carwash",
+  "appName": "WashDesk",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  }
+}
