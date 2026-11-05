@@ -1,0 +1,13 @@
+{
+  "name": "WashDesk — Car Wash Business Manager",
+  "short_name": "WashDesk",
+  "description": "Car wash billing, customer records, inventory, expenses and reports.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#101827",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
