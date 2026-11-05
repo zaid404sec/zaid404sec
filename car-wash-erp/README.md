@@ -6,7 +6,7 @@ A mobile-friendly, installable starter app tailored to a car washing centre.
 - Customer and vehicle register: contact details, vehicle class, registration number and visit history.
 - Service catalogue with standard, private-car, taxi, commercial-vehicle and SUV rates.
 - Invoice builder with multiple line items, line and invoice discounts, configured GST rates, financial-year invoice numbering, partial payments and balances.
-- Invoice preview, Print / Save as PDF, and WhatsApp click-to-share. Supported Android browsers can share the generated PDF using the native share sheet.
+- Invoice preview, locally generated styled PDF export, native Android save to Downloads, and PDF sharing through the Android share sheet (including WhatsApp).
 - Inventory register, low-stock alerts, purchase entries, weighted-average purchase cost and stock adjustments.
 - Optional one-consumable-per-service recipe for automatic stock deduction when a service is invoiced.
 - Expense register, staff directory, invoice staff assignment and monthly management summaries.

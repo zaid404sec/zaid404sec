@@ -6,6 +6,8 @@ files:
   - index.html
   - manifest.webmanifest
   - icon.svg
+  - html2pdf.bundle.min.js
+  - invoice-native.bundle.js
   - electron/**
   - package.json
 win:

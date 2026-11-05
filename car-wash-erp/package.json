@@ -5,11 +5,18 @@
   "description": "WashDesk Car Wash Business Manager",
   "main": "electron/main.cjs",
   "scripts": {
-    "desktop": "electron .",
-    "dist:win": "electron-builder --win nsis --x64"
+    "desktop": "npm run prepare:assets && electron .",
+    "dist:win": "npm run prepare:assets && electron-builder --win nsis --x64",
+    "prepare:assets": "node scripts/prepare-assets.mjs"
   },
   "devDependencies": {
     "electron": "^35.0.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "esbuild": "^0.25.0"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.0.0",
+    "@capgo/capacitor-file-sharer": "^7.0.0",
+    "html2pdf.js": "0.10.1"
   }
 }
