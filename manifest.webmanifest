@@ -1,0 +1,11 @@
+{
+  "name": "WashLedger — Car Wash Business",
+  "short_name": "WashLedger",
+  "description": "Billing, inventory and business records for car washing centres.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6fa",
+  "theme_color": "#0b1528",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
