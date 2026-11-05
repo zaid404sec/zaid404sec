@@ -15,20 +15,26 @@
 (async function(){
  try {
   if (!('DecompressionStream' in window)) throw new Error('Please update Chrome to load this app.');
-  const response=await fetch('./app.bundle.js.gz.b64');
-  if(!response.ok) throw new Error('App bundle could not be downloaded.');
-  const encoded=(await response.text()).trim();
+  const parts=['app.bundle.js.gz.b64','bundle-part-1.txt','bundle-part-2.txt','bundle-part-3.txt'];
+  const encoded=(await Promise.all(parts.map(async file=>{
+    const response=await fetch('./'+file);
+    if(!response.ok) throw new Error('Missing app file: '+file);
+    return (await response.text()).trim();
+  }))).join('');
   const binary=atob(encoded);
   const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
-  const source=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const source=await new Response(stream).text();
   const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
-  const script=document.createElement('script');script.src=url;
+  const script=document.createElement('script'); script.src=url;
   script.onload=()=>{URL.revokeObjectURL(url);const e=document.getElementById('appLoading');if(e)e.remove();};
   script.onerror=()=>{document.getElementById('appLoading').textContent='The app could not start. Reload and try again.';};
   document.body.appendChild(script);
- } catch(e){document.getElementById('appLoading').textContent='Unable to load WashLedger: '+e.message;}
+ } catch(e) {
+  document.getElementById('appLoading').textContent='Unable to load WashLedger: '+e.message;
+ }
 })();
-if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) {
  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 </script>
