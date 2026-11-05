@@ -1,0 +1,21 @@
+appId: com.washdesk.carwash
+productName: WashDesk
+directories:
+  output: release
+files:
+  - index.html
+  - manifest.webmanifest
+  - icon.svg
+  - electron/**
+  - package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: WashDesk-Setup-${version}-${arch}.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
