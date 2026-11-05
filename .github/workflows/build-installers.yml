@@ -46,6 +46,10 @@ jobs:
           node-version: 20
       - name: Install Capacitor
         run: npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7
+      - name: Prepare web assets
+        run: |
+          mkdir www
+          cp index.html manifest.webmanifest icon.svg www/
       - name: Add Android platform
         run: npx cap add android
       - name: Sync web app
