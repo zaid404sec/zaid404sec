@@ -1,0 +1,62 @@
+name: Build WashDesk Installers
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'car-wash-erp/**'
+      - '.github/workflows/build-installers.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows EXE installer
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: car-wash-erp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: car-wash-erp/package-lock.json
+      - name: Install dependencies
+        run: npm install
+      - name: Build Windows installer
+        run: npm run dist:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WashDesk-Windows-Installer
+          path: car-wash-erp/release/*.exe
+          if-no-files-found: error
+
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: car-wash-erp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Capacitor
+        run: npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7
+      - name: Add Android platform
+        run: npx cap add android
+      - name: Sync web app
+        run: npx cap sync android
+      - name: Build debug APK
+        working-directory: car-wash-erp/android
+        run: ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WashDesk-Android-APK
+          path: car-wash-erp/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
