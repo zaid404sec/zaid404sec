@@ -14,7 +14,7 @@ const mustContain = [
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
 }
-if (/cdnjs\\.cloudflare\\.com|unpkg\\.com\\/.*(html2pdf|jspdf)/i.test(html)) {
+if (/(cdnjs[.]cloudflare[.]com|unpkg[.]com\\/.*(html2pdf|jspdf))/i.test(html)) {
   throw new Error('Invoice PDF dependencies must be local/offline bundled assets.');
 }
 const inlineScripts = [...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/gi)]
@@ -37,7 +37,7 @@ const nextStart = html.indexOf('function nextInvoiceNo(');
 const nextEnd = html.indexOf(' async function reserveInvoiceNo', nextStart);
 if (nextStart < 0 || nextEnd < 0) throw new Error('Daily invoice counter function not found.');
 const nextFunction = html.slice(nextStart, nextEnd);
-const nextResult = vm.runInNewContext(nextFunction + "\\nnextInvoiceNo('2026-11-07')", {
+const nextResult = vm.runInNewContext(nextFunction + String.fromCharCode(10) + "nextInvoiceNo('2026-11-07')", {
   db: { business: { invoicePrefix: 'CW' }, invoices: [
     { date: '2026-11-07', number: 'CW-261107-001' },
     { date: '2026-11-07', number: 'CW-261107-005' },
@@ -51,7 +51,7 @@ const calcStart = html.indexOf('function calculateEditedInvoice(');
 const calcEnd = html.indexOf('  function saveInvoiceEdits', calcStart);
 if (calcStart < 0 || calcEnd < 0) throw new Error('Invoice total calculation function not found.');
 const calcFunction = html.slice(calcStart, calcEnd);
-const calc = vm.runInNewContext(calcFunction + "\\ncalculateEditedInvoice([{qty:2,rate:100,discount:10,taxRate:18},{qty:1,rate:50,discount:0,taxRate:0}],5,true)", {
+const calc = vm.runInNewContext(calcFunction + String.fromCharCode(10) + "calculateEditedInvoice([{qty:2,rate:100,discount:10,taxRate:18},{qty:1,rate:50,discount:0,taxRate:0}],5,true)", {
   sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
 });
 if (Math.abs(calc.gross-250) > .001 || Math.abs(calc.lineDisc-10) > .001 || Math.abs(calc.taxable-235) > .001 || Math.abs(calc.grand-268.4875) > .02) {
@@ -63,7 +63,7 @@ const salaryStart = html.indexOf('function staffSalaryPaid(');
 const salaryEnd = html.indexOf('  function staffSalaryDue', salaryStart);
 if (salaryStart < 0 || salaryEnd < 0) throw new Error('Staff salary aggregation function not found.');
 const salaryFunction = html.slice(salaryStart, salaryEnd);
-const paid = vm.runInNewContext(salaryFunction + "\\nstaffSalaryPaid('staff-1','2026-11')", {
+const paid = vm.runInNewContext(salaryFunction + String.fromCharCode(10) + "staffSalaryPaid('staff-1','2026-11')", {
   db: { expenses: [
     { category:'Salary', staffId:'staff-1', salaryMonth:'2026-11', date:'2026-11-05', amount:4500 },
     { category:'Electricity', staffId:'staff-1', salaryMonth:'2026-11', date:'2026-11-06', amount:900 },
