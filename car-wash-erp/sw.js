@@ -1,4 +1,4 @@
-const CACHE='washdesk-shell-v3';
+const CACHE='washdesk-shell-v4';
 const CORE=['./','./index.html','./manifest.webmanifest','./icon.svg','./html2pdf.bundle.min.js','./invoice-native.bundle.js','./exceljs.bundle.min.js','./report-export.bundle.js','./cloud-sync.bundle.js','./cloud-sync-setup.sql'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
