@@ -6,7 +6,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "desktop": "npm run prepare:assets && electron .",
-    "dist:win": "npm run prepare:assets && electron-builder --win nsis --x64",
+    "dist:win": "npm run prepare:assets && npm run validate && electron-builder --win nsis --x64",
     "prepare:assets": "node scripts/prepare-assets.mjs",
     "validate": "node scripts/validate-app.mjs"
   },
@@ -19,8 +19,8 @@
     "@capacitor/core": "^8.0.0",
     "@capgo/capacitor-file-sharer": "^8.1.16",
     "html2pdf.js": "0.10.1",
-    "@capacitor/app-launcher": "^8.0.0",
-    "@supabase/supabase-js": "^2.57.4",
+    "@capacitor/app-launcher": "^8.0.1",
+    "@supabase/supabase-js": "^2.119.0",
     "@andreeewill/exceljs": "5.0.3"
   }
 }
