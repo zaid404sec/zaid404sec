@@ -24,7 +24,7 @@ for (const [index, source] of inlineScripts.entries()) {
   await transform(source, { loader: 'js', target: 'es2020', logLevel: 'silent' });
   console.log('PASS: inline application JavaScript syntax ' + (index + 1));
 }
-for (const asset of ['html2pdf.bundle.min.js','invoice-native.bundle.js','report-export.bundle.js','cloud-sync.bundle.js']) {
+for (const asset of ['html2pdf.bundle.min.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js']) {
   const path = new URL('../' + asset, import.meta.url);
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
   console.log('PASS: bundled asset ' + asset);
@@ -75,6 +75,6 @@ const paid = vm.runInNewContext(salaryFunction + "\\nstaffSalaryPaid('staff-1','
 if (paid !== 4500) throw new Error('Staff salary expense aggregation test failed: ' + paid);
 console.log('PASS: staff salary payments are isolated and can be included in expense reports');
 
-if (!packageJson.dependencies['xlsx'] || !packageJson.dependencies['@supabase/supabase-js']) throw new Error('Excel or cloud-sync runtime dependency missing.');
+if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js']) throw new Error('Excel or cloud-sync runtime dependency missing.');
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('WashDesk validation complete.');
