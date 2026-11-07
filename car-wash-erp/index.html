@@ -106,7 +106,7 @@
   function invoiceDue(i){return Math.max(0,Number(i.grandTotal)-paid(i))}
   function customerName(cid){return db.customers.find(c=>c.id===cid)?.name||'Walk-in customer'} function invoiceCustomerName(i){return i?.customerNameSnapshot||customerName(i?.customerId)}
   function normalizeMobile(value){
-    let digits=String(value||'').replace(/\\D/g,'');
+    let digits=String(value||'').replace(/\D/g,'');
     if(digits.startsWith('0091')&&digits.length===14)digits=digits.slice(4);
     else if(digits.startsWith('91')&&digits.length===12)digits=digits.slice(2);
     else if(digits.startsWith('0')&&digits.length===11)digits=digits.slice(1);
