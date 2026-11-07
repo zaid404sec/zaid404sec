@@ -18,9 +18,9 @@
   "dependencies": {
     "@capacitor/core": "^8.0.0",
     "@capgo/capacitor-file-sharer": "^8.1.16",
-    "html2pdf.js": "0.10.1",
     "@capacitor/app-launcher": "^8.0.1",
     "@supabase/supabase-js": "^2.119.0",
-    "@andreeewill/exceljs": "5.0.3"
+    "@andreeewill/exceljs": "5.0.3",
+    "pdfmake": "0.2.23"
   }
 }
