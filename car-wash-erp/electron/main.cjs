@@ -1,5 +1,8 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('node:path');
+// Keep the original WashDesk user-data folder so an in-place Windows update
+// continues to read the existing local browser database.
+app.setPath('userData', path.join(app.getPath('appData'), 'WashDesk'));
 function createWindow() {
   const win = new BrowserWindow({
     width: 1440, height: 920, minWidth: 980, minHeight: 680,
