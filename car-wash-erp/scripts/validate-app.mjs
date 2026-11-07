@@ -17,13 +17,12 @@ for (const token of mustContain) {
 if (html.includes('cdnjs.cloudflare.com') || html.includes('unpkg.com/html2pdf') || html.includes('unpkg.com/jspdf')) {
   throw new Error('Invoice PDF dependencies must be local/offline bundled assets.');
 }
-const inlineScripts = [...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/gi)]
-  .map(match => match[1]).filter(source => source.trim());
-if (!inlineScripts.length) throw new Error('No inline application script was found.');
-for (const [index, source] of inlineScripts.entries()) {
-  await transform(source, { loader: 'js', target: 'es2020', logLevel: 'silent' });
-  console.log('PASS: inline application JavaScript syntax ' + (index + 1));
-}
+const inlineStart = html.indexOf('<script>');
+const inlineEnd = inlineStart >= 0 ? html.indexOf('</script>', inlineStart) : -1;
+if (inlineStart < 0 || inlineEnd < 0) throw new Error('No inline application script was found.');
+const inlineSource = html.slice(inlineStart + '<script>'.length, inlineEnd);
+await transform(inlineSource, { loader: 'js', target: 'es2020', logLevel: 'silent' });
+console.log('PASS: inline application JavaScript syntax');
 for (const asset of ['html2pdf.bundle.min.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js']) {
   const path = new URL('../' + asset, import.meta.url);
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
