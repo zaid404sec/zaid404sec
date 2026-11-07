@@ -112,6 +112,7 @@ const sampleInvoice = {
 const invoiceMarkup = vm.runInNewContext(
   invoiceHtmlSource + String.fromCharCode(10) + 'invoiceHTML(sampleInvoice)',
   {
+    sampleInvoice,
     db:{business:sampleInvoice.businessSnapshot,staff:[],customers:[],payments:[]},
     sum:(rows,fn)=>rows.reduce((total,row)=>total+Number(fn?fn(row):row||0),0),
     esc:value=>String(value??''),
