@@ -10,9 +10,9 @@ const mustContain = [
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
   'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle',
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
-  'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorized Signatory',
+  'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'cloud-otp-form', 'requestEmailOtp', 'verifyEmailOtp', 'Prime-Auto-Care-',
-  'const PAGE_WIDTH=730;', 'margin:[5,5,7,5]', 'windowWidth:760', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'DUPLICATE_CUSTOMER_MOBILE', 'DUPLICATE_VEHICLE_REGISTRATION', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'customer names may repeat', 'Vehicle registration numbers must be unique'
+  'const PAGE_WIDTH=730;', 'margin:[5,5,7,5]', 'windowWidth:760', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'DUPLICATE_CUSTOMER_MOBILE', 'DUPLICATE_VEHICLE_REGISTRATION', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
