@@ -12,6 +12,8 @@ alter table public.washdesk_sync enable row level security;
 alter table public.washdesk_sync replica identity full;
 
 drop policy if exists "WashDesk users can read own data" on public.washdesk_sync;
+drop policy if exists "WashDesk users can insert own data" on public.washdesk_sync;
+drop policy if exists "WashDesk users can update own data" on public.washdesk_sync;
 drop policy if exists "Prime Auto Care users can read own data" on public.washdesk_sync;
 create policy "Prime Auto Care users can read own data"
   on public.washdesk_sync for select
