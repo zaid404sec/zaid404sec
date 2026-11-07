@@ -30,9 +30,12 @@ jobs:
       - name: Install app dependencies
         working-directory: car-wash-erp
         run: npm install
-      - name: Build local PDF and file-share assets
+      - name: Build local PDF, report and cloud assets
         working-directory: car-wash-erp
         run: npm run prepare:assets
+      - name: Validate app syntax and business calculations
+        working-directory: car-wash-erp
+        run: npm run validate
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site artifact
