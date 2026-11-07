@@ -12,6 +12,7 @@ let lastPayloadString = '';
 let statusText = 'Not connected';
 let syncing = false;
 let pendingEmail = '';
+let retryDelay = 1500;
 
 function readConfig() { try { return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}'); } catch { return {}; } }
 function setStatus(value) { statusText = value; window.dispatchEvent(new CustomEvent('washdesk-cloud-status', { detail: value })); }
@@ -50,6 +51,7 @@ async function publishPayload(payload) {
     const { data, error } = await supabase.rpc('washdesk_merge_sync', { p_payload: body });
     if (error) throw error;
     const canonical = data && typeof data === 'object' ? data : body;
+    retryDelay = 1500;
     lastPayloadString = stableStringify(canonical);
     const local = applyRemote(canonical);
     if (stableStringify(local) !== lastPayloadString) queuedPayload = clone(local);
@@ -59,10 +61,11 @@ async function publishPayload(payload) {
     queuedPayload = queuedPayload || body;
     setStatus(navigator.onLine ? 'Sync pending · retry when connected' : 'Offline · changes saved on this device');
     console.error('Prime Auto Care cloud upload failed:', error);
+    retryDelay = Math.min(Math.max(1500, retryDelay * 2), 60000);
     return false;
   } finally {
     syncing = false;
-    if (queuedPayload && user && supabase) queueQueuedPush(120);
+    if (queuedPayload && user && supabase && navigator.onLine) queueQueuedPush(retryDelay);
   }
 }
 function queueQueuedPush(delay = 700) {
@@ -230,4 +233,4 @@ window.WashDeskCloud = {
   getStatus: () => statusText,
   getConfig: () => readConfig()
 };
-window.addEventListener('online', () => { if (user && localProvider) schedulePush(localProvider()); });
+window.addEventListener('online', () => { retryDelay = 1500; if (user && localProvider) schedulePush(localProvider()); });
