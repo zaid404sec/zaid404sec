@@ -429,47 +429,137 @@
   function calculateEditedInvoice(lines,discount,registered){const gross=sum(lines,l=>Number(l.qty)*Number(l.rate)),lineDisc=sum(lines,l=>Number(l.discount)||0),pre=Math.max(0,gross-lineDisc),overall=Math.min(pre,Math.max(0,Number(discount)||0)),taxable=Math.max(0,pre-overall);let tax=0;for(const l of lines){const base=Math.max(0,Number(l.qty)*Number(l.rate)-(Number(l.discount)||0));const allocated=pre>0?overall*base/pre:0;tax+=Math.max(0,base-allocated)*(registered?Number(l.taxRate)||0:0)/100}return {gross,lineDisc,overall,taxable,tax,grand:taxable+tax}}
   function saveInvoiceEdits(e){e.preventDefault();const form=e.target;const i=db.invoices.find(x=>x.id===editingInvoiceId);if(!i){notify('Invoice record not found. Reopen the invoice and retry.');return}const f=new FormData(form),lines=readInvoiceEditLines();if(!lines.length||lines.some(l=>!l.name||!Number.isFinite(l.qty)||l.qty<=0||l.rate<0||l.discount<0||l.discount>l.qty*l.rate+.009)){notify('Check every item name, quantity, rate and line discount.');return}const discount=Number(f.get('discount')||0),calc=calculateEditedInvoice(lines,discount,!!i.gstRegistered);if(discount>calc.gross-calc.lineDisc+.009){notify('Bill discount cannot exceed the item value.');return}if(calc.grand+0.009<paid(i)){notify('The revised total cannot be less than the payments already received.');return}const oldUse=invoiceStockUsage(i.lines),newUse=invoiceStockUsage(lines),ids=new Set([...Object.keys(oldUse),...Object.keys(newUse)]);for(const pid of ids){const p=db.products.find(x=>x.id===pid);if(p&&Number(newUse[pid]||0)>Number(p.qty)+Number(oldUse[pid]||0)+.000001){notify(`Not enough stock for ${p.name}. Available after reversing this bill: ${Number(p.qty)+Number(oldUse[pid]||0)}.`);return}}for(const pid of ids){const p=db.products.find(x=>x.id===pid);if(p)p.qty=Math.max(0,Number(p.qty)+Number(oldUse[pid]||0)-Number(newUse[pid]||0))}const cust=db.customers.find(c=>c.id===String(f.get('customerId')||''));i.customerId=cust?.id||null;i.customerNameSnapshot=String(f.get('customerName')||'Walk-in customer').trim();i.customerState=cust?.state||i.businessState||db.business.state;i.customerGstin=cust?.gstin||'';i.customerAddress=cust?.address||'';i.customerCity=cust?.city||'';i.vehicleNumber=String(f.get('vehicleNumber')||'').trim().toUpperCase();i.vehicleType=String(f.get('vehicleType')||'');i.odometer=String(f.get('odometer')||'');i.staffId=String(f.get('staffId')||'')||null;i.date=String(f.get('date')||i.date);i.financialYear=fy(i.date);i.lines=lines;i.discount=calc.overall;i.subtotal=calc.gross;i.lineDiscount=calc.lineDisc;i.taxable=calc.taxable;i.tax=calc.tax;i.grandTotal=calc.grand;i.stockCost=sum(Object.entries(newUse),([pid,qty])=>qty*Number(db.products.find(p=>p.id===pid)?.cost||0));i.notes=String(f.get('notes')||'').trim();i.editedAt=Date.now();save();closeModal();openInvoice(i.id);notify('Invoice updated. Totals, balance and stock were recalculated.')}
   function invoiceTaxLines(i){const pre=(i.lines||[]).map(l=>Math.max(0,l.qty*l.rate-(l.discount||0)));const preTotal=sum(pre);const supplierState=i.businessState||i.businessSnapshot?.state||db.business.state;const registered=i.gstRegistered??i.businessSnapshot?.registered??db.business.registered;const inter=!!(i.customerState&&supplierState&&i.customerState.trim().toLowerCase()!==supplierState.trim().toLowerCase());return (i.lines||[]).map((l,n)=>{const allocated=preTotal>0?(Number(i.discount)||0)*pre[n]/preTotal:0;const taxable=Math.max(0,pre[n]-allocated);const rate=registered?Number(l.taxRate)||0:0;const tax=taxable*rate/100;return {taxable,rate,tax,cgst:inter?0:tax/2,sgst:inter?0:tax/2,igst:inter?tax:0}})}
-    function invoiceHTML(i){const b=i.businessSnapshot||db.business;const registered=i.gstRegistered??b.registered;const lines=invoiceTaxLines(i);const cgst=sum(lines,x=>x.cgst),sgst=sum(lines,x=>x.sgst),igst=sum(lines,x=>x.igst),gstTotal=Number(i.tax??sum(lines,x=>x.tax))||0;const rows=(i.lines||[]).map((l,n)=>{const tx=lines[n]||{taxable:0,rate:0,tax:0};return `<tr><td>${n+1}. ${esc(l.name)}<div class="help">${l.kind==='service'?'Service':'Product'} · ${esc(l.sac||'SAC/HSN not set')} · GST ${tx.rate}%</div></td><td>${l.qty} ${esc(l.unit||'')}</td><td class="right">${INR(l.rate)}</td><td class="right">${INR(tx.taxable)}</td><td class="right">${INR(tx.tax)}</td></tr>`}).join('');const cust=db.customers.find(c=>c.id===i.customerId);const pay=paid(i),staffName=i.staffNameSnapshot||db.staff.find(st=>st.id===i.staffId)?.name||'Not recorded',paymentRows=db.payments.filter(p=>p.invoiceId===i.id),paymentModeLabel=paymentRows.length?Object.entries(paymentRows.reduce((a,p)=>(a[p.mode||'Other']=(a[p.mode||'Other']||0)+Number(p.amount||0),a),{})).map(([m,a])=>m+' '+INR(a)).join(' · '):(i.paymentMode||'Credit / Not paid');return `<div class="invoice-preview" id="invoice-paper"><div class="inv-top"><div><img src="./prime-auto-care-logo.jpg" alt="Prime Auto Care" style="float:left;width:88px;height:59px;object-fit:contain;margin:0 12px 8px 0;border-radius:4px" /><h2>PRIME AUTO CARE</h2><div style="font-size:11px;line-height:1.6;color:#657187">${esc(b.address||'Business address not configured')}<br/>${esc(b.city||'')}, ${esc(b.state||'')} (${esc(b.stateCode||'')})<br/>${b.phone?'Phone: '+esc(b.phone):''}<br/>${registered&&b.gstin?'GSTIN: '+esc(b.gstin):''}</div></div><div class="inv-meta"><b>${registered?'TAX INVOICE':'INVOICE'}</b><br/>No: ${esc(i.number)}<br/>Date: ${esc(i.date)}<br/>Financial year: ${esc(i.financialYear||fy(i.date))}<br/><b style="color:${invoiceDue(i)>0?"#9c342e":"#187454"}">${invoiceDue(i)>0?"CREDIT / PAYMENT DUE":"PAID IN FULL"}</b></div></div><div class="bill-to"><b>Bill to</b><br/>${esc(invoiceCustomerName(i))}<br/>${esc(i.customerAddress||cust?.address||'')}<br/>${esc(i.customerCity||cust?.city||'')}, ${esc(i.customerState||cust?.state||'')}<br/>${cust?.phone?'Phone: '+esc(cust.phone):''} ${i.customerGstin?' · GSTIN: '+esc(i.customerGstin):''}<br/>Vehicle: ${esc(i.vehicleNumber||'—')} · ${esc(i.vehicleType||'')}<br/>Service performed by: ${esc(staffName)}<br/>${i.odometer?'Odometer: '+esc(i.odometer)+' km':''}</div><table><thead><tr><th>Description / SAC-HSN</th><th>Qty</th><th class="right">Rate</th><th class="right">Taxable</th><th class="right">GST</th></tr></thead><tbody>${rows}</tbody></table><div class="invoice-summary"><div class="invoice-summary-row"><span>Subtotal</span><b>${INR(i.subtotal)}</b></div><div class="invoice-summary-row"><span>Item discounts</span><b>− ${INR(i.lineDiscount||0)}</b></div><div class="invoice-summary-row"><span>Bill discount</span><b>− ${INR(i.discount||0)}</b></div><div class="invoice-summary-row"><span>Taxable value</span><b>${INR(i.taxable)}</b></div>${registered?(igst>0?`<div class="invoice-summary-row"><span>IGST</span><b>${INR(igst)}</b></div>`:`<div class="invoice-summary-row"><span>CGST</span><b>${INR(cgst)}</b></div><div class="invoice-summary-row"><span>SGST</span><b>${INR(sgst)}</b></div>`)+`<div class="invoice-summary-row"><span>GST total</span><b>${INR(gstTotal)}</b></div>`:''}<div class="invoice-grand-total"><span>GRAND TOTAL</span><strong>${INR(i.grandTotal)}</strong></div><div class="invoice-summary-row"><span>Payment mode</span><b>${esc(paymentModeLabel)}</b></div><div class="invoice-summary-row"><span>Paid</span><b>${INR(pay)}</b></div><div class="invoice-summary-row balance-row"><span>Balance due</span><b>${INR(invoiceDue(i))}</b></div></div><div class="inv-foot">${esc(i.notes||'')}<br/>${esc(b.terms||'Thank you for choosing Prime Auto Care. Drive safe!')}<div class="signature" style="margin:30px 0 0 auto;width:220px;text-align:center;border-top:1px solid #bda56e;padding-top:9px;color:#272113"><b>For PRIME AUTO CARE</b><div style="font-size:9px;color:#756b53;margin-top:4px">Authorized Signatory</div></div></div></div>`}
+    function invoiceHTML(i){
+    const b=i.businessSnapshot||db.business,registered=i.gstRegistered??b.registered;
+    const lines=invoiceTaxLines(i),cgst=sum(lines,x=>x.cgst),sgst=sum(lines,x=>x.sgst),igst=sum(lines,x=>x.igst),gstTotal=Number(i.tax??sum(lines,x=>x.tax))||0;
+    const rows=(i.lines||[]).map((l,n)=>{
+      const tx=lines[n]||{taxable:0,rate:0,tax:0};
+      return `<tr><td><span class="invoice-serial">${n+1}.</span> <b>${esc(l.name)}</b><div class="help">${l.kind==='service'?'Service':'Product'} · ${esc(l.sac||'SAC/HSN not set')} · GST ${tx.rate}%</div></td><td>${Number(l.qty)||0} ${esc(l.unit||'')}</td><td class="right">${INR(l.rate)}</td><td class="right">${INR(tx.taxable)}</td><td class="right">${INR(tx.tax)}</td></tr>`;
+    }).join('');
+    const cust=db.customers.find(c=>c.id===i.customerId),pay=paid(i);
+    const staffName=i.staffNameSnapshot||db.staff.find(st=>st.id===i.staffId)?.name||'Not recorded';
+    const paymentRows=db.payments.filter(p=>p.invoiceId===i.id);
+    const paymentModeLabel=paymentRows.length
+      ?Object.entries(paymentRows.reduce((a,p)=>(a[p.mode||'Other']=(a[p.mode||'Other']||0)+Number(p.amount||0),a),{})).map(([m,a])=>m+' '+INR(a)).join(' · ')
+      :(i.paymentMode||'Credit / Not paid');
+    const balance=invoiceDue(i),status=balance>0?'CREDIT / PAYMENT DUE':'PAID IN FULL';
+    const details=[b.phone?'Phone: '+esc(b.phone):'',registered&&b.gstin?'GSTIN: '+esc(b.gstin):''].filter(Boolean).join(' · ');
+    return `<div class="invoice-preview" id="invoice-paper">
+      <header class="premium-invoice-header">
+        <div class="premium-logo-panel"><img src="./prime-auto-care-logo.jpg" alt="Prime Auto Care original logo" /></div>
+        <div class="premium-brand-center"><h2>PRIME AUTO CARE</h2><div class="premium-brand-subtitle">GOLD & BLACK CAR SERVICES</div><div class="premium-brand-tagline">A PREMIUM AUTOMOTIVE STUDIO</div><div class="premium-business-details">${esc(b.address||'Business address not configured')} · ${esc(b.city||'')}, ${esc(b.state||'')} ${details?' · '+details:''}</div></div>
+        <div class="premium-car-mark">
+          <svg viewBox="0 0 260 104" role="img" aria-label="Premium car emblem">
+            <path d="M16 72 L28 56 Q34 50 50 48 L76 43 L98 22 Q104 15 116 15 L167 15 Q180 16 190 31 L205 46 L230 51 Q244 53 248 66 L247 78 L224 78 Q222 60 204 60 Q185 60 183 78 L78 78 Q76 60 57 60 Q39 60 37 78 L18 78 Z" fill="none" stroke="#17130d" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M91 43 L111 22 L163 22 Q173 23 184 43 Z M28 58 L54 58 M207 52 L228 58" fill="none" stroke="#17130d" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="57" cy="79" r="12" fill="#d4b36a" stroke="#17130d" stroke-width="5"/><circle cx="204" cy="79" r="12" fill="#d4b36a" stroke="#17130d" stroke-width="5"/>
+            <path d="M125 41 L145 34 L164 41 L160 64 L145 77 L130 64 Z" fill="#17130d" stroke="#f3dfad" stroke-width="2"/>
+            <path d="M137 49 L145 45 L153 49 L151 60 L145 66 L139 60 Z" fill="none" stroke="#d7b45f" stroke-width="2"/>
+          </svg>
+          <span>CARE · DETAIL · DRIVE</span>
+        </div>
+      </header>
+      <div class="invoice-title-strip"><strong>${registered?'TAX INVOICE':'INVOICE'} / SERVICE BILL</strong><div class="invoice-reference"><span>INVOICE NO. <b>${esc(i.number)}</b></span><span>DATE <b>${esc(i.date)}</b></span><span>FINANCIAL YEAR <b>${esc(i.financialYear||fy(i.date))}</b></span></div></div>
+      <div class="invoice-status-strip"><span>${status}</span><span>Thank you for choosing Prime Auto Care</span></div>
+      <section class="invoice-party-grid">
+        <div class="invoice-party-card"><div class="invoice-section-label">BILL TO</div><strong class="invoice-customer-name">${esc(invoiceCustomerName(i))}</strong><div>${esc(i.customerAddress||cust?.address||'Address not provided')}</div><div>${esc(i.customerCity||cust?.city||'')}${(i.customerCity||cust?.city)?', ':''}${esc(i.customerState||cust?.state||'')}</div><div>${cust?.phone?'Mobile: '+esc(cust.phone):'Mobile: —'} ${i.customerGstin?' · GSTIN: '+esc(i.customerGstin):''}</div></div>
+        <div class="invoice-party-card vehicle-party-card"><div class="invoice-section-label">VEHICLE & SERVICE</div><strong class="invoice-vehicle-number">${esc(i.vehicleNumber||'WALK-IN')}</strong><div>Vehicle class: <b>${esc(i.vehicleType||'Not specified')}</b></div><div>Odometer: <b>${i.odometer?esc(i.odometer)+' km':'—'}</b></div><div>Service performed by: <b>${esc(staffName)}</b></div></div>
+      </section>
+      <table class="premium-invoice-table"><thead><tr><th>Description / SAC-HSN</th><th>Qty</th><th class="right">Unit price</th><th class="right">Taxable</th><th class="right">GST</th></tr></thead><tbody>${rows||'<tr><td colspan="5">No service items recorded.</td></tr>'}</tbody></table>
+      <section class="invoice-lower-grid">
+        <div class="invoice-payment-card"><div class="invoice-section-label">PAYMENT DETAILS</div><div class="invoice-payment-row"><span>Payment method</span><b>${esc(paymentModeLabel)}</b></div><div class="invoice-payment-row"><span>Total received</span><b>${INR(pay)}</b></div><div class="invoice-payment-row"><span>Invoice status</span><b class="invoice-payment-status">${status}</b></div><div class="invoice-payment-note">${pay>0?'Thank you. Your payment has been recorded.':balance>0?'Payment is pending. Please clear the balance at your convenience.':'No balance is outstanding.'}</div></div>
+        <div class="invoice-summary">
+          <div class="invoice-summary-row"><span>Subtotal</span><b>${INR(i.subtotal)}</b></div>
+          <div class="invoice-summary-row"><span>Item discounts</span><b>− ${INR(i.lineDiscount||0)}</b></div>
+          <div class="invoice-summary-row"><span>Bill discount</span><b>− ${INR(i.discount||0)}</b></div>
+          <div class="invoice-summary-row"><span>Taxable value</span><b>${INR(i.taxable)}</b></div>
+          ${registered?(igst>0?`<div class="invoice-summary-row"><span>IGST</span><b>${INR(igst)}</b></div>`:`<div class="invoice-summary-row"><span>CGST</span><b>${INR(cgst)}</b></div><div class="invoice-summary-row"><span>SGST</span><b>${INR(sgst)}</b></div>`)+`<div class="invoice-summary-row"><span>GST total</span><b>${INR(gstTotal)}</b></div>`:''}
+          <div class="invoice-grand-total"><span>GRAND TOTAL</span><strong>${INR(i.grandTotal)}</strong></div>
+          <div class="invoice-summary-row"><span>Paid</span><b>${INR(pay)}</b></div>
+          <div class="invoice-summary-row balance-row"><span>Balance due</span><b>${INR(balance)}</b></div>
+        </div>
+      </section>
+      <footer class="invoice-footer-grid">
+        <div class="invoice-terms-card"><div class="invoice-footer-label">TERMS & CONDITIONS</div><p>${esc(i.notes||'Please retain this invoice for your records.')}</p><p>${esc(b.terms||'Thank you for choosing Prime Auto Care. Drive safe!')}</p></div>
+        <div class="invoice-signature-card"><div class="invoice-footer-label">AUTHORISED SIGNATURE</div><div class="invoice-signature-space"></div><b>For PRIME AUTO CARE</b><div class="invoice-signature-caption">Authorised Signatory</div><div class="invoice-gold-seal">PRIME<br/>AUTO<br/>CARE</div></div>
+      </footer>
+      <div class="invoice-bottom-line">PRIME AUTO CARE · GOLD & BLACK CAR SERVICES · THANK YOU FOR YOUR TRUST</div>
+    </div>`
+  }
   function invoicePdfName(i){const clean=v=>String(v||'').normalize('NFKD').replace(/[^A-Za-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,32);return `Prime-Auto-Care-${clean(i.number||'Invoice')}.pdf`}
   async function makePdfBlob(i){
     if(typeof window.html2pdf!=='function')throw new Error('The local PDF generator did not load. Close and reopen Prime Auto Care, then retry.');
-    // A4 printable width is smaller than the old 794px canvas once page margins
-    // are applied. Keep the full invoice inside a measured 730px capture area.
+    // Fixed A4-safe canvas: dynamic invoice values stay as text, never as a flattened template image.
     const PAGE_WIDTH=730;
     const holder=document.createElement('div');
     holder.style.cssText=`position:fixed;left:0;top:0;width:${PAGE_WIDTH}px;min-width:${PAGE_WIDTH}px;max-width:${PAGE_WIDTH}px;z-index:-1;pointer-events:none;background:#fff;overflow:visible;`;
     holder.innerHTML=invoiceHTML(i);
     const paper=holder.querySelector('.invoice-preview');
     if(!paper)throw new Error('Invoice preview could not be prepared.');
-    paper.style.cssText=`width:${PAGE_WIDTH}px!important;min-width:${PAGE_WIDTH}px!important;max-width:${PAGE_WIDTH}px!important;margin:0!important;padding:30px!important;box-sizing:border-box!important;overflow:visible!important;background:#fff!important;color:#172033!important;font-family:Arial,sans-serif!important;`;
+    paper.style.cssText=`display:block;width:${PAGE_WIDTH}px!important;min-width:${PAGE_WIDTH}px!important;max-width:${PAGE_WIDTH}px!important;margin:0!important;padding:18px!important;box-sizing:border-box!important;overflow:visible!important;background:#fff!important;color:#19160f!important;font-family:Arial,sans-serif!important;`;
     const style=document.createElement('style');
     style.textContent=`
       *{box-sizing:border-box}
-      .invoice-preview{display:block;width:730px!important;min-width:730px!important;max-width:730px!important;margin:0!important;padding:30px!important;border:0!important;border-radius:0!important;overflow:visible!important;background:#fff!important;color:#172033!important;font-family:Arial,sans-serif!important}
-      .invoice-preview .inv-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:2px solid #b58a36;padding-bottom:12px}
-      .invoice-preview .inv-top>div:first-child{flex:1 1 auto;min-width:0}
-      .invoice-preview .inv-meta{flex:0 0 170px;width:170px;max-width:170px;text-align:right;font-size:10px;line-height:1.55;overflow-wrap:anywhere}
-      .invoice-preview .bill-to{margin:16px 0;background:#f6f8fc;border-radius:8px;padding:10px;font-size:11px;line-height:1.55;overflow-wrap:anywhere}
-      .invoice-preview table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed;white-space:normal;font-size:10px}
-      .invoice-preview th{background:#eef3fb;padding:8px 5px;border-bottom:1px solid #dbe3ef;font-size:8px;text-align:left}
-      .invoice-preview th:nth-child(1),.invoice-preview td:nth-child(1){width:40%}
-      .invoice-preview th:nth-child(2),.invoice-preview td:nth-child(2){width:12%}
-      .invoice-preview th:nth-child(3),.invoice-preview td:nth-child(3){width:16%}
-      .invoice-preview th:nth-child(4),.invoice-preview td:nth-child(4){width:17%}
-      .invoice-preview th:nth-child(5),.invoice-preview td:nth-child(5){width:15%}
-      .invoice-preview td{padding:8px 5px;border-bottom:1px solid #e8edf4;white-space:normal;overflow-wrap:anywhere;vertical-align:top}
+      .invoice-preview{display:block;width:730px!important;min-width:730px!important;max-width:730px!important;margin:0!important;padding:18px!important;border:1px solid #1d1910!important;border-radius:3px!important;overflow:visible!important;background:#fffdf7!important;color:#19160f!important;font-family:Arial,sans-serif!important}
+      .premium-invoice-header{display:grid;grid-template-columns:78px minmax(0,1fr) 148px;align-items:center;gap:12px;min-height:104px;padding:13px 15px;border:2px solid #17130c;border-radius:3px;background:linear-gradient(118deg,#a77a2b 0%,#e6ca83 28%,#f7e7b5 49%,#d0aa5c 75%,#94691f 100%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+      .premium-logo-panel{width:72px;height:72px;padding:4px;border:1px solid rgba(35,25,8,.5);background:rgba(255,255,255,.36);display:grid;place-items:center}
+      .premium-logo-panel img{display:block;width:100%;height:100%;object-fit:contain}
+      .premium-brand-center{text-align:center;min-width:0}
+      .premium-brand-center h2{margin:0 0 3px!important;color:#080704!important;font-family:Georgia,serif!important;font-size:23px!important;line-height:1.1!important;letter-spacing:1.1px!important;font-weight:900!important;text-shadow:0 1px 0 rgba(255,255,255,.48),0 2px 2px rgba(45,30,5,.2)}
+      .premium-brand-subtitle{font-family:Georgia,serif;font-weight:800;font-size:13px;letter-spacing:.6px;color:#17120a}
+      .premium-brand-tagline{font-size:8px;font-weight:800;letter-spacing:2px;color:#4b3817;margin:3px 0 5px}
+      .premium-business-details{font-size:8px;line-height:1.35;color:#35270f;overflow-wrap:anywhere}
+      .premium-car-mark{text-align:center;min-width:0}
+      .premium-car-mark svg{display:block;width:100%;height:57px}
+      .premium-car-mark span{display:block;font-size:7px;font-weight:900;letter-spacing:1.1px;color:#211809}
+      .invoice-title-strip{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0 7px;padding:8px 11px;border-bottom:1px solid #b68a3d;border-top:1px solid #e5d1a1;background:linear-gradient(90deg,#fbf4e3,#fffdf8)}
+      .invoice-title-strip>strong{font-family:Georgia,serif;color:#75531e;font-size:14px;letter-spacing:.5px}
+      .invoice-reference{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:5px 12px;font-size:8px;color:#6f6043}
+      .invoice-reference span{white-space:nowrap}.invoice-reference b{color:#17130b}
+      .invoice-status-strip{display:flex;justify-content:space-between;gap:10px;padding:5px 10px;margin-bottom:8px;background:#19160f;color:#e9cf91;font-size:8px;font-weight:900;letter-spacing:.6px}
+      .invoice-party-grid{display:grid;grid-template-columns:1.12fr .88fr;gap:8px;margin:8px 0}
+      .invoice-party-card{min-width:0;padding:9px 11px;border:1px solid #dfc891;border-left:3px solid #b88c3b;border-radius:3px;background:linear-gradient(135deg,#fffdf7,#f8f1df);font-size:9px;line-height:1.45;overflow-wrap:anywhere}
+      .invoice-section-label{margin-bottom:5px;color:#8c6529;font-size:8px;font-weight:900;letter-spacing:1px}
+      .invoice-customer-name{display:block;color:#17130b;font-size:13px;margin-bottom:3px}
+      .invoice-vehicle-number{display:block;font-family:Georgia,serif;font-size:16px;letter-spacing:1px;color:#17130b;margin-bottom:4px}
+      .premium-invoice-table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed;white-space:normal;font-size:9px;margin-top:9px}
+      .premium-invoice-table th{padding:8px 6px;border:1px solid #17130b;background:linear-gradient(180deg,#29251b,#0b0a07);color:#e9cf91;font-size:8px;font-weight:900;letter-spacing:.25px;text-align:left}
+      .premium-invoice-table th:nth-child(1),.premium-invoice-table td:nth-child(1){width:43%}
+      .premium-invoice-table th:nth-child(2),.premium-invoice-table td:nth-child(2){width:11%}
+      .premium-invoice-table th:nth-child(3),.premium-invoice-table td:nth-child(3){width:15%}
+      .premium-invoice-table th:nth-child(4),.premium-invoice-table td:nth-child(4){width:17%}
+      .premium-invoice-table th:nth-child(5),.premium-invoice-table td:nth-child(5){width:14%}
+      .premium-invoice-table td{padding:8px 6px;border:1px solid #d8caa9;white-space:normal;overflow-wrap:anywhere;vertical-align:top;color:#211d15;background:#fffefa}
+      .premium-invoice-table tbody tr:nth-child(even) td{background:#fbf6e9}
+      .premium-invoice-table .help{font-size:8px;color:#786b53;margin-top:2px;line-height:1.35}
+      .invoice-serial{display:inline-block;min-width:18px;color:#886529;font-weight:900}
       .invoice-preview .right{text-align:right}
-      .invoice-summary{display:block;width:100%;max-width:300px;margin:16px 0 0 auto;font-size:10px;line-height:1.5}
+      .invoice-lower-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start;margin-top:10px}
+      .invoice-payment-card{padding:10px 11px;border:1px solid #dfc891;border-radius:3px;background:#fbf5e7;font-size:9px;line-height:1.55;overflow-wrap:anywhere;break-inside:avoid;page-break-inside:avoid}
+      .invoice-payment-row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed #d9cba9}
+      .invoice-payment-row span{color:#62563f}.invoice-payment-row b{text-align:right;color:#19150c}
+      .invoice-payment-status{color:#8b6423!important}
+      .invoice-payment-note{margin-top:7px;color:#796744;font-size:8px}
+      .invoice-summary{display:block;width:100%;max-width:none;margin:0!important;padding:7px 9px;border:1px solid #e0cfaa;border-radius:3px;background:#fffefa;font-size:9px;line-height:1.45;break-inside:avoid;page-break-inside:avoid}
       .invoice-summary-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0}
-      .invoice-summary-row span{flex:1 1 auto;min-width:0}
-      .invoice-summary-row b{flex:0 0 auto;max-width:58%;text-align:right;white-space:nowrap}
-      .invoice-grand-total{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:8px 0;padding:11px 12px;border-radius:8px;background:#14213a;color:#fff}
-      .invoice-grand-total span{flex:1 1 auto;min-width:0}
-      .invoice-grand-total strong{flex:0 0 auto;font-size:18px;white-space:nowrap;text-align:right}
-      .balance-row{border-top:1px dashed #cbd5e1;padding-top:7px;margin-top:4px;font-size:11px}
-      .invoice-preview .inv-foot{border-top:1px solid #e5eaf2;padding-top:10px;margin-top:16px;font-size:9px;color:#657187;overflow-wrap:anywhere}
-      .invoice-preview .signature{width:210px!important;max-width:100%;margin:24px 0 0 auto!important;text-align:center;border-top:1px solid #bda56e;padding-top:8px;color:#272113}
-      .invoice-preview .help{font-size:9px;color:#69758b;line-height:1.4}
+      .invoice-summary-row span{flex:1 1 auto;min-width:0;color:#5e5544}
+      .invoice-summary-row b{flex:0 0 auto;max-width:58%;text-align:right;white-space:nowrap;color:#17130b}
+      .invoice-grand-total{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:7px 0;padding:10px 11px;border:1px solid #7d5b20;border-radius:3px;background:linear-gradient(110deg,#9e7328,#f2d88f 45%,#bb9142);color:#171108}
+      .invoice-grand-total span{flex:1 1 auto;min-width:0;font-size:10px;font-weight:900;letter-spacing:.65px}
+      .invoice-grand-total strong{flex:0 0 auto;font-size:17px;white-space:nowrap;text-align:right;color:#0b0905;text-shadow:0 1px 0 rgba(255,255,255,.5)}
+      .balance-row{border-top:1px dashed #bba16e;padding-top:6px;margin-top:4px;font-size:10px}
+      .invoice-preview .help{font-size:8px;color:#75684f;line-height:1.4}
+      .invoice-footer-grid{display:grid;grid-template-columns:1fr .86fr;gap:9px;margin-top:12px;break-inside:avoid;page-break-inside:avoid}
+      .invoice-terms-card,.invoice-signature-card{position:relative;min-width:0;border:1px solid #dfc891;background:#fffdf7;overflow:hidden}
+      .invoice-footer-label{padding:6px 9px;background:#17140e;color:#e9cf91;font-size:8px;font-weight:900;letter-spacing:.75px}
+      .invoice-terms-card p{margin:7px 9px;font-size:8px;line-height:1.42;color:#61563f;overflow-wrap:anywhere;white-space:pre-line}
+      .invoice-signature-card{padding-bottom:8px;text-align:center}
+      .invoice-signature-space{height:24px;margin:8px 18px 5px;border-bottom:1px solid #b89a60}
+      .invoice-signature-card b{font-family:Georgia,serif;font-size:10px;color:#21190b}
+      .invoice-signature-caption{font-size:8px;color:#756747;margin-top:3px}
+      .invoice-gold-seal{position:absolute;right:8px;top:38px;width:38px;height:38px;border:2px solid #b18a3b;border-radius:50%;display:grid;place-content:center;background:radial-gradient(circle,#fff4ce,#cba34d);color:#4b3612;font-size:6px;font-weight:900;line-height:1.05;transform:rotate(8deg)}
+      .invoice-bottom-line{margin-top:9px;padding-top:5px;border-top:1px solid #d9c28e;text-align:center;color:#8b6a31;font-size:7px;font-weight:900;letter-spacing:1px}
+      .invoice-preview tr,.invoice-preview .premium-invoice-header,.invoice-preview .invoice-title-strip{break-inside:avoid;page-break-inside:avoid}
     `;
     holder.prepend(style);
     document.body.appendChild(holder);
@@ -480,18 +570,16 @@
       if(measuredWidth>PAGE_WIDTH+1)throw new Error('Invoice content exceeds the A4 print area. Please reopen Prime Auto Care and retry.');
       const captureHeight=Math.max(900,paper.scrollHeight+80);
       const blob=await window.html2pdf().set({
-        margin:[5,5,7,5],
+        margin:[4,5,6,5],
         filename:invoicePdfName(i),
-        image:{type:'jpeg',quality:.98},
-        html2canvas:{scale:2,useCORS:false,backgroundColor:'#ffffff',windowWidth:760,windowHeight:captureHeight,scrollX:0,scrollY:0},
+        image:{type:'jpeg',quality:.99},
+        html2canvas:{scale:2,useCORS:false,backgroundColor:'#fffdf7',windowWidth:760,windowHeight:captureHeight,scrollX:0,scrollY:0},
         jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
-        pagebreak:{mode:['css','legacy'],avoid:['.invoice-summary','.invoice-grand-total','.signature']}
+        pagebreak:{mode:['css','legacy'],avoid:['.invoice-summary','.invoice-lower-grid','.invoice-footer-grid','.premium-invoice-header','.invoice-title-strip']}
       }).from(paper).outputPdf('blob');
       if(!(blob instanceof Blob)||blob.size<500)throw new Error('The PDF file came back empty. Please retry.');
       return blob;
-    }finally{
-      holder.remove();
-    }
+    }finally{holder.remove()}
   }
   function blobAsDataUrl(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error||new Error('Could not prepare the PDF file.'));reader.readAsDataURL(blob)})}
   function downloadInvoiceBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
