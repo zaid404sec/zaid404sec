@@ -44,8 +44,8 @@ window.WashDeskExcel = {
     const ExcelJS = window.ExcelJS;
     if (!ExcelJS?.Workbook) throw new Error('The Excel workbook library is not loaded. Reopen WashDesk and retry.');
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'WashDesk';
-    workbook.subject = 'Car wash business sales and operations report';
+    workbook.creator = 'Prime Auto Care';
+    workbook.subject = 'Prime Auto Care sales and operations report';
     workbook.title = filename.replace(/\\.xlsx$/i, '');
     workbook.created = new Date();
     workbook.modified = new Date();
