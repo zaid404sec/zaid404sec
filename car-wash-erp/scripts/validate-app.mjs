@@ -143,6 +143,19 @@ for (const field of ['GRAND TOTAL','₹100.00','Paid','₹25.00','Balance due','
 }
 console.log('PASS: invoice PDF HTML includes Grand Total, Paid, Balance Due and assigned staff');
 
+const reportSource = await readFile(new URL('../src/report-export.js', import.meta.url), 'utf8');
+for (const token of ["addSheet(workbook, 'Staff Advances'", "'Staff Advances Issued'", "'Advance Adjustment'", "advances })"]) {
+  if (!reportSource.includes(token)) throw new Error('Excel report is missing staff advance support: ' + token);
+}
+if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances})")) {
+  throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
+}
+const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes('washdesk-shell-v5')) {
+  throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
+}
+console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
+
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
 for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
