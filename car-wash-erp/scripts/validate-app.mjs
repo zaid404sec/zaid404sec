@@ -12,7 +12,7 @@ const mustContain = [
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorized Signatory',
   'cloud-otp-form', 'requestEmailOtp', 'verifyEmailOtp', 'Prime-Auto-Care-',
-  'const PAGE_WIDTH=730;', 'margin:[5,5,7,5]', 'windowWidth:760', 'invoice-grand-total strong', 'invoice-summary-row b'
+  'const PAGE_WIDTH=730;', 'margin:[5,5,7,5]', 'windowWidth:760', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -26,7 +26,7 @@ if (inlineStart < 0 || inlineEnd < 0) throw new Error('No inline application scr
 const inlineSource = html.slice(inlineStart + '<script>'.length, inlineEnd);
 await transform(inlineSource, { loader: 'js', target: 'es2020', logLevel: 'silent' });
 console.log('PASS: inline application JavaScript syntax');
-for (const asset of ['html2pdf.bundle.min.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js']) {
+for (const asset of ['html2pdf.bundle.min.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','prime-auto-care-logo.jpg']) {
   const path = new URL('../' + asset, import.meta.url);
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
   console.log('PASS: bundled asset ' + asset);
@@ -67,15 +67,29 @@ if (salaryStart < 0 || salaryEnd < 0) throw new Error('Staff salary aggregation 
 const salaryFunction = html.slice(salaryStart, salaryEnd);
 const paid = vm.runInNewContext(salaryFunction + String.fromCharCode(10) + "staffSalaryPaid('staff-1','2026-11')", {
   db: { expenses: [
-    { category:'Salary', staffId:'staff-1', salaryMonth:'2026-11', date:'2026-11-05', amount:4500 },
+    { category:'Salary', staffId:'staff-1', salaryMonth:'2026-11', date:'2026-11-05', amount:4500, advanceAdjustment:600 },
     { category:'Electricity', staffId:'staff-1', salaryMonth:'2026-11', date:'2026-11-06', amount:900 },
     { category:'Salary', staffId:'staff-2', salaryMonth:'2026-11', date:'2026-11-06', amount:3000 }
   ] },
   monthKey: date => date ? String(date).slice(0,7) : '2026-11',
   sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
 });
-if (paid !== 4500) throw new Error('Staff salary expense aggregation test failed: ' + paid);
-console.log('PASS: staff salary payments are isolated and can be included in expense reports');
+if (paid !== 5100) throw new Error('Staff salary plus advance adjustment aggregation test failed: ' + paid);
+console.log('PASS: staff salary payments and non-cash advance adjustments are included in salary settlement');
+const advancesStart = html.indexOf('function staffAdvancesOutstanding(');
+const advancesEnd = html.indexOf('function staffSalaryPaid(', advancesStart);
+if (advancesStart < 0 || advancesEnd < 0) throw new Error('Staff advance balance function not found.');
+const advancesFunction = html.slice(advancesStart, advancesEnd);
+const advancesOpen = vm.runInNewContext(advancesFunction + String.fromCharCode(10) + "staffAdvancesOutstanding('staff-1')", {
+  db: { staffAdvances: [
+    { staffId:'staff-1', amount:1200, recoveredAmount:300 },
+    { staffId:'staff-1', amount:500, recoveredAmount:500 },
+    { staffId:'staff-2', amount:900, recoveredAmount:100 }
+  ] },
+  sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
+});
+if (advancesOpen !== 900) throw new Error('Staff advance outstanding calculation failed: ' + advancesOpen);
+console.log('PASS: staff advance register calculates adjusted and open balances by staff member');
 
 // Invoice totals are computed from item quantities, rates, line discounts and tax rates.
 const billCalcStart = html.indexOf('function calcLines(');
@@ -128,6 +142,19 @@ for (const field of ['GRAND TOTAL','₹100.00','Paid','₹25.00','Balance due','
   if (!invoiceMarkup.includes(field)) throw new Error('Invoice PDF is missing required field: ' + field);
 }
 console.log('PASS: invoice PDF HTML includes Grand Total, Paid, Balance Due and assigned staff');
+
+const reportSource = await readFile(new URL('../src/report-export.js', import.meta.url), 'utf8');
+for (const token of ["addSheet(workbook, 'Staff Advances'", "'Staff Advances Issued'", "'Advance Adjustment'", "advances })"]) {
+  if (!reportSource.includes(token)) throw new Error('Excel report is missing staff advance support: ' + token);
+}
+if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances})")) {
+  throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
+}
+const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes('washdesk-shell-v5')) {
+  throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
+}
+console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
 for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number']) {
