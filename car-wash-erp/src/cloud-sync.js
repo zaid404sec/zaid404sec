@@ -1,6 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
 const CONFIG_KEY = 'washdesk-cloud-config-v1';
+const DEFAULT_PROJECT_CONFIG = {
+  url: 'https://jkjudmkqaebrgllemris.supabase.co',
+  anonKey: 'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw'
+};
 let supabase = null;
 let user = null;
 let channel = null;
@@ -14,7 +18,12 @@ let syncing = false;
 let pendingEmail = '';
 let retryDelay = 1500;
 
-function readConfig() { try { return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}'); } catch { return {}; } }
+function readConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+    return { ...DEFAULT_PROJECT_CONFIG, ...(saved && typeof saved === 'object' ? saved : {}) };
+  } catch { return { ...DEFAULT_PROJECT_CONFIG }; }
+}
 function setStatus(value) { statusText = value; window.dispatchEvent(new CustomEvent('washdesk-cloud-status', { detail: value })); }
 function clone(value) { return JSON.parse(JSON.stringify(value ?? {})); }
 function stableStringify(value) {
@@ -59,7 +68,16 @@ async function publishPayload(payload) {
     return true;
   } catch (error) {
     queuedPayload = queuedPayload || body;
-    setStatus(navigator.onLine ? 'Sync pending · retry when connected' : 'Offline · changes saved on this device');
+    const message = String(error?.message || error || '');
+    if (message.includes('DUPLICATE_CUSTOMER_MOBILE')) {
+      setStatus('Sync blocked · duplicate customer mobile number. Check the customer register on this device.');
+      window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'A mobile number is already assigned to another customer on another device. Resolve the duplicate customer records, then sync again.' }));
+    } else if (message.includes('DUPLICATE_VEHICLE_REGISTRATION')) {
+      setStatus('Sync blocked · duplicate vehicle registration number. Check the vehicle register on this device.');
+      window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'A vehicle registration number is already saved on another device. Resolve the duplicate vehicle records, then sync again.' }));
+    } else {
+      setStatus(navigator.onLine ? 'Sync pending · retry when connected' : 'Offline · changes saved on this device');
+    }
     console.error('Prime Auto Care cloud upload failed:', error);
     retryDelay = Math.min(Math.max(1500, retryDelay * 2), 60000);
     return false;
