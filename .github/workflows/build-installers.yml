@@ -46,8 +46,10 @@ jobs:
           node-version: 22
       - name: Install Capacitor
         run: npm install @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
-      - name: Prepare local PDF and native share assets
+      - name: Prepare local PDF, reports and cloud assets
         run: npm run prepare:assets
+      - name: Validate app syntax and business calculations
+        run: npm run validate
       - name: Prepare web assets
         run: |
           mkdir www
