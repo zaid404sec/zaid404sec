@@ -12,7 +12,7 @@ const mustContain = [
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'cloud-otp-form', 'requestEmailOtp', 'verifyEmailOtp', 'Prime-Auto-Care-',
-  'const PAGE_WIDTH=730;', 'margin:[4,5,6,5]', 'windowWidth:760', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique'
+  'pdfMake.createPdf', 'Prime Auto Care Invoice ', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -26,7 +26,7 @@ if (inlineStart < 0 || inlineEnd < 0) throw new Error('No inline application scr
 const inlineSource = html.slice(inlineStart + '<script>'.length, inlineEnd);
 await transform(inlineSource, { loader: 'js', target: 'es2020', logLevel: 'silent' });
 console.log('PASS: inline application JavaScript syntax');
-for (const asset of ['html2pdf.bundle.min.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','prime-auto-care-logo.jpg']) {
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','prime-auto-care-logo.jpg']) {
   const path = new URL('../' + asset, import.meta.url);
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
   console.log('PASS: bundled asset ' + asset);
@@ -195,6 +195,6 @@ for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'e
 if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
 console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
 
-if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js']) throw new Error('Excel or cloud-sync runtime dependency missing.');
+if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
