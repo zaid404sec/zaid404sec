@@ -1,5 +1,5 @@
 appId: com.washdesk.carwash
-productName: WashDesk
+productName: Prime Auto Care
 directories:
   output: release
 files:
@@ -19,7 +19,7 @@ win:
     - target: nsis
       arch:
         - x64
-  artifactName: WashDesk-Setup-${version}-${arch}.${ext}
+  artifactName: Prime-Auto-Care-Setup-${version}-${arch}.${ext}
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true

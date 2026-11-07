@@ -9,7 +9,9 @@ const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
   'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle',
-  'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf'
+  'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
+  'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorized Signatory',
+  'cloud-otp-form', 'requestEmailOtp', 'verifyEmailOtp', 'Prime-Auto-Care-'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -74,6 +76,29 @@ const paid = vm.runInNewContext(salaryFunction + String.fromCharCode(10) + "staf
 if (paid !== 4500) throw new Error('Staff salary expense aggregation test failed: ' + paid);
 console.log('PASS: staff salary payments are isolated and can be included in expense reports');
 
+// Invoice totals are computed from item quantities, rates, line discounts and tax rates.
+const billCalcStart = html.indexOf('function calcLines(');
+const billCalcEnd = html.indexOf('function billSummary()', billCalcStart);
+if (billCalcStart < 0 || billCalcEnd < 0) throw new Error('Bill calculation function is missing.');
+const billCalcSource = html.slice(billCalcStart, billCalcEnd);
+const billCalc = vm.runInNewContext(billCalcSource + String.fromCharCode(10) +
+  "calcLines([{qty:2,rate:100,discount:10,taxRate:18},{qty:1,rate:50,discount:0,taxRate:0}],5)", {
+    db: { business: { registered: true } },
+    sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
+  });
+if (billCalc.gross !== 250 || billCalc.lineDisc !== 10 || billCalc.taxable !== 235 ||
+    Math.abs(billCalc.tax - 33.4875) > 0.001 || Math.abs(billCalc.grand - 268.4875) > 0.001) {
+  throw new Error('Invoice total calculation test failed: ' + JSON.stringify(billCalc));
+}
+console.log('PASS: invoice PDF source totals reconcile from subtotal through GST to grand total');
+
+const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
+for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number']) {
+  if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
+}
+if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
+console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
+
 if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js']) throw new Error('Excel or cloud-sync runtime dependency missing.');
 console.log('PASS: Excel and Supabase sync dependencies declared');
-console.log('WashDesk validation complete.');
+console.log('Prime Auto Care validation complete.');
