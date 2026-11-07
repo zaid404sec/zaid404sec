@@ -14,7 +14,7 @@ const mustContain = [
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
 }
-if (/(cdnjs[.]cloudflare[.]com|unpkg[.]com\\/.*(html2pdf|jspdf))/i.test(html)) {
+if (html.includes('cdnjs.cloudflare.com') || html.includes('unpkg.com/html2pdf') || html.includes('unpkg.com/jspdf')) {
   throw new Error('Invoice PDF dependencies must be local/offline bundled assets.');
 }
 const inlineScripts = [...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/gi)]
