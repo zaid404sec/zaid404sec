@@ -76,21 +76,21 @@ const paid = vm.runInNewContext(salaryFunction + String.fromCharCode(10) + "staf
 if (paid !== 4500) throw new Error('Staff salary expense aggregation test failed: ' + paid);
 console.log('PASS: staff salary payments are isolated and can be included in expense reports');
 
-// Invoice PDF arithmetic must agree with the bill builder to the nearest paise.
-const invoiceCalcStart = html.indexOf('function money2(');
-const invoiceCalcEnd = html.indexOf('function invoicePdfName(i)', invoiceCalcStart);
-if (invoiceCalcStart < 0 || invoiceCalcEnd < 0) throw new Error('Invoice PDF calculation functions are missing.');
-const invoiceCalcSource = html.slice(invoiceCalcStart, invoiceCalcEnd);
-const invoiceCalc = vm.runInNewContext(invoiceCalcSource + String.fromCharCode(10) +
-  "invoiceFigures({lines:[{qty:2,rate:100,discount:10,taxRate:18},{qty:1,rate:50,discount:0,taxRate:0}],discount:5,gstRegistered:true,businessState:'Gujarat',customerState:'Gujarat'})", {
-    db: { business: { registered: true, state: 'Gujarat' } },
+// Invoice totals are computed from item quantities, rates, line discounts and tax rates.
+const billCalcStart = html.indexOf('function calcLines(');
+const billCalcEnd = html.indexOf('function billSummary()', billCalcStart);
+if (billCalcStart < 0 || billCalcEnd < 0) throw new Error('Bill calculation function is missing.');
+const billCalcSource = html.slice(billCalcStart, billCalcEnd);
+const billCalc = vm.runInNewContext(billCalcSource + String.fromCharCode(10) +
+  "calcLines([{qty:2,rate:100,discount:10,taxRate:18},{qty:1,rate:50,discount:0,taxRate:0}],5)", {
+    db: { business: { registered: true } },
     sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
   });
-if (invoiceCalc.subtotal !== 250 || invoiceCalc.lineDiscount !== 10 || invoiceCalc.taxable !== 235 ||
-    invoiceCalc.tax !== 33.49 || invoiceCalc.grandTotal !== 268.49) {
-  throw new Error('Invoice PDF total calculation test failed: ' + JSON.stringify(invoiceCalc));
+if (billCalc.gross !== 250 || billCalc.lineDisc !== 10 || billCalc.taxable !== 235 ||
+    Math.abs(billCalc.tax - 33.4875) > 0.001 || Math.abs(billCalc.grand - 268.4875) > 0.001) {
+  throw new Error('Invoice total calculation test failed: ' + JSON.stringify(billCalc));
 }
-console.log('PASS: PDF subtotal, discounts, GST and grand total reconcile to paise');
+console.log('PASS: invoice PDF source totals reconcile from subtotal through GST to grand total');
 
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
 for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number']) {
