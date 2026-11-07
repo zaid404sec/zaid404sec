@@ -129,7 +129,8 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="modal-backdrop" id="modal-backdrop"><div class="modal" id="modal"><div class="modal-head"><h3 id="modal-title">Details</h3><button class="close" id="modal-close" aria-label="Close">×</button></div><div id="modal-body"></div></div></div>
 <div id="print-root" class="hide"></div>
-<script src="./html2pdf.bundle.min.js"></script>
+<script src="./pdfmake.bundle.min.js"></script>
+<script src="./pdfmake-vfs.js"></script>
 <script src="./invoice-native.bundle.js"></script>
 <script src="./exceljs.bundle.min.js"></script>
 <script src="./report-export.bundle.js"></script>
@@ -542,98 +543,265 @@
   }
   function invoicePdfName(i){const clean=v=>String(v||'').normalize('NFKD').replace(/[^A-Za-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,32);return `Prime-Auto-Care-${clean(i.number||'Invoice')}.pdf`}
   async function makePdfBlob(i){
-    if(typeof window.html2pdf!=='function')throw new Error('The local PDF generator did not load. Close and reopen Prime Auto Care, then retry.');
-    // Fixed A4-safe canvas: dynamic invoice values stay as text, never as a flattened template image.
-    const PAGE_WIDTH=730;
-    const holder=document.createElement('div');
-    holder.style.cssText=`position:fixed;left:0;top:0;width:${PAGE_WIDTH}px;min-width:${PAGE_WIDTH}px;max-width:${PAGE_WIDTH}px;z-index:-1;pointer-events:none;background:#fff;overflow:visible;`;
-    holder.innerHTML=invoiceHTML(i);
-    const paper=holder.querySelector('.invoice-preview');
-    if(!paper)throw new Error('Invoice preview could not be prepared.');
-    paper.style.cssText=`display:block;width:${PAGE_WIDTH}px!important;min-width:${PAGE_WIDTH}px!important;max-width:${PAGE_WIDTH}px!important;margin:0!important;padding:18px!important;box-sizing:border-box!important;overflow:visible!important;background:#fff!important;color:#19160f!important;font-family:Arial,sans-serif!important;`;
-    const style=document.createElement('style');
-    style.textContent=`
-      *{box-sizing:border-box}
-      .invoice-preview{display:block;width:730px!important;min-width:730px!important;max-width:730px!important;margin:0!important;padding:18px!important;border:1px solid #1d1910!important;border-radius:3px!important;overflow:visible!important;background:#fffdf7!important;color:#19160f!important;font-family:Arial,sans-serif!important}
-      .premium-invoice-header{display:grid;grid-template-columns:78px minmax(0,1fr) 148px;align-items:center;gap:12px;min-height:104px;padding:13px 15px;border:2px solid #17130c;border-radius:3px;background:linear-gradient(118deg,#a77a2b 0%,#e6ca83 28%,#f7e7b5 49%,#d0aa5c 75%,#94691f 100%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
-      .premium-logo-panel{width:72px;height:72px;padding:4px;border:1px solid rgba(35,25,8,.5);background:rgba(255,255,255,.36);display:grid;place-items:center}
-      .premium-logo-panel img{display:block;width:100%;height:100%;object-fit:contain}
-      .premium-brand-center{text-align:center;min-width:0}
-      .premium-brand-center h2{margin:0 0 3px!important;color:#080704!important;font-family:Georgia,serif!important;font-size:23px!important;line-height:1.1!important;letter-spacing:1.1px!important;font-weight:900!important;text-shadow:0 1px 0 rgba(255,255,255,.48),0 2px 2px rgba(45,30,5,.2)}
-      .premium-brand-subtitle{font-family:Georgia,serif;font-weight:800;font-size:13px;letter-spacing:.6px;color:#17120a}
-      .premium-brand-tagline{font-size:8px;font-weight:800;letter-spacing:2px;color:#4b3817;margin:3px 0 5px}
-      .premium-business-details{font-size:8px;line-height:1.35;color:#35270f;overflow-wrap:anywhere}
-      .premium-car-mark{text-align:center;min-width:0}
-      .premium-car-mark svg{display:block;width:100%;height:57px}
-      .premium-car-mark span{display:block;font-size:7px;font-weight:900;letter-spacing:1.1px;color:#211809}
-      .invoice-title-strip{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0 7px;padding:8px 11px;border-bottom:1px solid #b68a3d;border-top:1px solid #e5d1a1;background:linear-gradient(90deg,#fbf4e3,#fffdf8)}
-      .invoice-title-strip>strong{font-family:Georgia,serif;color:#75531e;font-size:14px;letter-spacing:.5px}
-      .invoice-reference{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:5px 12px;font-size:8px;color:#6f6043}
-      .invoice-reference span{white-space:nowrap}.invoice-reference b{color:#17130b}
-      .invoice-status-strip{display:flex;justify-content:space-between;gap:10px;padding:5px 10px;margin-bottom:8px;background:#19160f;color:#e9cf91;font-size:8px;font-weight:900;letter-spacing:.6px}
-      .invoice-party-grid{display:grid;grid-template-columns:1.12fr .88fr;gap:8px;margin:8px 0}
-      .invoice-party-card{min-width:0;padding:9px 11px;border:1px solid #dfc891;border-left:3px solid #b88c3b;border-radius:3px;background:linear-gradient(135deg,#fffdf7,#f8f1df);font-size:9px;line-height:1.45;overflow-wrap:anywhere}
-      .invoice-section-label{margin-bottom:5px;color:#8c6529;font-size:8px;font-weight:900;letter-spacing:1px}
-      .invoice-customer-name{display:block;color:#17130b;font-size:13px;margin-bottom:3px}
-      .invoice-vehicle-number{display:block;font-family:Georgia,serif;font-size:16px;letter-spacing:1px;color:#17130b;margin-bottom:4px}
-      .premium-invoice-table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed;white-space:normal;font-size:9px;margin-top:9px}
-      .premium-invoice-table th{padding:8px 6px;border:1px solid #17130b;background:linear-gradient(180deg,#29251b,#0b0a07);color:#e9cf91;font-size:8px;font-weight:900;letter-spacing:.25px;text-align:left}
-      .premium-invoice-table th:nth-child(1),.premium-invoice-table td:nth-child(1){width:43%}
-      .premium-invoice-table th:nth-child(2),.premium-invoice-table td:nth-child(2){width:11%}
-      .premium-invoice-table th:nth-child(3),.premium-invoice-table td:nth-child(3){width:15%}
-      .premium-invoice-table th:nth-child(4),.premium-invoice-table td:nth-child(4){width:17%}
-      .premium-invoice-table th:nth-child(5),.premium-invoice-table td:nth-child(5){width:14%}
-      .premium-invoice-table td{padding:8px 6px;border:1px solid #d8caa9;white-space:normal;overflow-wrap:anywhere;vertical-align:top;color:#211d15;background:#fffefa}
-      .premium-invoice-table tbody tr:nth-child(even) td{background:#fbf6e9}
-      .premium-invoice-table .help{font-size:8px;color:#786b53;margin-top:2px;line-height:1.35}
-      .invoice-serial{display:inline-block;min-width:18px;color:#886529;font-weight:900}
-      .invoice-preview .right{text-align:right}
-      .invoice-lower-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start;margin-top:10px}
-      .invoice-payment-card{padding:10px 11px;border:1px solid #dfc891;border-radius:3px;background:#fbf5e7;font-size:9px;line-height:1.55;overflow-wrap:anywhere;break-inside:avoid;page-break-inside:avoid}
-      .invoice-payment-row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed #d9cba9}
-      .invoice-payment-row span{color:#62563f}.invoice-payment-row b{text-align:right;color:#19150c}
-      .invoice-payment-status{color:#8b6423!important}
-      .invoice-payment-note{margin-top:7px;color:#796744;font-size:8px}
-      .invoice-summary{display:block;width:100%;max-width:none;margin:0!important;padding:7px 9px;border:1px solid #e0cfaa;border-radius:3px;background:#fffefa;font-size:9px;line-height:1.45;break-inside:avoid;page-break-inside:avoid}
-      .invoice-summary-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0}
-      .invoice-summary-row span{flex:1 1 auto;min-width:0;color:#5e5544}
-      .invoice-summary-row b{flex:0 0 auto;max-width:58%;text-align:right;white-space:nowrap;color:#17130b}
-      .invoice-grand-total{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:7px 0;padding:10px 11px;border:1px solid #7d5b20;border-radius:3px;background:linear-gradient(110deg,#9e7328,#f2d88f 45%,#bb9142);color:#171108}
-      .invoice-grand-total span{flex:1 1 auto;min-width:0;font-size:10px;font-weight:900;letter-spacing:.65px}
-      .invoice-grand-total strong{flex:0 0 auto;font-size:17px;white-space:nowrap;text-align:right;color:#0b0905;text-shadow:0 1px 0 rgba(255,255,255,.5)}
-      .balance-row{border-top:1px dashed #bba16e;padding-top:6px;margin-top:4px;font-size:10px}
-      .invoice-preview .help{font-size:8px;color:#75684f;line-height:1.4}
-      .invoice-footer-grid{display:grid;grid-template-columns:1fr .86fr;gap:9px;margin-top:12px;break-inside:avoid;page-break-inside:avoid}
-      .invoice-terms-card,.invoice-signature-card{position:relative;min-width:0;border:1px solid #dfc891;background:#fffdf7;overflow:hidden}
-      .invoice-footer-label{padding:6px 9px;background:#17140e;color:#e9cf91;font-size:8px;font-weight:900;letter-spacing:.75px}
-      .invoice-terms-card p{margin:7px 9px;font-size:8px;line-height:1.42;color:#61563f;overflow-wrap:anywhere;white-space:pre-line}
-      .invoice-signature-card{padding-bottom:8px;text-align:center}
-      .invoice-signature-space{height:24px;margin:8px 18px 5px;border-bottom:1px solid #b89a60}
-      .invoice-signature-card b{font-family:Georgia,serif;font-size:10px;color:#21190b}
-      .invoice-signature-caption{font-size:8px;color:#756747;margin-top:3px}
-      .invoice-gold-seal{position:absolute;right:8px;top:38px;width:38px;height:38px;border:2px solid #b18a3b;border-radius:50%;display:grid;place-content:center;background:radial-gradient(circle,#fff4ce,#cba34d);color:#4b3612;font-size:6px;font-weight:900;line-height:1.05;transform:rotate(8deg)}
-      .invoice-bottom-line{margin-top:9px;padding-top:5px;border-top:1px solid #d9c28e;text-align:center;color:#8b6a31;font-size:7px;font-weight:900;letter-spacing:1px}
-      .invoice-preview tr,.invoice-preview .premium-invoice-header,.invoice-preview .invoice-title-strip{break-inside:avoid;page-break-inside:avoid}
-    `;
-    holder.prepend(style);
-    document.body.appendChild(holder);
-    try{
-      if(document.fonts?.ready)await document.fonts.ready;
-      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-      const measuredWidth=Math.ceil(Math.max(paper.getBoundingClientRect().width,paper.scrollWidth));
-      if(measuredWidth>PAGE_WIDTH+1)throw new Error('Invoice content exceeds the A4 print area. Please reopen Prime Auto Care and retry.');
-      const captureHeight=Math.max(900,paper.scrollHeight+80);
-      const blob=await window.html2pdf().set({
-        margin:[4,5,6,5],
-        filename:invoicePdfName(i),
-        image:{type:'jpeg',quality:.99},
-        html2canvas:{scale:2,useCORS:false,backgroundColor:'#fffdf7',windowWidth:760,windowHeight:captureHeight,scrollX:0,scrollY:0},
-        jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
-        pagebreak:{mode:['css','legacy'],avoid:['.invoice-summary','.invoice-lower-grid','.invoice-footer-grid','.premium-invoice-header','.invoice-title-strip']}
-      }).from(paper).outputPdf('blob');
-      if(!(blob instanceof Blob)||blob.size<500)throw new Error('The PDF file came back empty. Please retry.');
-      return blob;
-    }finally{holder.remove()}
+    const pdfMake=window.pdfMake;
+    if(!pdfMake||typeof pdfMake.createPdf!=='function')throw new Error('The local invoice PDF engine did not load. Close and reopen Prime Auto Care, then retry.');
+    if(!pdfMake.vfs||!Object.keys(pdfMake.vfs).length)throw new Error('The invoice PDF fonts did not load. Reopen Prime Auto Care and retry.');
+    const b=i.businessSnapshot||db.business,registered=i.gstRegistered??b.registered;
+    const txLines=invoiceTaxLines(i),cgst=sum(txLines,x=>x.cgst),sgst=sum(txLines,x=>x.sgst),igst=sum(txLines,x=>x.igst),gstTotal=Number(i.tax??sum(txLines,x=>x.tax))||0;
+    const customer=db.customers.find(c=>c.id===i.customerId);
+    const staffName=i.staffNameSnapshot||db.staff.find(st=>st.id===i.staffId)?.name||'Not recorded';
+    const payments=db.payments.filter(p=>p.invoiceId===i.id),totalPaid=paid(i),balance=invoiceDue(i);
+    const status=balance>0?'CREDIT / PAYMENT DUE':'PAID IN FULL';
+    const safeText=value=>String(value??'').trim()||'—';
+    const details=[b.phone?'Phone: '+b.phone:'',registered&&b.gstin?'GSTIN: '+b.gstin:''].filter(Boolean).join('  |  ');
+    const brandDetails=[safeText(b.address),[b.city,b.state].filter(Boolean).join(', '),details].filter(x=>x!=='—').join('  |  ');
+    const formatAmount=value=>INR(Number(value)||0);
+    const logoData=await new Promise(resolve=>{
+      if(window.__primeAutoCareLogoData){resolve(window.__primeAutoCareLogoData);return;}
+      const img=new Image();
+      img.onload=()=>{
+        try{
+          const canvas=document.createElement('canvas');
+          canvas.width=img.naturalWidth||320;canvas.height=img.naturalHeight||220;
+          const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);
+          resolve(canvas.toDataURL('image/jpeg',.93));
+        }catch(error){console.warn('Prime Auto Care logo conversion failed:',error);resolve(null);}
+      };
+      img.onerror=()=>resolve(null);
+      img.src='./prime-auto-care-logo.jpg';
+    });
+    const carSvg=String.raw`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="94" viewBox="0 0 240 94">
+      <path d="M10 66 L22 50 Q29 43 47 41 L72 36 L94 17 Q101 10 113 10 L158 10 Q176 11 188 30 L205 44 L224 48 Q233 50 236 62 L234 73 L213 73 Q211 57 195 57 Q178 57 176 73 L72 73 Q70 57 53 57 Q35 57 33 73 L12 73 Z" fill="none" stroke="#17130c" stroke-width="4.3" stroke-linejoin="round"/>
+      <path d="M88 36 L106 17 L157 17 Q171 19 181 36 Z M24 51 L47 51 M204 48 L226 53" fill="none" stroke="#17130c" stroke-width="2.7" stroke-linecap="round"/>
+      <circle cx="53" cy="74" r="10" fill="#d6b15f" stroke="#17130c" stroke-width="3.5"/><circle cx="195" cy="74" r="10" fill="#d6b15f" stroke="#17130c" stroke-width="3.5"/>
+      <path d="M113 30 L129 24 L145 30 L142 49 L129 61 L116 49 Z" fill="#17130c" stroke="#d7b45f" stroke-width="1.5"/>
+    </svg>`;
+    const paymentBody=[
+      [{text:'PAYMENT DETAILS',style:'sectionTitleDark',colSpan:2,fillColor:'#17130c',border:[false,false,false,false]},{}],
+      [{text:'Payment mode',style:'smallLabel'},{text:safeText(payments.length?'Recorded below':i.paymentMode||'Credit / Not paid'),style:'smallValue',alignment:'right'}]
+    ];
+    if(payments.length){
+      payments.forEach(p=>paymentBody.push([
+        {text:(p.mode||'Other')+(p.date?'  ·  '+p.date:''),style:'smallLabel'},
+        {text:formatAmount(p.amount),style:'smallValue',alignment:'right'}
+      ]));
+    }
+    paymentBody.push(
+      [{text:'TOTAL RECEIVED',style:'smallLabelBold'},{text:formatAmount(totalPaid),style:'smallValueBold',alignment:'right'}],
+      [{text:'INVOICE STATUS',style:'smallLabelBold'},{text:status,style:'statusValue',alignment:'right'}]
+    );
+    const summaryBody=[
+      [{text:'Subtotal',style:'smallLabel'},{text:formatAmount(i.subtotal),style:'smallValue',alignment:'right'}],
+      [{text:'Item discounts',style:'smallLabel'},{text:'− '+formatAmount(i.lineDiscount||0),style:'smallValue',alignment:'right'}],
+      [{text:'Bill discount',style:'smallLabel'},{text:'− '+formatAmount(i.discount||0),style:'smallValue',alignment:'right'}],
+      [{text:'Taxable value',style:'smallLabel'},{text:formatAmount(i.taxable),style:'smallValue',alignment:'right'}]
+    ];
+    if(registered){
+      if(igst>0)summaryBody.push([{text:'IGST',style:'smallLabel'},{text:formatAmount(igst),style:'smallValue',alignment:'right'}]);
+      else{
+        summaryBody.push([{text:'CGST',style:'smallLabel'},{text:formatAmount(cgst),style:'smallValue',alignment:'right'}]);
+        summaryBody.push([{text:'SGST',style:'smallLabel'},{text:formatAmount(sgst),style:'smallValue',alignment:'right'}]);
+      }
+      summaryBody.push([{text:'GST total',style:'smallLabel'},{text:formatAmount(gstTotal),style:'smallValue',alignment:'right'}]);
+    }
+    summaryBody.push(
+      [{text:'GRAND TOTAL',style:'grandTotalLabel',fillColor:'#d6b15f',border:[true,true,true,true]},{text:formatAmount(i.grandTotal),style:'grandTotalValue',alignment:'right',fillColor:'#d6b15f',border:[true,true,true,true]}],
+      [{text:'Paid',style:'smallLabelBold'},{text:formatAmount(totalPaid),style:'smallValueBold',alignment:'right'}],
+      [{text:'BALANCE DUE',style:'balanceLabel'},{text:formatAmount(balance),style:'balanceValue',alignment:'right'}]
+    );
+    const lineRows=(i.lines||[]).map((line,index)=>{
+      const tax=txLines[index]||{taxable:0,rate:0,tax:0};
+      return [
+        {stack:[
+          {text:(index+1)+'.  '+safeText(line.name),style:'itemName'},
+          {text:(line.kind==='service'?'Service':'Product')+'  |  '+(line.sac||'SAC/HSN not set')+'  |  GST '+(tax.rate||0)+'%',style:'itemMeta'}
+        ]},
+        {text:String(Number(line.qty)||0)+' '+(line.unit||''),style:'itemValue',alignment:'center'},
+        {text:formatAmount(line.rate),style:'itemValue',alignment:'right'},
+        {text:formatAmount(tax.taxable),style:'itemValue',alignment:'right'},
+        {text:formatAmount(tax.tax),style:'itemValue',alignment:'right'}
+      ];
+    });
+    const docDefinition={
+      info:{title:'Prime Auto Care Invoice '+i.number,author:'Prime Auto Care',subject:'Gold and black car wash service invoice'},
+      pageSize:'A4',pageMargins:[28,27,28,34],
+      defaultStyle:{font:'Roboto',fontSize:9,color:'#241f16',lineHeight:1.15},
+      styles:{
+        brandTitle:{fontSize:21,bold:true,color:'#11100c',characterSpacing:1.1},
+        brandSubtitle:{fontSize:11,bold:true,color:'#18140d',characterSpacing:.6},
+        brandTagline:{fontSize:7,bold:true,color:'#5d471f',characterSpacing:1.5},
+        brandDetails:{fontSize:7,color:'#44361e',lineHeight:1.25},
+        carCaption:{fontSize:6,bold:true,color:'#2d210f',characterSpacing:1},
+        invoiceTitle:{fontSize:13,bold:true,color:'#75531e',characterSpacing:.5},
+        metaLabel:{fontSize:7,color:'#786744'},
+        metaValue:{fontSize:8,bold:true,color:'#17130b'},
+        statusBand:{fontSize:8,bold:true,color:'#f0d99e',characterSpacing:.5},
+        sectionTitle:{fontSize:8,bold:true,color:'#8a6528',characterSpacing:1},
+        sectionTitleDark:{fontSize:8,bold:true,color:'#e9cf91',characterSpacing:.8,margin:[7,6,7,6]},
+        partyName:{fontSize:12,bold:true,color:'#17130b',margin:[0,2,0,3]},
+        partyText:{fontSize:8,color:'#40382a',lineHeight:1.3},
+        vehicleNumber:{fontSize:15,bold:true,color:'#18130b',characterSpacing:.7,margin:[0,2,0,4]},
+        itemHeader:{fontSize:7,bold:true,color:'#f0d99e',characterSpacing:.25},
+        itemName:{fontSize:8.5,bold:true,color:'#211b10'},
+        itemMeta:{fontSize:7,color:'#76684d',margin:[0,2,0,0]},
+        itemValue:{fontSize:8,color:'#211d15'},
+        smallLabel:{fontSize:8,color:'#635944',margin:[3,3,3,3]},
+        smallValue:{fontSize:8,bold:true,color:'#1b170f',margin:[3,3,3,3]},
+        smallLabelBold:{fontSize:8,bold:true,color:'#4a3c24',margin:[4,3,4,3]},
+        smallValueBold:{fontSize:8,bold:true,color:'#17130b',margin:[4,3,4,3]},
+        grandTotalLabel:{fontSize:9,bold:true,color:'#171108',characterSpacing:.7,margin:[8,8,8,8]},
+        grandTotalValue:{fontSize:15,bold:true,color:'#0b0905',margin:[8,8,8,8]},
+        balanceLabel:{fontSize:8,bold:true,color:'#6b4b1b',margin:[6,3,5,3]},
+        balanceValue:{fontSize:9,bold:true,color:'#17130b',margin:[6,3,5,3]},
+        statusValue:{fontSize:7,bold:true,color:balance>0?'#9a352a':'#236a4f',margin:[3,3,3,3]},
+        footerLabel:{fontSize:8,bold:true,color:'#e9cf91',characterSpacing:.7},
+        footerText:{fontSize:7.5,color:'#5d513a',lineHeight:1.3},
+        signatureName:{fontSize:9,bold:true,color:'#241b0d'},
+        signatureCaption:{fontSize:7,color:'#766745'},
+        bottomLine:{fontSize:6.5,bold:true,color:'#86652e',characterSpacing:.9}
+      },
+      background:(pageNumber,pageSize)=>({
+        canvas:[{type:'rect',x:14,y:14,w:pageSize.width-28,h:pageSize.height-28,lineWidth:.7,lineColor:'#c5a15d'}]
+      }),
+      footer:(pageNumber,pageCount)=>({
+        columns:[
+          {text:'PRIME AUTO CARE  ·  GOLD & BLACK CAR SERVICES  ·  THANK YOU FOR YOUR TRUST',style:'bottomLine',alignment:'center'},
+          {text:'Page '+pageNumber+' of '+pageCount,fontSize:6,color:'#8a7755',alignment:'right',margin:[0,0,0,0],width:'auto'}
+        ],
+        margin:[28,0,28,15]
+      }),
+      content:[
+        {
+          table:{widths:[70,'*',120],body:[[
+            logoData?{image:logoData,fit:[58,58],alignment:'center',margin:[3,0,3,0],border:[false,false,false,false]}:{text:'PRIME\nAUTO CARE',bold:true,fontSize:10,alignment:'center',color:'#17130c'},
+            {stack:[
+              {text:'PRIME AUTO CARE',style:'brandTitle',alignment:'center'},
+              {text:'GOLD & BLACK CAR SERVICES',style:'brandSubtitle',alignment:'center',margin:[0,2,0,0]},
+              {text:'A PREMIUM AUTOMOTIVE STUDIO',style:'brandTagline',alignment:'center',margin:[0,3,0,4]},
+              {text:brandDetails,style:'brandDetails',alignment:'center'}
+            ],margin:[2,5,2,5],border:[false,false,false,false]},
+            {stack:[{svg:carSvg,width:112,alignment:'center'},{text:'CARE  ·  DETAIL  ·  DRIVE',style:'carCaption',alignment:'center',margin:[0,-1,0,0]}],border:[false,false,false,false],margin:[0,7,0,0]}
+          ]]},
+          layout:{
+            fillColor:()=> '#e6c77d',
+            hLineWidth:()=>1.4,vLineWidth:()=>1.4,hLineColor:()=> '#8b672a',vLineColor:()=> '#8b672a',
+            paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>7,paddingBottom:()=>7
+          }
+        },
+        {
+          margin:[0,10,0,6],
+          table:{widths:['*','auto'],body:[[
+            {text:registered?'TAX INVOICE / SERVICE BILL':'INVOICE / SERVICE BILL',style:'invoiceTitle',margin:[6,8,3,8],border:[false,false,false,false]},
+            {stack:[
+              {text:'INVOICE NO.  '+safeText(i.number),style:'metaValue',alignment:'right'},
+              {text:'DATE  '+safeText(i.date),style:'metaLabel',alignment:'right',margin:[0,2,0,0]},
+              {text:'FINANCIAL YEAR  '+safeText(i.financialYear||fy(i.date)),style:'metaLabel',alignment:'right',margin:[0,2,0,0]}
+            ],margin:[6,5,6,5],border:[false,false,false,false]}
+          ]]},
+          layout:{fillColor:()=> '#fbf4e3',hLineWidth:()=>.6,vLineWidth:()=>0,hLineColor:()=> '#bd9650',paddingLeft:()=>5,paddingRight:()=>5,paddingTop:()=>2,paddingBottom:()=>2}
+        },
+        {
+          margin:[0,0,0,9],
+          table:{widths:['*'],body:[[{text:status+'     |     Thank you for choosing Prime Auto Care',style:'statusBand',alignment:'center',margin:[6,6,6,6],border:[false,false,false,false]}]]},
+          layout:{fillColor:()=> '#17130c',hLineWidth:()=>0,vLineWidth:()=>0,paddingLeft:()=>3,paddingRight:()=>3,paddingTop:()=>0,paddingBottom:()=>0}
+        },
+        {
+          margin:[0,0,0,9],
+          table:{widths:['*','*'],body:[[
+            {stack:[
+              {text:'BILL TO',style:'sectionTitle'},
+              {text:safeText(invoiceCustomerName(i)),style:'partyName'},
+              {text:safeText(i.customerAddress||customer?.address||'Address not provided'),style:'partyText'},
+              {text:[i.customerCity||customer?.city,i.customerState||customer?.state].filter(Boolean).join(', '),style:'partyText'},
+              {text:'Mobile: '+safeText(customer?.phone)+(i.customerGstin?'  |  GSTIN: '+i.customerGstin:''),style:'partyText'}
+            ],fillColor:'#fff9e9',margin:[9,8,9,8],border:[true,true,true,true]},
+            {stack:[
+              {text:'VEHICLE & SERVICE',style:'sectionTitle'},
+              {text:safeText(i.vehicleNumber||'WALK-IN'),style:'vehicleNumber'},
+              {text:[{text:'Vehicle class: ',bold:false},{text:safeText(i.vehicleType),bold:true}],style:'partyText'},
+              {text:'Odometer: '+(i.odometer?safeText(i.odometer)+' km':'—'),style:'partyText'},
+              {text:'Service performed by: '+safeText(staffName),style:'partyText'}
+            ],fillColor:'#fff9e9',margin:[9,8,9,8],border:[true,true,true,true]}
+          ]]},
+          layout:{hLineWidth:()=>.7,vLineWidth:()=>8,hLineColor:()=> '#d9c18a',vLineColor:()=> '#ffffff',paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>0,paddingBottom:()=>0}
+        },
+        {
+          table:{headerRows:1,keepWithHeaderRows:1,dontBreakRows:true,widths:['*',42,68,82,65],body:[
+            [
+              {text:'DESCRIPTION / SAC-HSN',style:'itemHeader'},
+              {text:'QTY',style:'itemHeader',alignment:'center'},
+              {text:'UNIT PRICE',style:'itemHeader',alignment:'right'},
+              {text:'TAXABLE',style:'itemHeader',alignment:'right'},
+              {text:'GST',style:'itemHeader',alignment:'right'}
+            ],
+            ...(lineRows.length?lineRows:[[{text:'No service items recorded.',style:'itemMeta',colSpan:5},{},{},{},{}]])
+          ]},
+          layout:{
+            fillColor:(row)=>row===0?'#17130c':(row%2?'#fffdf7':'#fbf5e6'),
+            hLineColor:()=> '#d7c7a4',vLineColor:()=> '#d7c7a4',hLineWidth:()=>.55,vLineWidth:()=>.55,
+            paddingLeft:()=>6,paddingRight:()=>6,paddingTop:(row)=>row===0?7:8,paddingBottom:(row)=>row===0?7:8
+          }
+        },
+        {
+          margin:[0,11,0,0],
+          table:{widths:['*','*'],body:[[
+            {
+              stack:[
+                {text:'PAYMENT DETAILS',style:'sectionTitleDark',fillColor:'#17130c',margin:[6,8,6,8]},
+                {text:'Payment method: '+(payments.length?payments.map(p=>p.mode||'Other').filter((m,n,a)=>a.indexOf(m)===n).join(' / '):safeText(i.paymentMode||'Credit / Not paid')),style:'partyText',margin:[3,5,3,4]},
+                ...payments.map(p=>({columns:[{text:(p.mode||'Other')+(p.date?'  ·  '+p.date:''),style:'smallLabel',width:'*'},{text:formatAmount(p.amount),style:'smallValue',alignment:'right',width:'auto'}],margin:[3,2,3,2]})),
+                {columns:[{text:'TOTAL RECEIVED',style:'smallLabelBold',width:'*'},{text:formatAmount(totalPaid),style:'smallValueBold',alignment:'right',width:'auto'}],margin:[3,5,3,3]},
+                {text:status,style:'statusValue',margin:[3,5,3,3]},
+                {text:balance>0?'Payment is pending. Please clear the balance at your convenience.':'No balance is outstanding. Thank you.',style:'itemMeta',margin:[3,3,3,4]}
+              ],
+              fillColor:'#fbf5e7',margin:[9,8,9,8],border:[true,true,true,true]
+            },
+            {
+              table:{widths:['*','auto'],body:summaryBody},
+              layout:{
+                hLineColor:()=> '#d9cba9',vLineWidth:()=>0,hLineWidth:()=>.45,
+                paddingLeft:()=>7,paddingRight:()=>7,paddingTop:()=>2,paddingBottom:()=>2
+              },
+              margin:[0,0,0,0],border:[false,false,false,false]
+            }
+          ]]},
+          layout:{hLineWidth:()=>0,vLineWidth:()=>8,vLineColor:()=> '#ffffff',paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>0,paddingBottom:()=>0}
+        },
+        {
+          margin:[0,11,0,0],
+          table:{widths:['*','*'],body:[[
+            {
+              stack:[
+                {text:'TERMS & CONDITIONS',style:'footerLabel',fillColor:'#17130c',margin:[7,7,7,7]},
+                {text:safeText(i.notes||'Please retain this invoice for your records.'),style:'footerText',margin:[7,7,7,3]},
+                {text:safeText(b.terms||'Thank you for choosing Prime Auto Care. Drive safe!'),style:'footerText',margin:[7,2,7,7]}
+              ],
+              fillColor:'#fffdf7',border:[true,true,true,true]
+            },
+            {
+              stack:[
+                {text:'AUTHORISED SIGNATURE',style:'footerLabel',fillColor:'#17130c',margin:[7,7,7,7]},
+                {text:' ',margin:[0,13,0,8],decoration:'underline',decorationColor:'#b89a60'},
+                {text:'For PRIME AUTO CARE',style:'signatureName',alignment:'center',margin:[0,0,0,3]},
+                {text:'Authorised Signatory',style:'signatureCaption',alignment:'center'},
+                {text:'PRIME  ·  AUTO  ·  CARE',fontSize:6,bold:true,color:'#8a6628',alignment:'center',margin:[0,6,0,4]}
+              ],
+              fillColor:'#fffdf7',border:[true,true,true,true]
+            }
+          ]]},
+          layout:{hLineColor:()=> '#d9c18a',vLineColor:()=> '#d9c18a',hLineWidth:()=>.7,vLineWidth:()=>8,paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>0,paddingBottom:()=>0}
+        },
+        {text:'PRIME AUTO CARE  ·  GOLD & BLACK CAR SERVICES  ·  THANK YOU FOR YOUR TRUST',alignment:'center',style:'bottomLine',margin:[0,10,0,0]}
+      ]
+    };
+    return await new Promise((resolve,reject)=>{
+      try{
+        pdfMake.createPdf(docDefinition).getBlob(blob=>{
+          if(!(blob instanceof Blob)||blob.size<500){reject(new Error('The invoice PDF could not be generated. Please retry.'));return;}
+          resolve(blob);
+        });
+      }catch(error){reject(error)}
+    });
   }
   function blobAsDataUrl(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error||new Error('Could not prepare the PDF file.'));reader.readAsDataURL(blob)})}
   function downloadInvoiceBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
