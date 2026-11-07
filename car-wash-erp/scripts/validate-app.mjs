@@ -96,8 +96,7 @@ const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 
 for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
 }
-if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?
- then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
+if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
 console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
 
 if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js']) throw new Error('Excel or cloud-sync runtime dependency missing.');
