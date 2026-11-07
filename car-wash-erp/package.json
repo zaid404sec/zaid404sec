@@ -1,13 +1,14 @@
 {
   "name": "washdesk-car-wash-erp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "WashDesk Car Wash Business Manager",
   "main": "electron/main.cjs",
   "scripts": {
     "desktop": "npm run prepare:assets && electron .",
-    "dist:win": "npm run prepare:assets && electron-builder --win nsis --x64",
-    "prepare:assets": "node scripts/prepare-assets.mjs"
+    "dist:win": "npm run prepare:assets && npm run validate && electron-builder --win nsis --x64",
+    "prepare:assets": "node scripts/prepare-assets.mjs",
+    "validate": "node scripts/validate-app.mjs"
   },
   "devDependencies": {
     "electron": "^35.0.0",
@@ -17,6 +18,9 @@
   "dependencies": {
     "@capacitor/core": "^8.0.0",
     "@capgo/capacitor-file-sharer": "^8.1.16",
-    "html2pdf.js": "0.10.1"
+    "html2pdf.js": "0.10.1",
+    "@capacitor/app-launcher": "^8.0.1",
+    "@supabase/supabase-js": "^2.119.0",
+    "@andreeewill/exceljs": "5.0.3"
   }
 }

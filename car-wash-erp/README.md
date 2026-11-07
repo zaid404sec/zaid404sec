@@ -13,6 +13,12 @@ A mobile-friendly, installable starter app tailored to a car washing centre.
 - JSON backup/restore and invoice CSV export.
 - Service-worker caching for the app shell and install-to-home-screen support.
 
+## Version 1.1.0 migration and updates
+
+- **Windows:** Install the new EXE over the existing WashDesk installation in the same folder. Electron stores browser data separately from the installer files; keep a JSON backup before updating.
+- **Android:** This build uses a new application ID because the old debug-signing private key is not available in the build environment. It installs beside the previous app so the old records remain untouched. Export a backup from the old app, install **WashDesk Updated**, then use Business Settings → Restore backup once. Do not uninstall the old app until the restored records are checked.
+- **Cloud sync:** A Supabase project, the included SQL setup, and the same sign-in on every device are required before realtime multi-device sync becomes active. Offline changes stay local and are uploaded when the device reconnects.
+
 ## Important limitations — read before using live business data
 This is a first working frontend edition. Business data is stored in the current browser's local storage. It does not yet provide cloud sync, multi-user accounts, role permissions, automatic server backup, a secured backend database, complete double-entry accounting, bank reconciliation, statutory audited Profit & Loss / Balance Sheet, GST return filing, IRN e-invoice generation, e-way bills, payroll compliance, supplier ledgers or AMC/prepaid wash-pass redemption. Use Export Backup regularly. Do not use a shared/public device for live customer data.
 

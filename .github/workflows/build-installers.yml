@@ -46,12 +46,14 @@ jobs:
           node-version: 22
       - name: Install Capacitor
         run: npm install @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
-      - name: Prepare local PDF and native share assets
+      - name: Prepare local PDF, reports and cloud assets
         run: npm run prepare:assets
+      - name: Validate app syntax and business calculations
+        run: npm run validate
       - name: Prepare web assets
         run: |
           mkdir www
-          cp index.html manifest.webmanifest icon.svg html2pdf.bundle.min.js invoice-native.bundle.js www/
+          cp index.html manifest.webmanifest icon.svg html2pdf.bundle.min.js invoice-native.bundle.js exceljs.bundle.min.js report-export.bundle.js cloud-sync.bundle.js cloud-sync-setup.sql www/
       - name: Add Android platform
         run: npx cap add android
       - name: Sync web app

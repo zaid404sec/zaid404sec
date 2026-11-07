@@ -8,6 +8,10 @@ files:
   - icon.svg
   - html2pdf.bundle.min.js
   - invoice-native.bundle.js
+  - exceljs.bundle.min.js
+  - report-export.bundle.js
+  - cloud-sync.bundle.js
+  - cloud-sync-setup.sql
   - electron/**
   - package.json
 win:
