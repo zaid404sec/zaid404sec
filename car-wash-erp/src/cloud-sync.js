@@ -7,6 +7,7 @@ let channel = null;
 let localProvider = null;
 let remoteHandler = null;
 let pushTimer = null;
+let queuedPayload = null;
 let lastPayloadString = '';
 let statusText = 'Not connected';
 let syncing = false;
@@ -14,6 +15,18 @@ let syncing = false;
 function readConfig() { try { return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}'); } catch { return {}; } }
 function setStatus(value) { statusText = value; window.dispatchEvent(new CustomEvent('washdesk-cloud-status', { detail: value })); }
 function clone(value) { return JSON.parse(JSON.stringify(value ?? {})); }
+function stableStringify(value) {
+  const normalize = input => {
+    if (Array.isArray(input)) return input.map(normalize);
+    if (input && typeof input === 'object') {
+      const ordered = {};
+      Object.keys(input).sort().forEach(key => { ordered[key] = normalize(input[key]); });
+      return ordered;
+    }
+    return input;
+  };
+  return JSON.stringify(normalize(value));
+}
 function initialize(config) {
   supabase = createClient(config.url, config.anonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }, realtime: { params: { eventsPerSecond: 8 } } });
 }
@@ -21,7 +34,7 @@ async function publishPayload(payload) {
   if (!supabase || !user || syncing) return false;
   syncing = true;
   const body = clone(payload);
-  const bodyString = JSON.stringify(body);
+  const bodyString = stableStringify(body);
   const stamp = new Date().toISOString();
   lastPayloadString = bodyString;
   setStatus('Syncing…');
@@ -35,13 +48,26 @@ async function publishPayload(payload) {
     setStatus(navigator.onLine ? 'Sync error · check setup' : 'Offline · changes saved on this device');
     console.error('WashDesk cloud upload failed:', error);
     return false;
-  } finally { syncing = false; }
+  } finally {
+    syncing = false;
+    if (queuedPayload) queueQueuedPush(100);
+  }
+}
+function queueQueuedPush(delay = 850) {
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(async () => {
+    if (!user || !supabase || syncing || !queuedPayload) return;
+    const snapshot = queuedPayload;
+    queuedPayload = null;
+    const saved = await publishPayload(snapshot);
+    if (!saved) queuedPayload = queuedPayload || snapshot;
+    if (queuedPayload && navigator.onLine) queueQueuedPush(saved ? 100 : 2500);
+  }, delay);
 }
 function schedulePush(payload) {
   if (!user || !supabase) return;
-  const snapshot = clone(payload);
-  clearTimeout(pushTimer);
-  pushTimer = setTimeout(() => publishPayload(snapshot), 850);
+  queuedPayload = clone(payload);
+  queueQueuedPush(850);
 }
 function listenForChanges() {
   if (!supabase || !user) return;
@@ -50,11 +76,11 @@ function listenForChanges() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'washdesk_sync', filter: 'user_id=eq.' + user.id }, async event => {
       const incoming = event.new?.payload;
       if (!incoming) return;
-      const text = JSON.stringify(incoming);
+      const text = stableStringify(incoming);
       if (text === lastPayloadString || !remoteHandler) return;
       try {
         const merged = await remoteHandler(incoming);
-        if (JSON.stringify(merged) !== text) schedulePush(merged);
+        if (stableStringify(merged) !== text) schedulePush(merged);
         setStatus('Connected · update received');
       } catch (error) { console.error('WashDesk cloud merge failed:', error); setStatus('Cloud update error'); }
     }).subscribe(state => {
@@ -68,8 +94,8 @@ async function initialSync() {
   if (error) throw error;
   if (data?.payload && remoteHandler) {
     const merged = await remoteHandler(data.payload);
-    const mergedText = JSON.stringify(merged);
-    if (mergedText !== JSON.stringify(data.payload)) await publishPayload(merged);
+    const mergedText = stableStringify(merged);
+    if (mergedText !== stableStringify(data.payload)) await publishPayload(merged);
     else { lastPayloadString = mergedText; setStatus('Connected · live sync on'); }
   } else if (localProvider) {
     await publishPayload(localProvider());
@@ -122,7 +148,7 @@ async function nextInvoiceNumber({ prefix, date, minNext }) {
 async function disconnect() {
   clearTimeout(pushTimer);
   if (channel && supabase) await supabase.removeChannel(channel);
-  channel = null; user = null; supabase = null; lastPayloadString = '';
+  channel = null; user = null; supabase = null; lastPayloadString = ''; queuedPayload = null;
   localStorage.removeItem(CONFIG_KEY);
   setStatus('Disconnected · local data remains on this device');
 }
