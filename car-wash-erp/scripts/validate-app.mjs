@@ -11,7 +11,8 @@ const mustContain = [
   'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle',
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorized Signatory',
-  'cloud-otp-form', 'requestEmailOtp', 'verifyEmailOtp', 'Prime-Auto-Care-'
+  'cloud-otp-form', 'requestEmailOtp', 'verifyEmailOtp', 'Prime-Auto-Care-',
+  'const PAGE_WIDTH=730;', 'margin:[5,5,7,5]', 'windowWidth:760', 'invoice-grand-total strong', 'invoice-summary-row b'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -91,6 +92,41 @@ if (billCalc.gross !== 250 || billCalc.lineDisc !== 10 || billCalc.taxable !== 2
   throw new Error('Invoice total calculation test failed: ' + JSON.stringify(billCalc));
 }
 console.log('PASS: invoice PDF source totals reconcile from subtotal through GST to grand total');
+
+// Verify the rendered invoice markup includes all money fields that were being
+// clipped from the right edge of customer PDFs.
+const invoiceHtmlStart = html.indexOf('function invoiceHTML(i){');
+const invoiceHtmlEnd = html.indexOf('function invoicePdfName(i)', invoiceHtmlStart);
+if (invoiceHtmlStart < 0 || invoiceHtmlEnd < 0) throw new Error('Invoice PDF HTML builder was not found.');
+const invoiceHtmlSource = html.slice(invoiceHtmlStart, invoiceHtmlEnd);
+const sampleInvoice = {
+  id:'pdf-test', number:'TEST-001', date:'2026-11-07', financialYear:'26-27',
+  customerId:null, customerNameSnapshot:'PDF Test Customer', customerAddress:'Surat',
+  customerCity:'Surat', customerState:'Gujarat', vehicleNumber:'GJ05AB1234',
+  vehicleType:'Private Car', staffId:null, staffNameSnapshot:'Test Washer',
+  businessSnapshot:{name:'Prime Auto Care',address:'Surat',city:'Surat',state:'Gujarat',stateCode:'24',registered:false},
+  gstRegistered:false, lines:[{name:'Premium Wash',kind:'service',sac:'',qty:1,unit:'service',rate:100,discount:0}],
+  subtotal:100,lineDiscount:0,discount:0,taxable:100,tax:0,grandTotal:100,
+  paymentMode:'Cash',notes:''
+};
+const invoiceMarkup = vm.runInNewContext(
+  invoiceHtmlSource + String.fromCharCode(10) + 'invoiceHTML(sampleInvoice)',
+  {
+    db:{business:sampleInvoice.businessSnapshot,staff:[],customers:[],payments:[]},
+    sum:(rows,fn)=>rows.reduce((total,row)=>total+Number(fn?fn(row):row||0),0),
+    esc:value=>String(value??''),
+    INR:value=>'₹'+Number(value||0).toFixed(2),
+    invoiceTaxLines:()=>[{taxable:100,rate:0,tax:0,cgst:0,sgst:0,igst:0}],
+    invoiceCustomerName:()=> 'PDF Test Customer',
+    paid:()=>25,
+    invoiceDue:()=>75,
+    fy:()=> '26-27'
+  }
+);
+for (const field of ['GRAND TOTAL','₹100.00','Paid','₹25.00','Balance due','₹75.00','Service performed by:']) {
+  if (!invoiceMarkup.includes(field)) throw new Error('Invoice PDF is missing required field: ' + field);
+}
+console.log('PASS: invoice PDF HTML includes Grand Total, Paid, Balance Due and assigned staff');
 
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
 for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number']) {
