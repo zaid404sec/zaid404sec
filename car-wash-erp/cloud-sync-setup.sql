@@ -28,7 +28,7 @@ immutable
 set search_path = public, pg_temp
 as $$
 begin
-  if p_value is not null and p_value ~ '^-?[0-9]+([.][0-9]+)?
+  if p_value is not null and p_value ~ '^-?[0-9]+([.][0-9]+)?$' then
     return p_value::numeric;
   end if;
   return 0;
