@@ -61,7 +61,7 @@ function queueQueuedPush(delay = 850) {
     queuedPayload = null;
     const saved = await publishPayload(snapshot);
     if (!saved) queuedPayload = queuedPayload || snapshot;
-    if (queuedPayload && navigator.onLine) queueQueuedPush(saved ? 100 : 2500);
+    else if (queuedPayload) queueQueuedPush(100);
   }, delay);
 }
 function schedulePush(payload) {
