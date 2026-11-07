@@ -80,6 +80,67 @@ as $$
         < public.washdesk_record_stamp(item);
 $$;
 
+-- Enforce phone and vehicle registration uniqueness after cross-device merge.
+-- Customer names intentionally are NOT unique: two different people can share a name.
+create or replace function public.washdesk_assert_unique_customer_keys(p_payload jsonb)
+returns void
+language plpgsql
+immutable
+set search_path = public, pg_temp
+as $$
+declare
+  v_duplicate text;
+begin
+  select normalized_phone into v_duplicate
+  from (
+    select
+      case
+        when digits ~ '^91[0-9]{10}$' then right(digits, 10)
+        when digits ~ '^0[0-9]{10}$' then right(digits, 10)
+        else digits
+      end as normalized_phone
+    from (
+      select regexp_replace(coalesce(item->>'phone', ''), '[^0-9]', '', 'g') as digits
+      from jsonb_array_elements(
+        case when jsonb_typeof(p_payload->'customers') = 'array'
+          then p_payload->'customers' else '[]'::jsonb end
+      ) as customer_rows(item)
+    ) raw_phones
+  ) normalized_phones
+  where normalized_phone <> ''
+  group by normalized_phone
+  having count(*) > 1
+  limit 1;
+
+  if v_duplicate is not null then
+    raise exception using
+      errcode = '23505',
+      message = 'DUPLICATE_CUSTOMER_MOBILE',
+      detail = 'The same normalized mobile number is assigned to more than one customer: ' || v_duplicate;
+  end if;
+
+  select normalized_registration into v_duplicate
+  from (
+    select regexp_replace(upper(coalesce(item->>'number', '')), '[^A-Z0-9]', '', 'g') as normalized_registration
+    from jsonb_array_elements(
+      case when jsonb_typeof(p_payload->'vehicles') = 'array'
+        then p_payload->'vehicles' else '[]'::jsonb end
+    ) as vehicle_rows(item)
+  ) normalized_vehicles
+  where normalized_registration <> ''
+  group by normalized_registration
+  having count(*) > 1
+  limit 1;
+
+  if v_duplicate is not null then
+    raise exception using
+      errcode = '23505',
+      message = 'DUPLICATE_VEHICLE_REGISTRATION',
+      detail = 'The same normalized vehicle registration number is assigned to more than one vehicle: ' || v_duplicate;
+  end if;
+end;
+$$;
+
 create or replace function public.washdesk_merge_sync(p_payload jsonb)
 returns jsonb
 language plpgsql
@@ -135,7 +196,7 @@ begin
 
   foreach v_collection in array array[
     'customers', 'vehicles', 'services', 'invoices', 'products',
-    'purchases', 'expenses', 'staff', 'payments'
+    'purchases', 'expenses', 'staff', 'staffAdvances', 'payments'
   ] loop
     execute format(
       'select public.washdesk_merge_records($1->%L, $2->%L, $3)',
@@ -151,6 +212,10 @@ begin
       true
     );
   end loop;
+
+  -- Validate mobile and vehicle registration uniqueness across every device.
+  -- Customer names may repeat; customer IDs remain the stable record keys.
+  perform public.washdesk_assert_unique_customer_keys(v_merged);
 
   -- Business profile and app settings use their own update timestamps.
   if public.washdesk_record_stamp(coalesce(v_existing->'business', '{}'::jsonb))
@@ -181,6 +246,7 @@ $$;
 revoke all on function public.washdesk_safe_number(text) from public;
 revoke all on function public.washdesk_record_stamp(jsonb) from public;
 revoke all on function public.washdesk_merge_records(jsonb, jsonb, jsonb) from public;
+revoke all on function public.washdesk_assert_unique_customer_keys(jsonb) from public;
 revoke all on function public.washdesk_merge_sync(jsonb) from public;
 grant execute on function public.washdesk_merge_sync(jsonb) to authenticated;
 

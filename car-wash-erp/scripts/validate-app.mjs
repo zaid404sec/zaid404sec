@@ -10,9 +10,9 @@ const mustContain = [
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
   'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle',
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
-  'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorized Signatory',
+  'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'cloud-otp-form', 'requestEmailOtp', 'verifyEmailOtp', 'Prime-Auto-Care-',
-  'const PAGE_WIDTH=730;', 'margin:[5,5,7,5]', 'windowWidth:760', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"'
+  'const PAGE_WIDTH=730;', 'margin:[4,5,6,5]', 'windowWidth:760', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -91,6 +91,38 @@ const advancesOpen = vm.runInNewContext(advancesFunction + String.fromCharCode(1
 if (advancesOpen !== 900) throw new Error('Staff advance outstanding calculation failed: ' + advancesOpen);
 console.log('PASS: staff advance register calculates adjusted and open balances by staff member');
 
+// Verify normalized unique identifiers. Customer names are intentionally repeatable.
+const uniqueStart = html.indexOf('function normalizeMobile(');
+const uniqueEnd = html.indexOf('function renderBillCustomerMatches(', uniqueStart);
+if (uniqueStart < 0 || uniqueEnd < 0) throw new Error('Customer / vehicle uniqueness helpers are missing.');
+const uniqueSource = html.slice(uniqueStart, uniqueEnd);
+const uniqueResult = vm.runInNewContext(
+  uniqueSource + String.fromCharCode(10) + `({
+    mobile: normalizeMobile('+91 98248 23200'),
+    duplicateCustomer: findCustomerByMobile('9824823200')?.id || '',
+    duplicateVehicle: findVehicleByNumber('gj 05-ab 1234')?.id || ''
+  })`,
+  { db: {
+      customers: [{ id:'customer-1', name:'Zaid', phone:'98248 23200' }],
+      vehicles: [{ id:'vehicle-1', customerId:'customer-1', number:'GJ05AB1234' }]
+    }
+  }
+);
+if (uniqueResult.mobile !== '9824823200' || uniqueResult.duplicateCustomer !== 'customer-1' || uniqueResult.duplicateVehicle !== 'vehicle-1') {
+  throw new Error('Customer mobile / vehicle registration normalization and duplicate lookup test failed: ' + JSON.stringify(uniqueResult));
+}
+console.log('PASS: mobile numbers normalize across +91 formatting and vehicle registrations ignore spaces / punctuation');
+
+const cloudSource = await readFile(new URL('../src/cloud-sync.js', import.meta.url), 'utf8');
+if (!cloudSource.includes('https://jkjudmkqaebrgllemris.supabase.co') ||
+    !cloudSource.includes('sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw')) {
+  throw new Error('Prime Auto Care Supabase URL / publishable key are not prefilled.');
+}
+for (const conflictToken of ['DUPLICATE_CUSTOMER_MOBILE','DUPLICATE_VEHICLE_REGISTRATION']) {
+  if (!cloudSource.includes(conflictToken)) throw new Error('Cloud sync does not explain duplicate-key conflicts: ' + conflictToken);
+}
+console.log('PASS: Prime Auto Care Supabase project defaults are configured');
+
 // Invoice totals are computed from item quantities, rates, line discounts and tax rates.
 const billCalcStart = html.indexOf('function calcLines(');
 const billCalcEnd = html.indexOf('function billSummary()', billCalcStart);
@@ -157,7 +189,7 @@ if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes('washdesk-shell
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
-for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number']) {
+for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'DUPLICATE_CUSTOMER_MOBILE', 'DUPLICATE_VEHICLE_REGISTRATION', 'staffAdvances']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
 }
 if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
