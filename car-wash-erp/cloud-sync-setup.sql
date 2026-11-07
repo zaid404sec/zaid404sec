@@ -9,6 +9,9 @@ create table if not exists public.washdesk_sync (
 
 alter table public.washdesk_sync enable row level security;
 
+-- Supabase Data API grants: access is still restricted by the RLS policies below.
+grant select, insert, update on public.washdesk_sync to authenticated;
+
 drop policy if exists "WashDesk users can read own data" on public.washdesk_sync;
 create policy "WashDesk users can read own data"
   on public.washdesk_sync for select
