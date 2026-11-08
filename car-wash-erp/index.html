@@ -295,7 +295,21 @@
   function productName(pid){return db.products.find(p=>p.id===pid)?.name||'Item'}
   function empty(title,desc,button){return `<div class="empty"><b>${esc(title)}</b>${esc(desc)}${button?`<div style="margin-top:14px"><button class="btn primary" data-action="${button.action}">${esc(button.label)}</button></div>`:''}</div>`}
   function pageHead(title,desc,actions=''){return `<div class="page-head"><div><h2>${title}</h2><p>${desc}</p></div><div class="actions">${actions}</div></div>`}
-  function render(){const el=document.getElementById('app');const map={dashboard:dashboard,billing:billing,invoices:invoices,customers:customers,services:services,inventory:inventory,purchases:purchases,expenses:expenses,staff:staff,reports:reports,offers:offers,settings:settings};el.innerHTML=(map[page]||dashboard)();wirePage()}
+  let remoteRenderPending=false;
+  function render(){const el=document.getElementById('app');const map={dashboard:dashboard,billing:billing,invoices:invoices,customers:customers,services:services,inventory:inventory,purchases:purchases,expenses:expenses,staff:staff,reports:reports,offers:offers,settings:settings};el.innerHTML=(map[page]||dashboard)();wirePage();remoteRenderPending=false}
+  function canRenderRemoteUpdate(){
+    // Remote cloud commits must never replace the active billing form: replacing
+    // #app destroys the focused input and Android immediately dismisses Gboard.
+    if(page==='billing')return false;
+    const backdrop=document.getElementById('modal-backdrop');
+    if(backdrop?.classList.contains('show'))return false;
+    const active=document.activeElement;
+    if(active&&active!==document.body&&active!==document.documentElement){
+      if(active.matches('input,textarea,select,[contenteditable="true"]'))return false;
+      if(active.closest?.('form'))return false;
+    }
+    return true;
+  }
   function stat(label,value,icon,note=''){return `<div class="stat"><div class="stat-top">${label}<span class="stat-icon">${icon}</span></div><div class="stat-value">${value}</div><div class="stat-note">${note}</div></div>`}
   function dashboard(){
     const t=today(),m=monthKey(),todayInv=db.invoices.filter(i=>i.date===t),monInv=db.invoices.filter(i=>monthKey(i.date)===m);
@@ -993,7 +1007,15 @@
     window.WashDeskExcel.exportWorkbook({filename,sales,daily,expenses,staff,advances}).then(result=>notify(`Excel workbook saved. Check ${result?.location||'Downloads'}.`)).catch(e=>{console.error(e);notify(e?.message||'Excel workbook could not be exported.')})
   }
   function mergeWashDeskData(local,remote){const base=Object.assign(blank(),local||{},remote||{}),deleted={...(local?._deletedIds||{})};Object.entries(remote?._deletedIds||{}).forEach(([id,t])=>deleted[id]=Math.max(Number(deleted[id])||0,Number(t)||0));const collections=['customers','vehicles','services','invoices','products','purchases','expenses','staff','staffAdvances','payments'];collections.forEach(key=>{const map=new Map();[...(local?.[key]||[]),...(remote?.[key]||[])].forEach(record=>{if(!record?.id)return;const old=map.get(record.id),stamp=x=>Number(x?.updatedAt||x?.editedAt||x?.createdAt||0);if(!old||stamp(record)>=stamp(old))map.set(record.id,record)});base[key]=[...map.values()].filter(record=>(Number(deleted[record.id])||0)<=(Number(record.updatedAt||record.editedAt||record.createdAt||0)))});base._deletedIds=deleted;const stamp=x=>Number(x?.updatedAt||0);base.business=stamp(local?.business)>=stamp(remote?.business)?(local?.business||base.business):(remote?.business||base.business);base.settings=stamp(local?.settings)>=stamp(remote?.settings)?(local?.settings||base.settings):(remote?.settings||base.settings);base.meta={...(local?.meta||{}),...(remote?.meta||{})};return base}
-  function receiveCloudData(remote){db=mergeWashDeskData(db,remote);localStorage.setItem(STORE,JSON.stringify(db));render();return db}
+  function receiveCloudData(remote){
+    // Apply remote records to the in-memory/local database immediately, but do
+    // not re-render over a live bill or any focused form. The billing search and
+    // selectors read from db, so they can still use newly synced customers.
+    db=mergeWashDeskData(db,remote);
+    localStorage.setItem(STORE,JSON.stringify(db));
+    if(canRenderRemoteUpdate())render();else remoteRenderPending=true;
+    return db;
+  }
   async function connectCloud(e){
     e.preventDefault();
     if(!window.WashDeskCloud?.pairDevice){notify('Shared device pairing is not available in this app build. Update Prime Auto Care.');return}

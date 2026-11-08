@@ -8,7 +8,7 @@ const packageJson = JSON.parse(await readFile(new URL('../package.json', import.
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
-  'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle',
+  'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle', 'function canRenderRemoteUpdate', 'remoteRenderPending', 'if(canRenderRemoteUpdate())render()',
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'pairDevice', 'pairingCode', 'Connect / Pair this device', 'Prime-Auto-Care-',
@@ -141,6 +141,27 @@ for (const conflictToken of ['DUPLICATE_CUSTOMER_MOBILE','DUPLICATE_VEHICLE_REGI
   if (!cloudSource.includes(conflictToken)) throw new Error('Cloud sync does not explain duplicate-key conflicts: ' + conflictToken);
 }
 console.log('PASS: Prime Auto Care Supabase project URL and publishable key are preconfigured');
+if (!cloudSource.includes('queuedPayload = payload;') ||
+    cloudSource.includes('queuedPayload = clone(payload)') ||
+    !cloudSource.includes('}, 30000);')) {
+  throw new Error('Cloud save path still performs repeated full-database copies or excessive safety polling.');
+}
+console.log('PASS: cloud save scheduling coalesces the latest DB snapshot without cloning on every save; Realtime remains primary');
+const remoteReceiveStart = html.indexOf('function receiveCloudData(');
+const remoteReceiveEnd = html.indexOf('async function connectCloud', remoteReceiveStart);
+if (remoteReceiveStart < 0 || remoteReceiveEnd < 0) throw new Error('Remote sync handler not found.');
+const remoteReceive = html.slice(remoteReceiveStart, remoteReceiveEnd);
+if (!remoteReceive.includes('if(canRenderRemoteUpdate())render()') ||
+    remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db));render();')) {
+  throw new Error('A remote sync event can still unconditionally replace the active app DOM.');
+}
+if (!html.includes("if(page==='billing')return false") ||
+    !html.includes("active.matches('input,textarea,select,[contenteditable=\"true\"]')") ||
+    !html.includes("backdrop?.classList.contains('show')")) {
+  throw new Error('Active billing inputs and modal forms are not protected from remote re-rendering.');
+}
+console.log('PASS: remote cloud updates preserve the active bill form, text focus and Android keyboard');
+
 for (const token of [
   'pairDevice', 'signInAnonymously()', 'washdesk_join_workspace',
   'washdesk_get_workspace', 'washdesk_merge_sync', 'washdesk_next_invoice_number',
