@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 const CONFIG_KEY = 'washdesk-cloud-config-v1';
 const DEFAULT_PROJECT_CONFIG = {
   url: 'https://jkjudmkqaebrgllemris.supabase.co',
-  anonKey: 'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw'
+  anonKey: 'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw',
+  email: 'BMUMZ3909@GMAIL.COM'
 };
 let supabase = null;
 let user = null;
