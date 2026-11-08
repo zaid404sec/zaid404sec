@@ -63,7 +63,7 @@ jobs:
         with:
           node-version: 22
       - name: Install Capacitor without desktop-only development dependencies
-        run: npm install --omit=dev --no-save @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
+        run: npm install --omit=dev --no-save esbuild@^0.25.0 @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
       - name: Prepare local PDF, reports and cloud assets
         run: npm run prepare:assets
       - name: Validate app syntax and business calculations
