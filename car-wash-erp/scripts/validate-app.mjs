@@ -144,7 +144,7 @@ console.log('PASS: Prime Auto Care Supabase project URL and publishable key are 
 for (const token of [
   'pairDevice', 'signInAnonymously()', 'washdesk_join_workspace',
   'washdesk_get_workspace', 'washdesk_merge_sync', 'washdesk_next_invoice_number',
-  'postgres_changes', 'startSafetyRefresh', 'offline',
+  'postgres_changes', 'startSafetyRefresh', 'Offline',
   'DEVICE_NOT_PAIRED'
 ]) {
   if (!cloudSource.includes(token)) throw new Error('Shared device pairing / cloud sync hook is missing: ' + token);
