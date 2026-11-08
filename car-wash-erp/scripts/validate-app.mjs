@@ -99,6 +99,7 @@ const uniqueSource = html.slice(uniqueStart, uniqueEnd);
 const uniqueResult = vm.runInNewContext(
   uniqueSource + String.fromCharCode(10) + `({
     mobile: normalizeMobile('+91 98248 23200'),
+    mobile0091: normalizeMobile('0091 98248 23200'),
     duplicateCustomer: findCustomerByMobile('9824823200')?.id || '',
     duplicateVehicle: findVehicleByNumber('gj 05-ab 1234')?.id || ''
   })`,
@@ -108,7 +109,7 @@ const uniqueResult = vm.runInNewContext(
     }
   }
 );
-if (uniqueResult.mobile !== '9824823200' || uniqueResult.duplicateCustomer !== 'customer-1' || uniqueResult.duplicateVehicle !== 'vehicle-1') {
+if (uniqueResult.mobile !== '9824823200' || uniqueResult.mobile0091 !== '9824823200' || uniqueResult.duplicateCustomer !== 'customer-1' || uniqueResult.duplicateVehicle !== 'vehicle-1') {
   throw new Error('Customer mobile / vehicle registration normalization and duplicate lookup test failed: ' + JSON.stringify(uniqueResult));
 }
 console.log('PASS: mobile numbers normalize across +91 formatting and vehicle registrations ignore spaces / punctuation');
@@ -183,33 +184,12 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes('washdesk-shell-v5')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('washdesk-shell-v6')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
-// Local duplicate checks must normalise Indian phone formats and vehicle registration formatting.
-const keyStart = html.indexOf('function normalizeMobile(');
-const keyEnd = html.indexOf('function renderBillCustomerMatches(', keyStart);
-if (keyStart < 0 || keyEnd < 0) throw new Error('Customer/vehicle key helpers were not found.');
-const keyFunctions = html.slice(keyStart, keyEnd);
-const keyResults = vm.runInNewContext(
-  keyFunctions + String.fromCharCode(10) + `({
-    phone91: normalizeMobile('+91 98248-23200'),
-    phone0091: normalizeMobile('0091 98248-23200'),
-    vehicle: normalizeVehicleNumber('GJ-05 AB-1234'),
-    duplicatePhone: !!findCustomerByMobile('0091 98248 23200'),
-    duplicateVehicle: !!findVehicleByNumber('GJ05 AB 1234')
-  })`,
-  { db: { customers:[{id:'c1',phone:'98248 23200'}], vehicles:[{id:'v1',number:'GJ05AB1234'}] } }
-);
-if (keyResults.phone91!=='9824823200' || keyResults.phone0091!=='9824823200' ||
-    keyResults.vehicle!=='GJ05AB1234' || !keyResults.duplicatePhone || !keyResults.duplicateVehicle) {
-  throw new Error('Customer mobile / vehicle duplicate normalisation test failed: ' + JSON.stringify(keyResults));
-}
-console.log('PASS: duplicate customer/mobile/vehicle checks normalise 91, 0091 and registration formatting');
-
-
+const cloudSource = await readFile(new URL('../src/cloud-sync.js', import.meta.url), 'utf8');
 for (const token of [
   'https://jkjudmkqaebrgllemris.supabase.co',
   'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw',
@@ -230,13 +210,15 @@ if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependenci
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
  then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
-if (!sql.includes("when digits ~ '^0091[0-9]{10}
+const phone0091Rule = String.raw`when digits ~ '^0091[0-9]{10}
 console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
 
 if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
- then right(digits, 10)")) throw new Error('Cloud SQL does not normalise 0091-prefixed mobile numbers.');
+ then right(digits, 10)`;
+if (!sql.includes(phone0091Rule)) throw new Error('Cloud SQL does not normalise 0091-prefixed mobile numbers.');
+
 console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
 
 if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
