@@ -158,7 +158,7 @@ const electronMain = await readFile(new URL('../electron/main.cjs', import.meta.
 const electronBuilder = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
 if (!electronMain.includes("setAsDefaultProtocolClient('primeautocare')") ||
     !electronMain.includes('prime-auto-native-auth-url') ||
-    !electronBuilderAuth.includes('primeautocare')) {
+    !electronBuilder.includes('primeautocare')) {
   throw new Error('Windows magic-link protocol handler is not configured.');
 }
 if (!html.includes('Send secure sign-in link') || html.includes('Six-digit email sign-in code') || html.includes('localhost:3000')) {
