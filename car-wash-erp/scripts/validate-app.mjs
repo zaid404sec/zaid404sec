@@ -12,7 +12,7 @@ const mustContain = [
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'cloud-otp-form', 'requestEmailOtp', 'verifyEmailOtp', 'Prime-Auto-Care-',
-  'pdfMake.createPdf', 'pdfMake.vfs', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique'
+  'pdfMake.createPdf', 'pdfMake.vfs', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -26,7 +26,7 @@ if (inlineStart < 0 || inlineEnd < 0) throw new Error('No inline application scr
 const inlineSource = html.slice(inlineStart + '<script>'.length, inlineEnd);
 await transform(inlineSource, { loader: 'js', target: 'es2020', logLevel: 'silent' });
 console.log('PASS: inline application JavaScript syntax');
-for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','prime-auto-care-logo.jpg']) {
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
   const path = new URL('../' + asset, import.meta.url);
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
   console.log('PASS: bundled asset ' + asset);
@@ -188,11 +188,55 @@ if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes('washdesk-shell
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
+// Local duplicate checks must normalise Indian phone formats and vehicle registration formatting.
+const keyStart = html.indexOf('function normalizeMobile(');
+const keyEnd = html.indexOf('function renderBillCustomerMatches(', keyStart);
+if (keyStart < 0 || keyEnd < 0) throw new Error('Customer/vehicle key helpers were not found.');
+const keyFunctions = html.slice(keyStart, keyEnd);
+const keyResults = vm.runInNewContext(
+  keyFunctions + String.fromCharCode(10) + `({
+    phone91: normalizeMobile('+91 98248-23200'),
+    phone0091: normalizeMobile('0091 98248-23200'),
+    vehicle: normalizeVehicleNumber('GJ-05 AB-1234'),
+    duplicatePhone: !!findCustomerByMobile('0091 98248 23200'),
+    duplicateVehicle: !!findVehicleByNumber('GJ05 AB 1234')
+  })`,
+  { db: { customers:[{id:'c1',phone:'98248 23200'}], vehicles:[{id:'v1',number:'GJ05AB1234'}] } }
+);
+if (keyResults.phone91!=='9824823200' || keyResults.phone0091!=='9824823200' ||
+    keyResults.vehicle!=='GJ05AB1234' || !keyResults.duplicatePhone || !keyResults.duplicateVehicle) {
+  throw new Error('Customer mobile / vehicle duplicate normalisation test failed: ' + JSON.stringify(keyResults));
+}
+console.log('PASS: duplicate customer/mobile/vehicle checks normalise 91, 0091 and registration formatting');
+
+const cloudSource = await readFile(new URL('../src/cloud-sync.js', import.meta.url), 'utf8');
+for (const token of [
+  'https://jkjudmkqaebrgllemris.supabase.co',
+  'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw',
+  'BMUMZ3909@GMAIL.COM'
+]) {
+  if (!cloudSource.includes(token)) throw new Error('Supabase project/email preconfiguration is missing: ' + token);
+}
+console.log('PASS: shared Supabase project URL, publishable key and business email are prefilled');
+
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
 for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
 }
-if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
+if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?
+console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
+
+if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
+console.log('PASS: Excel and Supabase sync dependencies declared');
+console.log('Prime Auto Care validation complete.');
+ then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
+if (!sql.includes("when digits ~ '^0091[0-9]{10}
+console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
+
+if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
+console.log('PASS: Excel and Supabase sync dependencies declared');
+console.log('Prime Auto Care validation complete.');
+ then right(digits, 10)")) throw new Error('Cloud SQL does not normalise 0091-prefixed mobile numbers.');
 console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
 
 if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');

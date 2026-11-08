@@ -95,6 +95,7 @@ begin
   from (
     select
       case
+        when digits ~ '^0091[0-9]{10}$' then right(digits, 10)
         when digits ~ '^91[0-9]{10}$' then right(digits, 10)
         when digits ~ '^0[0-9]{10}$' then right(digits, 10)
         else digits
