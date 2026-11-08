@@ -163,7 +163,7 @@ function applyRemote(payload) {
 }
 async function publishPayload(payload) {
   if (!supabase || !user || !workspace) return false;
-  if (syncing) { queuedPayload = clone(payload); return false; }
+  if (syncing) { queuedPayload = payload; return false; }
   syncing = true;
   const body = clone(payload);
   setStatus(navigator.onLine ? 'Syncing changes…' : 'Offline · saved on this device');
@@ -208,7 +208,10 @@ function queueQueuedPush(delay = 700) {
 }
 function schedulePush(payload) {
   if (!user || !workspace || !supabase) return;
-  queuedPayload = clone(payload);
+  // Keep only the latest live DB reference while the debounce timer runs.
+  // Serializing/cloning the full business database in every save handler blocks
+  // the WebView main thread and makes on-screen typing feel unstable.
+  queuedPayload = payload;
   queueQueuedPush(500);
 }
 function listenForChanges() {
@@ -283,7 +286,7 @@ function startSafetyRefresh() {
     } catch (error) {
       console.warn('Prime Auto Care sync reconciliation:', error);
     }
-  }, 12000);
+  }, 30000);
 }
 async function resume({ getLocal, onRemote }) {
   const config = readConfig();
