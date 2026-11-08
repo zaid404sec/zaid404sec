@@ -322,4 +322,5 @@ window.WashDeskCloud = {
   getAuthRedirectUrl: () => AUTH_REDIRECT_URL,
   getConfig: () => readConfig()
 };
+window.addEventListener('prime-auto-native-auth-url', event => { void handleAuthRedirect(event?.detail?.url); });
 window.addEventListener('online', () => { retryDelay = 1500; if (user && localProvider) schedulePush(localProvider()); });
