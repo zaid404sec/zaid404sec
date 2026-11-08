@@ -1,9 +1,5 @@
 appId: com.washdesk.carwash
 productName: Prime Auto Care
-protocols:
-  - name: Prime Auto Care Secure Sign-in
-    schemes:
-      - primeautocare
 directories:
   output: release
 files:
