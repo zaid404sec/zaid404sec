@@ -53,6 +53,7 @@
     .premium-business-details{font-size:8px;line-height:1.35;color:#35270f;overflow-wrap:anywhere}
     .premium-car-mark{text-align:center;min-width:0}
     .premium-car-mark svg{display:block;width:100%;height:57px}
+    .premium-car-mark img{display:block;width:100%;height:57px;object-fit:cover;border:1px solid #8b6729;border-radius:3px;box-shadow:0 2px 7px rgba(0,0,0,.24)}
     .premium-car-mark span{display:block;font-size:7px;font-weight:900;letter-spacing:1.1px;color:#211809}
     .invoice-title-strip{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0 7px;padding:8px 11px;border-bottom:1px solid #b68a3d;border-top:1px solid #e5d1a1;background:linear-gradient(90deg,#fbf4e3,#fffdf8)}
     .invoice-title-strip>strong{font-family:Georgia,serif;color:#75531e;font-size:14px;letter-spacing:.5px}
@@ -504,13 +505,7 @@
         <div class="premium-logo-panel"><img src="./prime-auto-care-logo.jpg" alt="Prime Auto Care original logo" /></div>
         <div class="premium-brand-center"><h2>PRIME AUTO CARE</h2><div class="premium-brand-subtitle">GOLD & BLACK CAR SERVICES</div><div class="premium-brand-tagline">A PREMIUM AUTOMOTIVE STUDIO</div><div class="premium-business-details">${esc(b.address||'Business address not configured')} · ${esc(b.city||'')}, ${esc(b.state||'')} ${details?' · '+details:''}</div></div>
         <div class="premium-car-mark">
-          <svg viewBox="0 0 260 104" role="img" aria-label="Premium car emblem">
-            <path d="M16 72 L28 56 Q34 50 50 48 L76 43 L98 22 Q104 15 116 15 L167 15 Q180 16 190 31 L205 46 L230 51 Q244 53 248 66 L247 78 L224 78 Q222 60 204 60 Q185 60 183 78 L78 78 Q76 60 57 60 Q39 60 37 78 L18 78 Z" fill="none" stroke="#17130d" stroke-width="5" stroke-linejoin="round"/>
-            <path d="M91 43 L111 22 L163 22 Q173 23 184 43 Z M28 58 L54 58 M207 52 L228 58" fill="none" stroke="#17130d" stroke-width="3" stroke-linecap="round"/>
-            <circle cx="57" cy="79" r="12" fill="#d4b36a" stroke="#17130d" stroke-width="5"/><circle cx="204" cy="79" r="12" fill="#d4b36a" stroke="#17130d" stroke-width="5"/>
-            <path d="M125 41 L145 34 L164 41 L160 64 L145 77 L130 64 Z" fill="#17130d" stroke="#f3dfad" stroke-width="2"/>
-            <path d="M137 49 L145 45 L153 49 L151 60 L145 66 L139 60 Z" fill="none" stroke="#d7b45f" stroke-width="2"/>
-          </svg>
+          <img src="./prime-auto-care-car-photo.jpg" alt="Prime Auto Care premium car" />
           <span>CARE · DETAIL · DRIVE</span>
         </div>
       </header>
@@ -569,6 +564,22 @@
       };
       img.onerror=()=>resolve(null);
       img.src='./prime-auto-care-logo.jpg';
+    });
+    const carPhotoData=await new Promise(resolve=>{
+      if(window.__primeAutoCareCarPhotoData){resolve(window.__primeAutoCareCarPhotoData);return;}
+      const img=new Image();
+      img.onload=()=>{
+        try{
+          const canvas=document.createElement('canvas');
+          canvas.width=img.naturalWidth||360;canvas.height=img.naturalHeight||195;
+          const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);
+          const data=canvas.toDataURL('image/jpeg',.90);
+          window.__primeAutoCareCarPhotoData=data;
+          resolve(data);
+        }catch(error){console.warn('Prime Auto Care car photo conversion failed:',error);resolve(null);}
+      };
+      img.onerror=()=>resolve(null);
+      img.src='./prime-auto-care-car-photo.jpg';
     });
     const carSvg=String.raw`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="94" viewBox="0 0 240 94">
       <path d="M10 66 L22 50 Q29 43 47 41 L72 36 L94 17 Q101 10 113 10 L158 10 Q176 11 188 30 L205 44 L224 48 Q233 50 236 62 L234 73 L213 73 Q211 57 195 57 Q178 57 176 73 L72 73 Q70 57 53 57 Q35 57 33 73 L12 73 Z" fill="none" stroke="#17130c" stroke-width="4.3" stroke-linejoin="round"/>
@@ -680,7 +691,7 @@
               {text:'A PREMIUM AUTOMOTIVE STUDIO',style:'brandTagline',alignment:'center',margin:[0,3,0,4]},
               {text:brandDetails,style:'brandDetails',alignment:'center'}
             ],margin:[2,5,2,5],border:[false,false,false,false]},
-            {stack:[{svg:carSvg,width:112,alignment:'center'},{text:'CARE  ·  DETAIL  ·  DRIVE',style:'carCaption',alignment:'center',margin:[0,-1,0,0]}],border:[false,false,false,false],margin:[0,7,0,0]}
+            {stack:[carPhotoData?{image:carPhotoData,fit:[112,58],alignment:'center',margin:[0,0,0,2]}:{svg:carSvg,width:112,alignment:'center'},{text:'CARE  ·  DETAIL  ·  DRIVE',style:'carCaption',alignment:'center',margin:[0,0,0,0]}],border:[false,false,false,false],margin:[0,7,0,0]}
           ]]},
           layout:{
             fillColor:()=> '#e6c77d',
