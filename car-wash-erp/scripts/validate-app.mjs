@@ -122,6 +122,9 @@ if (!cloudSource.includes('https://jkjudmkqaebrgllemris.supabase.co') ||
 for (const conflictToken of ['DUPLICATE_CUSTOMER_MOBILE','DUPLICATE_VEHICLE_REGISTRATION']) {
   if (!cloudSource.includes(conflictToken)) throw new Error('Cloud sync does not explain duplicate-key conflicts: ' + conflictToken);
 }
+if (!cloudSource.includes('BMUMZ3909@GMAIL.COM')) {
+  throw new Error('The shared business email is not prefilled.');
+}
 console.log('PASS: Prime Auto Care Supabase project defaults are configured');
 
 // Invoice totals are computed from item quantities, rates, line discounts and tax rates.
@@ -189,36 +192,13 @@ if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
-const cloudSource = await readFile(new URL('../src/cloud-sync.js', import.meta.url), 'utf8');
-for (const token of [
-  'https://jkjudmkqaebrgllemris.supabase.co',
-  'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw',
-  'BMUMZ3909@GMAIL.COM'
-]) {
-  if (!cloudSource.includes(token)) throw new Error('Supabase project/email preconfiguration is missing: ' + token);
-}
-console.log('PASS: shared Supabase project URL, publishable key and business email are prefilled');
-
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
 for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
 }
-if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?
-console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
-
-if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
-console.log('PASS: Excel and Supabase sync dependencies declared');
-console.log('Prime Auto Care validation complete.');
- then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
-const phone0091Rule = String.raw`when digits ~ '^0091[0-9]{10}
-console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
-
-if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
-console.log('PASS: Excel and Supabase sync dependencies declared');
-console.log('Prime Auto Care validation complete.');
- then right(digits, 10)`;
+if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
+const phone0091Rule = String.raw`when digits ~ '^0091[0-9]{10}$' then right(digits, 10)`;
 if (!sql.includes(phone0091Rule)) throw new Error('Cloud SQL does not normalise 0091-prefixed mobile numbers.');
-
 console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
 
 if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
