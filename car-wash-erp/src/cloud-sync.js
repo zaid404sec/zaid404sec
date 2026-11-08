@@ -299,19 +299,29 @@ async function resume({ getLocal, onRemote }) {
     return false;
   }
   user = data.session.user;
+  // Keep the last known pairing locally. If the app is restarted while offline,
+  // the saved owner/workspace mapping allows the queued local data to sync once
+  // connectivity returns, without asking the user to pair the device again.
+  workspace = readWorkspace();
   try {
-    workspace = await getWorkspaceFromServer();
-    if (!workspace) {
+    const serverWorkspace = await getWorkspaceFromServer();
+    if (serverWorkspace) {
+      workspace = serverWorkspace;
+      localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace));
+    } else if (!workspace) {
       setStatus('Device signed in · enter the shared pairing code');
       return false;
     }
-    localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace));
     await initialSync();
     return true;
   } catch (error) {
     console.error('Prime Auto Care cloud resume failed:', error);
     const message = String(error?.message || error || '');
-    setStatus(message.includes('washdesk_sync') ? 'Signed in · run the shared database SQL setup' : 'Cloud reconnect needed · check database setup');
+    if (workspace && !navigator.onLine) {
+      setStatus('Offline · shared workspace saved; automatic sync will resume when internet returns');
+    } else {
+      setStatus(message.includes('washdesk_sync') ? 'Signed in · run the shared database SQL setup' : 'Cloud reconnect needed · retrying when internet returns');
+    }
     return false;
   }
 }
@@ -358,5 +368,11 @@ window.WashDeskCloud = {
 };
 window.addEventListener('online', () => {
   retryDelay = 1500;
-  if (user && workspace && localProvider) schedulePush(localProvider());
+  if (user && workspace && localProvider) {
+    schedulePush(localProvider());
+    if (!channel) void initialSync().catch(error => console.warn('Prime Auto Care cloud reconnect:', error));
+  } else if (localProvider && remoteHandler) {
+    // Also retry session/workspace restoration if the app was opened while offline.
+    void resume({ getLocal: localProvider, onRemote: remoteHandler }).catch(error => console.warn('Prime Auto Care saved device reconnect:', error));
+  }
 });
