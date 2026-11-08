@@ -104,7 +104,7 @@ declare
   v_auth_user uuid := auth.uid();
   v_workspace_id uuid;
   v_owner_user uuid;
-  v_code text := upper(regexp_replace(coalesce(p_pairing_code, ''), '\\s', '', 'g'));
+  v_code text := upper(regexp_replace(coalesce(p_pairing_code, ''), '\s', '', 'g'));
   v_role text;
   v_business_name text;
 begin
