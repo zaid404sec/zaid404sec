@@ -24,7 +24,7 @@ if (!pdfMakeFonts.includes('addVirtualFileSystem(vfs)')) {
 // VFS script has executed successfully in the app's WebView.
 await writeFile(
   pdfMakeFontsTarget,
-  pdfMakeFonts + String.raw`\n;window.__primeAutoCarePdfFontsReady = !!(window.pdfMake && typeof window.pdfMake.createPdf === 'function' && typeof window.pdfMake.addVirtualFileSystem === 'function');\n`,
+  pdfMakeFonts + '\n;window.__primeAutoCarePdfFontsReady = !!(window.pdfMake && typeof window.pdfMake.createPdf === \'function\' && typeof window.pdfMake.addVirtualFileSystem === \'function\');\n',
   'utf8'
 );
 await copyFile(excelJsSource, excelJsTarget);
