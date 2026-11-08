@@ -265,7 +265,7 @@ async function initialSync() {
 }
 function startSafetyRefresh() {
   clearInterval(pollingTimer);
-  // Realtime is the primary path. A light 12-second reconciliation also recovers
+  // Realtime is the primary path. A light 30-second reconciliation also recovers
   // missed events after sleep, network changes, or a temporary socket disconnect.
   pollingTimer = setInterval(async () => {
     if (!navigator.onLine || !user || !workspace || !supabase || syncing) return;
