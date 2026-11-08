@@ -98,7 +98,7 @@ jobs:
           if updated == normalized:
               raise SystemExit('Could not update Gradle wrapper distribution URL: ' + normalized)
           path.write_text(updated.replace('https:', r'https\:'))
-          print(path.read_text())())
+          print(path.read_text())
           PY
       - name: Build debug APK
         working-directory: car-wash-erp/android
