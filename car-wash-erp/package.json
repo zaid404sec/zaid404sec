@@ -12,8 +12,7 @@
   },
   "devDependencies": {
     "electron": "^35.0.0",
-    "electron-builder": "^26.0.12",
-    "esbuild": "^0.25.0"
+    "electron-builder": "^26.0.12"
   },
   "dependencies": {
     "@capacitor/core": "^8.0.0",
@@ -21,6 +20,7 @@
     "@capacitor/app-launcher": "^8.0.1",
     "@supabase/supabase-js": "^2.119.0",
     "@andreeewill/exceljs": "5.0.3",
-    "pdfmake": "0.2.23"
+    "pdfmake": "0.2.23",
+    "esbuild": "^0.25.0"
   }
 }
