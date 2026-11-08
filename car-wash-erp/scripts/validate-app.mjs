@@ -192,6 +192,18 @@ if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
+if (!html.includes("Files → Downloads → Prime Auto Care") ||
+    !html.includes("relativePath:'Download/Prime Auto Care'") ||
+    !html.includes('Downloads / Prime Auto Care folder')) {
+  throw new Error('Prime Auto Care backup and invoice PDF save locations are inconsistent.');
+}
+if (html.includes('Files → Downloads → WashDesk') ||
+    html.includes("relativePath:'Download/WashDesk'") ||
+    html.includes('Downloads / WashDesk folder')) {
+  throw new Error('A legacy WashDesk download location is still exposed to customers.');
+}
+console.log('PASS: invoice PDFs and full backups use the Prime Auto Care Downloads folder');
+
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
 for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
