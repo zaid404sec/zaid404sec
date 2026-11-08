@@ -1,15 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
-import { App } from '@capacitor/app';
 
-const CONFIG_KEY = 'washdesk-cloud-config-v1';
-const AUTH_REDIRECT_URL = 'primeautocare://auth-callback';
+const CONFIG_KEY = 'prime-auto-care-cloud-config-v2';
+const WORKSPACE_KEY = 'prime-auto-care-workspace-v2';
 const DEFAULT_PROJECT_CONFIG = {
   url: 'https://jkjudmkqaebrgllemris.supabase.co',
-  anonKey: 'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw',
-  email: 'BMUMZ3909@GMAIL.COM'
+  anonKey: 'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw'
 };
+
 let supabase = null;
 let user = null;
+let workspace = null;
 let channel = null;
 let localProvider = null;
 let remoteHandler = null;
@@ -18,18 +18,28 @@ let queuedPayload = null;
 let lastPayloadString = '';
 let statusText = 'Not connected';
 let syncing = false;
-let pendingEmail = '';
 let retryDelay = 1500;
-let authLinkListenerReady = false;
-let lastAuthLink = '';
+let pollingTimer = null;
 
 function readConfig() {
   try {
     const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
     return { ...DEFAULT_PROJECT_CONFIG, ...(saved && typeof saved === 'object' ? saved : {}) };
-  } catch { return { ...DEFAULT_PROJECT_CONFIG }; }
+  } catch {
+    return { ...DEFAULT_PROJECT_CONFIG };
+  }
 }
-function setStatus(value) { statusText = value; window.dispatchEvent(new CustomEvent('washdesk-cloud-status', { detail: value })); }
+function readWorkspace() {
+  try {
+    return JSON.parse(localStorage.getItem(WORKSPACE_KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+function setStatus(value) {
+  statusText = value;
+  window.dispatchEvent(new CustomEvent('washdesk-cloud-status', { detail: value }));
+}
 function clone(value) { return JSON.parse(JSON.stringify(value ?? {})); }
 function stableStringify(value) {
   const normalize = input => {
@@ -44,81 +54,117 @@ function stableStringify(value) {
   return JSON.stringify(normalize(value));
 }
 function initialize(config) {
+  if (supabase && supabase.supabaseUrl === config.url) return;
+  if (channel && supabase) void supabase.removeChannel(channel);
   supabase = createClient(config.url, config.anonKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'pkce' },
-    realtime: { params: { eventsPerSecond: 10 } }
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false
+    },
+    realtime: { params: { eventsPerSecond: 20 } }
   });
-  void installAuthLinkListener();
 }
-async function handleAuthRedirect(rawUrl) {
-  if (!rawUrl || rawUrl === lastAuthLink) return;
-  let callback;
-  try { callback = new URL(rawUrl); } catch { return; }
-  if (callback.protocol !== 'primeautocare:' || callback.hostname !== 'auth-callback') return;
-  lastAuthLink = rawUrl;
-
-  const authError = callback.searchParams.get('error_description') || callback.searchParams.get('error');
-  if (authError) {
-    setStatus('Email sign-in failed · request a new link');
-    window.dispatchEvent(new CustomEvent('prime-auto-cloud-auth', { detail: { ok: false, message: authError } }));
-    return;
+function saveConfig({ url, anonKey }) {
+  if (!/^https:\/\//i.test(url || '') || !anonKey) {
+    throw new Error('The prefilled Supabase project URL and publishable key are required.');
   }
-
-  const code = callback.searchParams.get('code');
-  if (!code) {
-    setStatus('Email link did not contain a sign-in code · request a new link');
-    window.dispatchEvent(new CustomEvent('prime-auto-cloud-auth', { detail: { ok: false, message: 'The email link is incomplete. Request a fresh sign-in link from this device.' } }));
-    return;
-  }
-
-  try {
-    const config = readConfig();
-    if (!supabase) initialize(config);
-    setStatus('Completing secure email sign-in…');
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw error;
-    if (!data?.session || !data?.user) throw new Error('Supabase did not return a signed-in session.');
-    user = data.user;
-    pendingEmail = '';
-    await initialSync();
-    window.dispatchEvent(new CustomEvent('prime-auto-cloud-auth', {
-      detail: { ok: true, message: 'This phone is signed in to the shared Prime Auto Care account.' }
-    }));
-  } catch (error) {
-    console.error('Prime Auto Care email-link callback failed:', error);
-    const message = String(error?.message || error || 'Email verification failed');
-    setStatus(message.includes('washdesk_sync') ? 'Signed in · database setup required' : 'Email sign-in failed · request a new link');
-    window.dispatchEvent(new CustomEvent('prime-auto-cloud-auth', { detail: { ok: false, message } }));
-  }
+  const config = {
+    url: url.trim().replace(/\/$/, ''),
+    anonKey: anonKey.trim()
+  };
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  return config;
 }
-
-async function installAuthLinkListener() {
-  if (authLinkListenerReady) return;
-  authLinkListenerReady = true;
-  try {
-    await App.addListener('appUrlOpen', event => { void handleAuthRedirect(event?.url); });
-    const launch = await App.getLaunchUrl();
-    if (launch?.url) await handleAuthRedirect(launch.url);
-  } catch (error) {
-    // Browser and Electron builds may not provide the native App plugin. Android
-    // registers it through Capacitor and handles the primeautocare:// callback.
-    console.info('Native email-link listener is unavailable in this runtime:', error?.message || error);
+function normalizeWorkspace(data) {
+  const value = Array.isArray(data) ? data[0] : data;
+  if (!value?.workspace_id || !value?.owner_user_id) {
+    throw new Error('Supabase did not return the shared Prime Auto Care workspace. Run the latest database setup SQL and pair this device again.');
   }
+  return {
+    workspace_id: value.workspace_id,
+    owner_user_id: value.owner_user_id,
+    role: value.role || 'member',
+    business_name: value.business_name || 'Prime Auto Care'
+  };
 }
-
+async function ensureSession() {
+  if (!supabase) throw new Error('Supabase is not initialized.');
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  if (data.session?.user) {
+    user = data.session.user;
+    return user;
+  }
+  setStatus('Creating secure device session…');
+  const { data: signed, error: signError } = await supabase.auth.signInAnonymously();
+  if (signError) {
+    const message = String(signError.message || signError);
+    if (/anonymous.*disabled|anonymous.*not enabled/i.test(message)) {
+      throw new Error('Enable Anonymous Sign-Ins once in Supabase: Authentication → Sign In / Providers → Anonymous Sign-Ins. No email or SMTP is needed.');
+    }
+    throw signError;
+  }
+  if (!signed?.session || !signed?.user) throw new Error('Supabase did not create a secure device session.');
+  user = signed.user;
+  return user;
+}
+async function getWorkspaceFromServer() {
+  if (!supabase || !user) return null;
+  const { data, error } = await supabase.rpc('washdesk_get_workspace');
+  if (error) {
+    const message = String(error.message || error);
+    if (/function .*washdesk_get_workspace.* does not exist|schema cache/i.test(message)) {
+      throw new Error('The shared-workspace SQL has not been installed yet. Run the latest Prime Auto Care cloud-sync SQL file once in Supabase SQL Editor.');
+    }
+    throw error;
+  }
+  if (!data) return null;
+  return normalizeWorkspace(data);
+}
+async function pairDevice({ url, anonKey, pairingCode, getLocal, onRemote }) {
+  const config = saveConfig({ url, anonKey });
+  const code = String(pairingCode || '').replace(/\s/g, '').toUpperCase();
+  if (!/^[A-F0-9]{48,80}$/.test(code)) {
+    throw new Error('Enter the device pairing code generated at the end of the Supabase SQL setup. It is a long code made of letters A–F and numbers 0–9.');
+  }
+  localProvider = getLocal;
+  remoteHandler = onRemote;
+  initialize(config);
+  await ensureSession();
+  setStatus('Pairing this device with Prime Auto Care…');
+  const { data, error } = await supabase.rpc('washdesk_join_workspace', { p_pairing_code: code });
+  if (error) {
+    const message = String(error.message || error);
+    if (/function .*washdesk_join_workspace.* does not exist|schema cache/i.test(message)) {
+      throw new Error('The shared-workspace SQL is not installed. Run the latest Prime Auto Care cloud-sync SQL file first.');
+    }
+    if (/INVALID_PAIRING_CODE/i.test(message)) {
+      throw new Error('That device pairing code is incorrect. Copy the complete code from the final SQL Editor result.');
+    }
+    throw error;
+  }
+  workspace = normalizeWorkspace(data);
+  localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace));
+  await initialSync();
+  return {
+    connected: true,
+    workspace: workspace.business_name,
+    role: workspace.role,
+    message: 'This device is connected to the shared Prime Auto Care database. Other paired phones and the laptop will receive updates automatically.'
+  };
+}
 function applyRemote(payload) {
   if (!remoteHandler || !payload) return payload;
   return remoteHandler(clone(payload)) || payload;
 }
 async function publishPayload(payload) {
-  if (!supabase || !user) return false;
+  if (!supabase || !user || !workspace) return false;
   if (syncing) { queuedPayload = clone(payload); return false; }
   syncing = true;
   const body = clone(payload);
   setStatus(navigator.onLine ? 'Syncing changes…' : 'Offline · saved on this device');
   try {
-    // Server-side row locking and per-record merge prevent concurrent devices
-    // from replacing each other's whole-database snapshots.
     const { data, error } = await supabase.rpc('washdesk_merge_sync', { p_payload: body });
     if (error) throw error;
     const canonical = data && typeof data === 'object' ? data : body;
@@ -126,16 +172,16 @@ async function publishPayload(payload) {
     lastPayloadString = stableStringify(canonical);
     const local = applyRemote(canonical);
     if (stableStringify(local) !== lastPayloadString) queuedPayload = clone(local);
-    setStatus('Connected · all changes synced');
+    setStatus('Connected · all devices synced');
     return true;
   } catch (error) {
     queuedPayload = queuedPayload || body;
     const message = String(error?.message || error || '');
     if (message.includes('DUPLICATE_CUSTOMER_MOBILE')) {
-      setStatus('Sync blocked · duplicate customer mobile number. Check the customer register on this device.');
-      window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'A mobile number is already assigned to another customer on another device. Resolve the duplicate customer records, then sync again.' }));
+      setStatus('Sync blocked · duplicate customer mobile number. Resolve the customer conflict.');
+      window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'A mobile number is assigned to more than one customer across devices. Resolve the duplicate customer records, then sync again.' }));
     } else if (message.includes('DUPLICATE_VEHICLE_REGISTRATION')) {
-      setStatus('Sync blocked · duplicate vehicle registration number. Check the vehicle register on this device.');
+      setStatus('Sync blocked · duplicate vehicle registration number. Resolve the vehicle conflict.');
       window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'A vehicle registration number is already saved on another device. Resolve the duplicate vehicle records, then sync again.' }));
     } else {
       setStatus(navigator.onLine ? 'Sync pending · retry when connected' : 'Offline · changes saved on this device');
@@ -145,30 +191,32 @@ async function publishPayload(payload) {
     return false;
   } finally {
     syncing = false;
-    if (queuedPayload && user && supabase && navigator.onLine) queueQueuedPush(retryDelay);
+    if (queuedPayload && user && workspace && supabase && navigator.onLine) queueQueuedPush(retryDelay);
   }
 }
 function queueQueuedPush(delay = 700) {
   clearTimeout(pushTimer);
   pushTimer = setTimeout(async () => {
-    if (!user || !supabase || syncing || !queuedPayload || !navigator.onLine) return;
+    if (!user || !workspace || !supabase || syncing || !queuedPayload || !navigator.onLine) return;
     const snapshot = queuedPayload;
     queuedPayload = null;
     await publishPayload(snapshot);
   }, delay);
 }
 function schedulePush(payload) {
-  if (!user || !supabase) return;
+  if (!user || !workspace || !supabase) return;
   queuedPayload = clone(payload);
-  queueQueuedPush(650);
+  queueQueuedPush(500);
 }
 function listenForChanges() {
-  if (!supabase || !user) return;
-  if (channel) supabase.removeChannel(channel);
-  channel = supabase.channel('prime-auto-care-sync-' + user.id)
+  if (!supabase || !user || !workspace) return;
+  if (channel) void supabase.removeChannel(channel);
+  channel = supabase.channel('prime-auto-care-workspace-' + workspace.workspace_id)
     .on('postgres_changes', {
-      event: '*', schema: 'public', table: 'washdesk_sync',
-      filter: 'user_id=eq.' + user.id
+      event: '*',
+      schema: 'public',
+      table: 'washdesk_sync',
+      filter: 'user_id=eq.' + workspace.owner_user_id
     }, event => {
       const incoming = event.new?.payload;
       if (!incoming) return;
@@ -177,150 +225,135 @@ function listenForChanges() {
       try {
         const merged = applyRemote(incoming);
         if (stableStringify(merged) !== incomingText) schedulePush(merged);
-        else setStatus('Connected · update received from another device');
+        else setStatus('Connected · live update received');
       } catch (error) {
-        console.error('Prime Auto Care cloud merge failed:', error);
+        console.error('Prime Auto Care live update merge failed:', error);
         setStatus('Cloud update error · local data is safe');
       }
     })
     .subscribe(state => {
-      if (state === 'SUBSCRIBED') setStatus('Connected · live sync active');
+      if (state === 'SUBSCRIBED') setStatus('Connected · live sync active on all paired devices');
       else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') setStatus('Reconnecting live sync…');
     });
 }
 async function initialSync() {
-  if (!supabase || !user) throw new Error('Sign in to the shared business account first.');
-  setStatus('Checking shared business data…');
+  if (!supabase || !user || !workspace) throw new Error('Pair this device with the shared Prime Auto Care business first.');
+  setStatus('Loading shared Prime Auto Care data…');
   const { data, error } = await supabase.from('washdesk_sync')
-    .select('payload,updated_at').eq('user_id', user.id).maybeSingle();
+    .select('payload,updated_at')
+    .eq('user_id', workspace.owner_user_id)
+    .maybeSingle();
   if (error) throw error;
   if (data?.payload) {
     const merged = applyRemote(data.payload);
     if (stableStringify(merged) !== stableStringify(data.payload)) await publishPayload(merged);
     else {
       lastPayloadString = stableStringify(data.payload);
-      setStatus('Connected · live sync active');
+      setStatus('Connected · live sync active on all paired devices');
     }
   } else if (localProvider) {
     await publishPayload(localProvider());
   }
   listenForChanges();
+  startSafetyRefresh();
 }
-function saveConfig({ url, anonKey, email }) {
-  if (!/^https:\/\//i.test(url || '') || !anonKey || !email) {
-    throw new Error('Enter the Supabase project URL, public key and shared business email.');
-  }
-  const config = {
-    url: url.trim().replace(/\/$/, ''),
-    anonKey: anonKey.trim(),
-    email: email.trim().toLowerCase()
-  };
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-  return config;
-}
-async function requestEmailOtp({ url, anonKey, email, getLocal, onRemote }) {
-  const config = saveConfig({ url, anonKey, email });
-  localProvider = getLocal;
-  remoteHandler = onRemote;
-  initialize(config);
-  pendingEmail = config.email;
-  setStatus('Sending email sign-in code…');
-  const { error } = await supabase.auth.signInWithOtp({
-    email: config.email,
-    options: {
-      shouldCreateUser: true,
-      emailRedirectTo: AUTH_REDIRECT_URL
+function startSafetyRefresh() {
+  clearInterval(pollingTimer);
+  // Realtime is the primary path. A light 12-second reconciliation also recovers
+  // missed events after sleep, network changes, or a temporary socket disconnect.
+  pollingTimer = setInterval(async () => {
+    if (!navigator.onLine || !user || !workspace || !supabase || syncing) return;
+    try {
+      const { data, error } = await supabase.from('washdesk_sync')
+        .select('payload,updated_at')
+        .eq('user_id', workspace.owner_user_id)
+        .maybeSingle();
+      if (error || !data?.payload) return;
+      const incomingText = stableStringify(data.payload);
+      if (incomingText === lastPayloadString || !remoteHandler) return;
+      const merged = applyRemote(data.payload);
+      if (stableStringify(merged) !== incomingText) await publishPayload(merged);
+      else {
+        lastPayloadString = incomingText;
+        setStatus('Connected · live sync active on all paired devices');
+      }
+    } catch (error) {
+      console.warn('Prime Auto Care sync reconciliation:', error);
     }
-  });
-  if (error) { pendingEmail = ''; throw error; }
-  setStatus('Secure sign-in link sent · open the email on this phone');
-  return {
-    sent: true,
-    email: config.email,
-    redirectTo: AUTH_REDIRECT_URL,
-    message: 'A secure sign-in link has been sent to ' + config.email + '. Open the newest email on this same phone and tap Sign in. Prime Auto Care will reopen automatically and connect this phone.'
-  };
-}
-async function verifyEmailOtp({ email, token, getLocal, onRemote }) {
-  const config = readConfig();
-  const address = String(email || config.email || '').trim().toLowerCase();
-  const code = String(token || '').replace(/\s/g, '');
-  if (!config.url || !config.anonKey || !address || !/^\d{6}$/.test(code)) {
-    throw new Error('Enter the six-digit email code and check the saved project details.');
-  }
-  localProvider = getLocal;
-  remoteHandler = onRemote;
-  initialize(config);
-  setStatus('Verifying email code…');
-  const { data, error } = await supabase.auth.verifyOtp({ email: address, token: code, type: 'email' });
-  if (error) throw error;
-  if (!data?.session || !data?.user) throw new Error('The email code was accepted but no signed-in session was returned.');
-  user = data.user;
-  pendingEmail = '';
-  await initialSync();
-  return { connected: true, message: 'Prime Auto Care cloud sync is connected. This device has joined the shared business data.' };
-}
-async function connect({ url, anonKey, email, password, mode, getLocal, onRemote }) {
-  // Backward-compatible password sign-in for existing installations.
-  if (!/^https:\/\//i.test(url || '') || !anonKey || !email || !password) {
-    throw new Error('Enter the Supabase project URL, public key, email and password.');
-  }
-  const config = saveConfig({ url, anonKey, email });
-  localProvider = getLocal; remoteHandler = onRemote; initialize(config);
-  setStatus('Signing in…');
-  const authResult = mode === 'signup'
-    ? await supabase.auth.signUp({ email: config.email, password })
-    : await supabase.auth.signInWithPassword({ email: config.email, password });
-  if (authResult.error) throw authResult.error;
-  if (!authResult.data.session) {
-    setStatus('Email verification required');
-    return { connected: false, message: 'Verify the email sent by Supabase, then sign in on this device and the other devices.' };
-  }
-  user = authResult.data.user;
-  await initialSync();
-  return { connected: true, message: 'Cloud sync connected. Shared records are merged across signed-in devices.' };
+  }, 12000);
 }
 async function resume({ getLocal, onRemote }) {
   const config = readConfig();
   if (!config.url || !config.anonKey) return false;
-  localProvider = getLocal; remoteHandler = onRemote; initialize(config);
+  localProvider = getLocal;
+  remoteHandler = onRemote;
+  initialize(config);
   const { data, error } = await supabase.auth.getSession();
-  if (error) { setStatus('Cloud sign-in expired'); return false; }
-  if (!data.session) { setStatus('Project saved · sign in on this device'); return false; }
+  if (error) { setStatus('Device session unavailable · pair this device again'); return false; }
+  if (!data.session?.user) {
+    user = null; workspace = null;
+    setStatus('Not connected · enter the shared device pairing code');
+    return false;
+  }
   user = data.session.user;
-  try { await initialSync(); return true; }
-  catch (error) {
-    console.error('Cloud resume failed:', error);
-    setStatus('Cloud setup incomplete · check SQL setup');
+  try {
+    workspace = await getWorkspaceFromServer();
+    if (!workspace) {
+      setStatus('Device signed in · enter the shared pairing code');
+      return false;
+    }
+    localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace));
+    await initialSync();
+    return true;
+  } catch (error) {
+    console.error('Prime Auto Care cloud resume failed:', error);
+    const message = String(error?.message || error || '');
+    setStatus(message.includes('washdesk_sync') ? 'Signed in · run the shared database SQL setup' : 'Cloud reconnect needed · check database setup');
     return false;
   }
 }
 async function syncNow(payload) {
-  if (!supabase || !user) throw new Error('Connect this device to the shared business account first.');
+  if (!supabase || !user || !workspace) throw new Error('Connect this device with the shared device pairing code first.');
   return await publishPayload(payload);
 }
 async function nextInvoiceNumber({ prefix, date, minNext }) {
-  if (!supabase || !user) throw new Error('Cloud counter is not connected.');
+  if (!supabase || !user || !workspace) throw new Error('Shared cloud database is not connected.');
   const { data, error } = await supabase.rpc('washdesk_next_invoice_number', {
-    p_prefix: prefix || 'CW', p_date: date, p_min_next_value: Math.max(1, Number(minNext) || 1)
+    p_prefix: prefix || 'CW',
+    p_date: date,
+    p_min_next_value: Math.max(1, Number(minNext) || 1)
   });
   if (error) throw error;
-  if (typeof data !== 'string' || !data) throw new Error('The cloud invoice counter returned an invalid number.');
+  if (typeof data !== 'string' || !data) throw new Error('The shared invoice counter returned an invalid number.');
   return data;
 }
 async function disconnect() {
   clearTimeout(pushTimer);
+  clearInterval(pollingTimer);
   if (channel && supabase) await supabase.removeChannel(channel);
-  if (supabase) { try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* local data stays available */ } }
-  channel = null; user = null; supabase = null; lastPayloadString = ''; queuedPayload = null; pendingEmail = '';
-  localStorage.removeItem(CONFIG_KEY);
-  setStatus('Disconnected · local business data remains on this device');
+  if (supabase) {
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* local records stay available */ }
+  }
+  channel = null;
+  user = null;
+  workspace = null;
+  lastPayloadString = '';
+  queuedPayload = null;
+  localStorage.removeItem(WORKSPACE_KEY);
+  setStatus('This device disconnected · local records remain safe');
 }
 window.WashDeskCloud = {
-  connect, requestEmailOtp, verifyEmailOtp, resume, schedulePush, syncNow, nextInvoiceNumber, disconnect,
+  pairDevice,
+  resume,
+  schedulePush,
+  syncNow,
+  nextInvoiceNumber,
+  disconnect,
   getStatus: () => statusText,
-  getAuthRedirectUrl: () => AUTH_REDIRECT_URL,
-  getConfig: () => readConfig()
+  getConfig: () => readConfig(),
+  getWorkspace: () => workspace || readWorkspace()
 };
-window.addEventListener('prime-auto-native-auth-url', event => { void handleAuthRedirect(event?.detail?.url); });
-window.addEventListener('online', () => { retryDelay = 1500; if (user && localProvider) schedulePush(localProvider()); });
+window.addEventListener('online', () => {
+  retryDelay = 1500;
+  if (user && workspace && localProvider) schedulePush(localProvider());
+});
