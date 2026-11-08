@@ -11,7 +11,7 @@ const mustContain = [
   'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle',
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
-  'requestEmailOtp', 'primeautocare://auth-callback', 'Prime-Auto-Care-',
+  'pairDevice', 'pairingCode', 'Connect / Pair this device', 'Prime-Auto-Care-',
   'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
 ];
 for (const token of mustContain) {
@@ -140,31 +140,28 @@ if (!cloudSource.includes('https://jkjudmkqaebrgllemris.supabase.co') ||
 for (const conflictToken of ['DUPLICATE_CUSTOMER_MOBILE','DUPLICATE_VEHICLE_REGISTRATION']) {
   if (!cloudSource.includes(conflictToken)) throw new Error('Cloud sync does not explain duplicate-key conflicts: ' + conflictToken);
 }
-if (!cloudSource.includes('BMUMZ3909@GMAIL.COM')) {
-  throw new Error('The shared business email is not prefilled.');
+console.log('PASS: Prime Auto Care Supabase project URL and publishable key are preconfigured');
+for (const token of [
+  'pairDevice', 'signInAnonymously()', 'washdesk_join_workspace',
+  'washdesk_get_workspace', 'washdesk_merge_sync', 'washdesk_next_invoice_number',
+  'postgres_changes', 'startSafetyRefresh', 'Offline',
+  'Offline'
+]) {
+  if (!cloudSource.includes(token)) throw new Error('Shared device pairing / cloud sync hook is missing: ' + token);
 }
-console.log('PASS: Prime Auto Care Supabase project defaults are configured');
-for (const token of ["emailRedirectTo: AUTH_REDIRECT_URL", "const AUTH_REDIRECT_URL = 'primeautocare://auth-callback'", "exchangeCodeForSession(code)", "flowType: 'pkce'", "installAuthLinkListener"]) {
-  if (!cloudSource.includes(token)) throw new Error('Supabase email-link authentication is missing: ' + token);
+for (const obsolete of ['requestEmailOtp', 'verifyEmailOtp', 'emailRedirectTo', 'AUTH_REDIRECT_URL', 'exchangeCodeForSession']) {
+  if (cloudSource.includes(obsolete)) throw new Error('Legacy email-link authentication remains in the cloud module: ' + obsolete);
 }
-if (!packageJson.dependencies?.['@capacitor/app']) {
-  throw new Error('The Capacitor App deep-link plugin is not installed.');
+if (cloudSource.includes('localhost:3000') || html.includes('localhost:3000') ||
+    html.includes('Send secure sign-in link') || html.includes('Six-digit email sign-in code')) {
+  throw new Error('The cloud flow still contains an email-link / localhost redirect dependency.');
 }
-const androidLinkScript = await readFile(new URL('./configure-android-auth-deeplink.mjs', import.meta.url), 'utf8');
-for (const token of ['android:scheme="primeautocare"', 'android:host="auth-callback"', 'singleTask']) {
-  if (!androidLinkScript.includes(token)) throw new Error('Android magic-link routing is missing: ' + token);
+if (!html.includes('Enable Anonymous Sign-Ins') ||
+    !html.includes('Connect / Pair this device') ||
+    !html.includes('same code once on each of the four phones and the Windows laptop')) {
+  throw new Error('Cloud settings do not explain the shared device-pairing workflow.');
 }
-const electronMain = await readFile(new URL('../electron/main.cjs', import.meta.url), 'utf8');
-const electronBuilder = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
-if (!electronMain.includes("setAsDefaultProtocolClient('primeautocare')") ||
-    !electronMain.includes('prime-auto-native-auth-url') ||
-    !electronBuilder.includes('primeautocare')) {
-  throw new Error('Windows magic-link protocol handler is not configured.');
-}
-if (!html.includes('Send secure sign-in link') || html.includes('Six-digit email sign-in code') || html.includes('localhost:3000')) {
-  throw new Error('Cloud settings still expect an OTP code or localhost redirect.');
-}
-console.log('PASS: Android and Windows magic-link return routing is configured');
+console.log('PASS: email-link auth removed; anonymous authenticated devices join one shared workspace');
 
 
 // Invoice totals are computed from item quantities, rates, line discounts and tax rates.
@@ -245,19 +242,30 @@ if (html.includes('Files → Downloads → WashDesk') ||
 console.log('PASS: invoice PDFs and full backups use the Prime Auto Care Downloads folder');
 
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
-for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances']) {
+for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'device_not_paired']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
 }
 if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
 const phone0091Rule = String.raw`when digits ~ '^0091[0-9]{10}$' then right(digits, 10)`;
 if (!sql.includes(phone0091Rule)) throw new Error('Cloud SQL does not normalise 0091-prefixed mobile numbers.');
 console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
+if (!sql.includes("grant execute on function public.washdesk_join_workspace(text) to authenticated;") ||
+    !sql.includes("grant execute on function public.washdesk_merge_sync(jsonb) to authenticated;") ||
+    !sql.includes("to authenticated") ||
+    !sql.includes('washdesk_create_pairing_code() as "Prime Auto Care device pairing code"')) {
+  throw new Error('Shared device SQL does not provision a pairing code and authenticated workspace RPCs.');
+}
+if (!sql.includes('washdesk_can_read_sync(user_id)') || !sql.includes('for update')) {
+  throw new Error('Shared workspace data is missing member RLS or serialized writes.');
+}
+console.log('PASS: database supports secure shared workspace membership and pairing-code provisioning');
+
 
 if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
 
 const electronBuilderAuth = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
 for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','cloud-sync-setup.sql']) {
-  if (!electronBuilder.includes('- ' + asset)) throw new Error('Windows installer is missing a required runtime asset: ' + asset);
+  if (!electronBuilderAuth.includes('- ' + asset)) throw new Error('Windows installer is missing a required runtime asset: ' + asset);
 }
 console.log('PASS: Windows installer includes PDFMake, fonts, images, Excel and cloud-sync assets');
 

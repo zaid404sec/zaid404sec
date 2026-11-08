@@ -17,14 +17,24 @@ A mobile-friendly, installable starter app tailored to a car washing centre.
 
 - **Windows:** Install the new EXE over the existing WashDesk installation in the same folder. Electron stores browser data separately from the installer files; keep a JSON backup before updating.
 - **Android:** This build uses a new application ID because the old debug-signing private key is not available in the build environment. It installs beside the previous app so the old records remain untouched. Export a backup from the old app, install **WashDesk Updated**, then use Business Settings → Restore backup once. Do not uninstall the old app until the restored records are checked.
-- **Cloud sync:** A Supabase project, the included SQL setup, and the same sign-in on every device are required before realtime multi-device sync becomes active. Offline changes stay local and are uploaded when the device reconnects.
+- **Cloud sync:** One Supabase workspace is shared by all four Android phones and the Windows laptop. Enable Supabase Anonymous Sign-Ins once, run `cloud-sync-setup.sql` once in the project's SQL Editor, copy the 64-character pairing code returned by the final SQL query, then enter that same code once on every device. No email link, OTP or custom SMTP is used. Each device receives its own persistent authenticated session and joins the same workspace. Database writes are serialized and merged by record ID, PostgreSQL Realtime pushes committed updates to paired devices, a 12-second safety reconciliation recovers missed socket events, and local changes are merged/pushed after reconnecting from offline mode. Keep the pairing code private; anyone who has it can add a device.
 
 ## Important limitations — read before using live business data
-This is a first working frontend edition. Business data is stored in the current browser's local storage. It does not yet provide cloud sync, multi-user accounts, role permissions, automatic server backup, a secured backend database, complete double-entry accounting, bank reconciliation, statutory audited Profit & Loss / Balance Sheet, GST return filing, IRN e-invoice generation, e-way bills, payroll compliance, supplier ledgers or AMC/prepaid wash-pass redemption. Use Export Backup regularly. Do not use a shared/public device for live customer data.
+Business records are stored locally first and can be synchronized to the shared Supabase workspace once the one-time database setup and device pairing are completed. The app does not provide detailed per-staff permissions or a complete double-entry accounting ledger, bank reconciliation, statutory audited Profit & Loss / Balance Sheet, GST return filing, IRN e-invoice generation, e-way bills, payroll compliance, supplier ledgers or AMC/prepaid wash-pass redemption. Use Export Backup regularly as an independent backup even after cloud sync is active. Do not use a shared/public device for live customer data.
 
 WhatsApp sharing is user-initiated. The app cannot silently send a message through a personal WhatsApp account. Fully automated outbound delivery needs the official WhatsApp Business Platform, Meta business setup, approved templates where applicable, and securely stored server-side credentials.
 
 GST registration, SAC/HSN codes, tax rates, place of supply, reverse-charge treatment and invoice particulars must be confirmed by the business's chartered accountant. This starter app is not a tax/accounting certification and does not replace TallyPrime.
+
+## Shared cloud setup (one time per Supabase project)
+
+1. Open the Supabase dashboard for your project and enable **Authentication → Sign In / Providers → Anonymous Sign-Ins**. No email provider or SMTP setup is required for this app's device pairing.
+2. Open **SQL Editor**, paste/run the complete `cloud-sync-setup.sql` file once. The final query returns a 64-character random pairing code. Keep it private and save it somewhere secure.
+3. On the first phone, import the old WashDesk backup if migrating existing local records, then open **Business settings → Shared Cloud Database** and pair using the code.
+4. Enter the same pairing code once on the other phones and Windows laptop. Do not import the old backup again on those devices.
+5. Confirm each device shows `Connected · live sync active on all paired devices`. Test by adding a harmless test customer on one device and confirming it appears on another, then remove the test customer.
+
+Anonymous Supabase sessions are stored separately per device. If an app is uninstalled or its data is cleared, that device must be paired again using the saved code. Existing devices remain connected if one device is removed. The pairing code grants permission to join the business workspace; keep it private. Supabase Realtime is the primary low-latency channel and the app also performs a periodic reconciliation to recover updates missed while a device sleeps or briefly loses connectivity.
 
 ## Run locally
 Serve this folder over localhost or HTTPS (service workers do not run from a plain file URL):

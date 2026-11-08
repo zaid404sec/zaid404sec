@@ -78,7 +78,7 @@ jobs:
         with:
           node-version: 22
       - name: Install Capacitor without desktop-only development dependencies
-        run: npm install --omit=dev --no-save esbuild@^0.25.0 @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8 @capacitor/app@^8
+        run: npm install --omit=dev --no-save esbuild@^0.25.0 @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
       - name: Prepare local PDF, reports and cloud assets
         run: npm run prepare:assets
       - name: Validate app syntax and business calculations
@@ -89,8 +89,6 @@ jobs:
           cp index.html manifest.webmanifest icon.svg prime-auto-care-logo.jpg prime-auto-care-car-photo.jpg pdfmake.bundle.min.js pdfmake-vfs.js invoice-native.bundle.js exceljs.bundle.min.js report-export.bundle.js cloud-sync.bundle.js cloud-sync-setup.sql www/
       - name: Add Android platform
         run: npx cap add android
-      - name: Configure Supabase email-link deep link
-        run: node scripts/configure-android-auth-deeplink.mjs
       - name: Sync web app
         run: npx cap sync android
       - name: Set up Java 21
