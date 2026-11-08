@@ -35,6 +35,8 @@ jobs:
             Start-Sleep -Seconds (15 * $attempt)
           } while ($true)
       - name: Build Windows installer (retry transient download failures)
+        id: windows-installer
+        continue-on-error: true
         shell: pwsh
         run: |
           $attempt = 0
@@ -45,10 +47,18 @@ jobs:
             if ($attempt -ge 3) { exit $LASTEXITCODE }
             Start-Sleep -Seconds (15 * $attempt)
           } while ($true)
+      - name: Build portable Windows executable if NSIS installer is unavailable
+        if: steps.windows-installer.outcome == 'failure'
+        shell: pwsh
+        run: |
+          npx electron-builder --win portable --x64 --publish never
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
           name: WashDesk-Windows-Installer
-          path: car-wash-erp/release/*.exe
+          path: |
+            car-wash-erp/release/*.exe
+            car-wash-erp/release/*.zip
           if-no-files-found: error
 
   android:
