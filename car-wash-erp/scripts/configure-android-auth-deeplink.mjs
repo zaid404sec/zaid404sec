@@ -3,12 +3,12 @@ import path from 'node:path';
 
 const manifestPath = path.resolve('android/app/src/main/AndroidManifest.xml');
 let xml = await readFile(manifestPath, 'utf8');
-const activityMatch = xml.match(/<activity\\b(?=[^>]*android:name=["']\\.MainActivity["'])[^>]*>[\\s\\S]*?<\\/activity>/);
+const activityMatch = xml.match(/<activity\b(?=[^>]*android:name=["']\.MainActivity["'])[^>]*>[\s\S]*?<\/activity>/);
 if (!activityMatch) {
   throw new Error('Could not find the generated Capacitor .MainActivity in AndroidManifest.xml');
 }
 let activity = activityMatch[0];
-const openingTag = activity.match(/^<activity\\b[^>]*>/)?.[0];
+const openingTag = activity.match(/^<activity\b[^>]*>/)?.[0];
 if (!openingTag) throw new Error('Could not read the MainActivity opening tag.');
 let updatedOpening = openingTag;
 if (/android:launchMode=/.test(updatedOpening)) {
@@ -26,7 +26,7 @@ const filter = `
                 <data android:scheme="primeautocare" android:host="auth-callback" />
             </intent-filter>`;
 if (!activity.includes('android:scheme="primeautocare"')) {
-  activity = activity.replace('</activity>', filter + '\\n        </activity>');
+  activity = activity.replace('</activity>', filter + '\n        </activity>');
 }
 xml = xml.replace(activityMatch[0], activity);
 await writeFile(manifestPath, xml, 'utf8');
