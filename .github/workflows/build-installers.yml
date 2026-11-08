@@ -23,10 +23,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install dependencies
-        run: npm install
-      - name: Build Windows installer
-        run: npm run dist:win
+      - name: Install dependencies (retry transient download failures)
+        shell: pwsh
+        run: |
+          $attempt = 0
+          do {
+            $attempt++
+            npm install
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -ge 3) { exit $LASTEXITCODE }
+            Start-Sleep -Seconds (15 * $attempt)
+          } while ($true)
+      - name: Build Windows installer (retry transient download failures)
+        shell: pwsh
+        run: |
+          $attempt = 0
+          do {
+            $attempt++
+            npm run dist:win
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -ge 3) { exit $LASTEXITCODE }
+            Start-Sleep -Seconds (15 * $attempt)
+          } while ($true)
       - uses: actions/upload-artifact@v4
         with:
           name: WashDesk-Windows-Installer
@@ -44,8 +62,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install Capacitor
-        run: npm install @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
+      - name: Install Capacitor without desktop-only development dependencies
+        run: npm install --omit=dev --no-save @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
       - name: Prepare local PDF, reports and cloud assets
         run: npm run prepare:assets
       - name: Validate app syntax and business calculations
@@ -63,6 +81,31 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Use the official smaller Gradle binary distribution
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path('android/gradle/wrapper/gradle-wrapper.properties')
+          original = path.read_text()
+          normalized = original.replace(r'https\\:', 'https:').replace(r'http\\:', 'http:')
+          updated = re.sub(
+              r'https://services\\.gradle\\.org/distributions/(gradle-[0-9.]+)-all\\.zip',
+              r'https://downloads.gradle.org/distributions/\\1-bin.zip',
+              normalized
+          )
+          if updated == normalized:
+              updated = re.sub(
+                  r'https://services\\.gradle\\.org/distributions/(gradle-[0-9.]+)-all\\.zip',
+                  r'https://downloads.gradle.org/distributions/\\1-bin.zip',
+                  normalized
+              )
+          if updated == normalized:
+              raise SystemExit('Could not update Gradle wrapper distribution URL: ' + normalized)
+          path.write_text(updated.replace('https:', r'https\\:'))
+          print(path.read_text())
+          PY
       - name: Build debug APK
         working-directory: car-wash-erp/android
         run: ./gradlew assembleDebug
