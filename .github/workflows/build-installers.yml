@@ -2,6 +2,11 @@ name: Build WashDesk Installers
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'car-wash-erp/**'
+      - '.github/workflows/build-installers.yml'
   push:
     branches: [main]
     paths:
