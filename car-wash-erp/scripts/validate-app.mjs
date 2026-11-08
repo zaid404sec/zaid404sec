@@ -242,7 +242,7 @@ if (html.includes('Files → Downloads → WashDesk') ||
 console.log('PASS: invoice PDFs and full backups use the Prime Auto Care Downloads folder');
 
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
-for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'DEVICE_NOT_PAIRED']) {
+for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'device_not_paired']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
 }
 if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
