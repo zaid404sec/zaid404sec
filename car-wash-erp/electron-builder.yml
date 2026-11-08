@@ -6,6 +6,10 @@ files:
   - index.html
   - manifest.webmanifest
   - icon.svg
+  - pdfmake.bundle.min.js
+  - pdfmake-vfs.js
+  - prime-auto-care-logo.jpg
+  - prime-auto-care-car-photo.jpg
   - html2pdf.bundle.min.js
   - invoice-native.bundle.js
   - exceljs.bundle.min.js
