@@ -31,6 +31,15 @@ for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bu
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
   console.log('PASS: bundled asset ' + asset);
 }
+
+const carPhotoBytes = await readFile(new URL('../prime-auto-care-car-photo.jpg', import.meta.url));
+if (carPhotoBytes.length < 1000 ||
+    carPhotoBytes[0] !== 0xff || carPhotoBytes[1] !== 0xd8 ||
+    carPhotoBytes[carPhotoBytes.length - 2] !== 0xff || carPhotoBytes[carPhotoBytes.length - 1] !== 0xd9) {
+  throw new Error('The Prime Auto Care PDF car photograph is not a complete JPEG file.');
+}
+console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
+
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
 if (appId !== 'com.washdesk.carwash.v2') throw new Error('Android migration-safe app ID was not set.');
 
@@ -214,5 +223,12 @@ if (!sql.includes(phone0091Rule)) throw new Error('Cloud SQL does not normalise 
 console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
 
 if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
+
+const electronBuilder = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','cloud-sync-setup.sql']) {
+  if (!electronBuilder.includes('- ' + asset)) throw new Error('Windows installer is missing a required runtime asset: ' + asset);
+}
+console.log('PASS: Windows installer includes PDFMake, fonts, images, Excel and cloud-sync assets');
+
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
