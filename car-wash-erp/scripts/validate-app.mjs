@@ -11,7 +11,7 @@ const mustContain = [
   'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle',
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
-  'cloud-otp-form', 'requestEmailOtp', 'verifyEmailOtp', 'Prime-Auto-Care-',
+  'requestEmailOtp', 'primeautocare://auth-callback', 'Prime-Auto-Care-',
   'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
 ];
 for (const token of mustContain) {
@@ -144,6 +144,28 @@ if (!cloudSource.includes('BMUMZ3909@GMAIL.COM')) {
   throw new Error('The shared business email is not prefilled.');
 }
 console.log('PASS: Prime Auto Care Supabase project defaults are configured');
+for (const token of ["emailRedirectTo: AUTH_REDIRECT_URL", "const AUTH_REDIRECT_URL = 'primeautocare://auth-callback'", "exchangeCodeForSession(code)", "flowType: 'pkce'", "installAuthLinkListener"]) {
+  if (!cloudSource.includes(token)) throw new Error('Supabase email-link authentication is missing: ' + token);
+}
+if (!packageJson.dependencies?.['@capacitor/app']) {
+  throw new Error('The Capacitor App deep-link plugin is not installed.');
+}
+const androidLinkScript = await readFile(new URL('./configure-android-auth-deeplink.mjs', import.meta.url), 'utf8');
+for (const token of ['android:scheme="primeautocare"', 'android:host="auth-callback"', 'singleTask']) {
+  if (!androidLinkScript.includes(token)) throw new Error('Android magic-link routing is missing: ' + token);
+}
+const electronMain = await readFile(new URL('../electron/main.cjs', import.meta.url), 'utf8');
+const electronBuilder = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
+if (!electronMain.includes("setAsDefaultProtocolClient('primeautocare')") ||
+    !electronMain.includes('prime-auto-native-auth-url') ||
+    !electronBuilder.includes('primeautocare')) {
+  throw new Error('Windows magic-link protocol handler is not configured.');
+}
+if (!html.includes('Send secure sign-in link') || html.includes('Six-digit email sign-in code') || html.includes('localhost:3000')) {
+  throw new Error('Cloud settings still expect an OTP code or localhost redirect.');
+}
+console.log('PASS: Android and Windows magic-link return routing is configured');
+
 
 // Invoice totals are computed from item quantities, rates, line discounts and tax rates.
 const billCalcStart = html.indexOf('function calcLines(');
@@ -205,7 +227,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('washdesk-shell-v8')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('washdesk-shell-v9')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
