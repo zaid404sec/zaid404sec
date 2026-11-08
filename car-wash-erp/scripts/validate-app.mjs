@@ -158,7 +158,7 @@ const electronMain = await readFile(new URL('../electron/main.cjs', import.meta.
 const electronBuilder = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
 if (!electronMain.includes("setAsDefaultProtocolClient('primeautocare')") ||
     !electronMain.includes('prime-auto-native-auth-url') ||
-    !electronBuilder.includes('primeautocare')) {
+    !electronBuilderAuth.includes('primeautocare')) {
   throw new Error('Windows magic-link protocol handler is not configured.');
 }
 if (!html.includes('Send secure sign-in link') || html.includes('Six-digit email sign-in code') || html.includes('localhost:3000')) {
@@ -255,7 +255,7 @@ console.log('PASS: cloud schema contains RLS, atomic row locking, and shared inv
 
 if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
 
-const electronBuilder = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
+const electronBuilderAuth = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
 for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','cloud-sync-setup.sql']) {
   if (!electronBuilder.includes('- ' + asset)) throw new Error('Windows installer is missing a required runtime asset: ' + asset);
 }
