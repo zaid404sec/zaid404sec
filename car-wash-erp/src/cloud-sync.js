@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
+import { App } from '@capacitor/app';
 
 const CONFIG_KEY = 'washdesk-cloud-config-v1';
+const AUTH_REDIRECT_URL = 'primeautocare://auth-callback';
 const DEFAULT_PROJECT_CONFIG = {
   url: 'https://jkjudmkqaebrgllemris.supabase.co',
   anonKey: 'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw',
@@ -18,6 +20,8 @@ let statusText = 'Not connected';
 let syncing = false;
 let pendingEmail = '';
 let retryDelay = 1500;
+let authLinkListenerReady = false;
+let lastAuthLink = '';
 
 function readConfig() {
   try {
@@ -41,10 +45,67 @@ function stableStringify(value) {
 }
 function initialize(config) {
   supabase = createClient(config.url, config.anonKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'pkce' },
     realtime: { params: { eventsPerSecond: 10 } }
   });
+  void installAuthLinkListener();
 }
+async function handleAuthRedirect(rawUrl) {
+  if (!rawUrl || rawUrl === lastAuthLink) return;
+  let callback;
+  try { callback = new URL(rawUrl); } catch { return; }
+  if (callback.protocol !== 'primeautocare:' || callback.hostname !== 'auth-callback') return;
+  lastAuthLink = rawUrl;
+
+  const authError = callback.searchParams.get('error_description') || callback.searchParams.get('error');
+  if (authError) {
+    setStatus('Email sign-in failed · request a new link');
+    window.dispatchEvent(new CustomEvent('prime-auto-cloud-auth', { detail: { ok: false, message: authError } }));
+    return;
+  }
+
+  const code = callback.searchParams.get('code');
+  if (!code) {
+    setStatus('Email link did not contain a sign-in code · request a new link');
+    window.dispatchEvent(new CustomEvent('prime-auto-cloud-auth', { detail: { ok: false, message: 'The email link is incomplete. Request a fresh sign-in link from this device.' } }));
+    return;
+  }
+
+  try {
+    const config = readConfig();
+    if (!supabase) initialize(config);
+    setStatus('Completing secure email sign-in…');
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    if (!data?.session || !data?.user) throw new Error('Supabase did not return a signed-in session.');
+    user = data.user;
+    pendingEmail = '';
+    await initialSync();
+    window.dispatchEvent(new CustomEvent('prime-auto-cloud-auth', {
+      detail: { ok: true, message: 'This phone is signed in to the shared Prime Auto Care account.' }
+    }));
+  } catch (error) {
+    console.error('Prime Auto Care email-link callback failed:', error);
+    const message = String(error?.message || error || 'Email verification failed');
+    setStatus(message.includes('washdesk_sync') ? 'Signed in · database setup required' : 'Email sign-in failed · request a new link');
+    window.dispatchEvent(new CustomEvent('prime-auto-cloud-auth', { detail: { ok: false, message } }));
+  }
+}
+
+async function installAuthLinkListener() {
+  if (authLinkListenerReady) return;
+  authLinkListenerReady = true;
+  try {
+    await App.addListener('appUrlOpen', event => { void handleAuthRedirect(event?.url); });
+    const launch = await App.getLaunchUrl();
+    if (launch?.url) await handleAuthRedirect(launch.url);
+  } catch (error) {
+    // Browser and Electron builds may not provide the native App plugin. Android
+    // registers it through Capacitor and handles the primeautocare:// callback.
+    console.info('Native email-link listener is unavailable in this runtime:', error?.message || error);
+  }
+}
+
 function applyRemote(payload) {
   if (!remoteHandler || !payload) return payload;
   return remoteHandler(clone(payload)) || payload;
@@ -166,11 +227,19 @@ async function requestEmailOtp({ url, anonKey, email, getLocal, onRemote }) {
   setStatus('Sending email sign-in code…');
   const { error } = await supabase.auth.signInWithOtp({
     email: config.email,
-    options: { shouldCreateUser: true }
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: AUTH_REDIRECT_URL
+    }
   });
   if (error) { pendingEmail = ''; throw error; }
-  setStatus('Email code sent · waiting for verification');
-  return { sent: true, email: config.email, message: 'A one-time sign-in code has been sent to ' + config.email + '. Enter that code here to connect this device.' };
+  setStatus('Secure sign-in link sent · open the email on this phone');
+  return {
+    sent: true,
+    email: config.email,
+    redirectTo: AUTH_REDIRECT_URL,
+    message: 'A secure sign-in link has been sent to ' + config.email + '. Open the newest email on this same phone and tap Sign in. Prime Auto Care will reopen automatically and connect this phone.'
+  };
 }
 async function verifyEmailOtp({ email, token, getLocal, onRemote }) {
   const config = readConfig();
@@ -250,6 +319,7 @@ async function disconnect() {
 window.WashDeskCloud = {
   connect, requestEmailOtp, verifyEmailOtp, resume, schedulePush, syncNow, nextInvoiceNumber, disconnect,
   getStatus: () => statusText,
+  getAuthRedirectUrl: () => AUTH_REDIRECT_URL,
   getConfig: () => readConfig()
 };
 window.addEventListener('online', () => { retryDelay = 1500; if (user && localProvider) schedulePush(localProvider()); });
