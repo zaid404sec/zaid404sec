@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { copyFile } from 'node:fs/promises';
+import { copyFile, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -15,7 +15,18 @@ const reportBundleTarget = path.join(root, 'report-export.bundle.js');
 const cloudBundleTarget = path.join(root, 'cloud-sync.bundle.js');
 
 await copyFile(pdfMakeSource, pdfMakeTarget);
-await copyFile(pdfMakeFontsSource, pdfMakeFontsTarget);
+const pdfMakeFonts = await readFile(pdfMakeFontsSource, 'utf8');
+if (!pdfMakeFonts.includes('addVirtualFileSystem(vfs)')) {
+  throw new Error('The bundled PDFMake VFS font file is not compatible with the installed PDFMake runtime.');
+}
+// pdfmake 0.2.23 installs font data with addVirtualFileSystem(); it does not
+// expose the legacy pdfMake.vfs object. Set a readiness marker only after the
+// VFS script has executed successfully in the app's WebView.
+await writeFile(
+  pdfMakeFontsTarget,
+  pdfMakeFonts + '\n;window.__primeAutoCarePdfFontsReady = !!(window.pdfMake && typeof window.pdfMake.createPdf === \'function\' && typeof window.pdfMake.addVirtualFileSystem === \'function\');\n',
+  'utf8'
+);
 await copyFile(excelJsSource, excelJsTarget);
 await build({
   entryPoints: [path.join(root, 'src', 'invoice-native.js')],

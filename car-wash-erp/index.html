@@ -98,6 +98,53 @@
     .invoice-bottom-line{margin-top:9px;padding-top:5px;border-top:1px solid #d9c28e;text-align:center;color:#8b6a31;font-size:7px;font-weight:900;letter-spacing:1px}
 
     @media(max-width:1100px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-quick{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}.invoice-layout{grid-template-columns:1fr}}
+    
+    /* Mobile invoice preview: keep the brand, car image and invoice columns readable. */
+    .invoice-preview{display:block;width:100%;min-width:0;max-width:100%;overflow:hidden;box-sizing:border-box}
+    .premium-invoice-header{min-width:0;grid-template-columns:70px minmax(0,1fr) 132px;gap:8px;padding:10px}
+    .premium-logo-panel{width:64px;height:64px;min-width:0}
+    .premium-logo-panel img{max-width:100%;max-height:100%;object-fit:contain}
+    .premium-brand-center{min-width:0;overflow-wrap:anywhere}
+    .premium-car-mark{min-width:0}
+    .premium-car-mark img{width:100%;max-width:100%;object-fit:cover}
+    .premium-invoice-table{width:100%;max-width:100%;table-layout:fixed}
+    .premium-invoice-table th,.premium-invoice-table td{min-width:0;padding:6px 4px;overflow-wrap:anywhere;word-break:normal}
+    .premium-invoice-table th:nth-child(1),.premium-invoice-table td:nth-child(1){width:38%}
+    .premium-invoice-table th:nth-child(2),.premium-invoice-table td:nth-child(2){width:14%}
+    .premium-invoice-table th:nth-child(3),.premium-invoice-table td:nth-child(3){width:15%}
+    .premium-invoice-table th:nth-child(4),.premium-invoice-table td:nth-child(4){width:17%}
+    .premium-invoice-table th:nth-child(5),.premium-invoice-table td:nth-child(5){width:16%}
+    .premium-invoice-table td:nth-child(2){word-break:keep-all}
+    @media(max-width:760px){
+      .premium-invoice-header{grid-template-columns:62px minmax(0,1fr);gap:7px;padding:9px;min-height:0}
+      .premium-logo-panel{width:58px;height:58px}
+      .premium-brand-center h2{font-size:clamp(15px,4.2vw,20px)!important;letter-spacing:.4px!important}
+      .premium-brand-subtitle{font-size:10px;letter-spacing:.2px}
+      .premium-brand-tagline{font-size:6px;letter-spacing:1px}
+      .premium-business-details{font-size:7px}
+      .premium-car-mark{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
+      .premium-car-mark img{height:48px;max-height:48px}
+      .premium-car-mark span{font-size:6px;letter-spacing:.7px}
+      .invoice-title-strip{align-items:flex-start;flex-direction:column;gap:5px}
+      .invoice-title-strip>strong{font-size:12px}
+      .invoice-reference{justify-content:flex-start;gap:4px 8px;font-size:7px}
+      .invoice-party-grid{grid-template-columns:1fr 1fr;gap:6px}
+      .invoice-party-card{padding:7px;font-size:8px}
+      .invoice-customer-name{font-size:11px}
+      .invoice-vehicle-number{font-size:13px}
+      .premium-invoice-table th{padding:6px 3px;font-size:7px;letter-spacing:0}
+      .premium-invoice-table td{padding:6px 3px;font-size:8px}
+      .invoice-lower-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+      .invoice-payment-card{padding:7px;font-size:8px}
+      .invoice-summary{padding:6px;font-size:8px}
+      .invoice-summary-row{gap:5px}
+      .invoice-grand-total{gap:5px;padding:8px 6px}
+      .invoice-grand-total strong{font-size:14px}
+      .invoice-footer-grid{grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:6px}
+      .invoice-terms-card p{font-size:7px;margin:6px}
+      .invoice-signature-card b{font-size:8px}
+    }
+
     @media(max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-hero{align-items:flex-start;flex-direction:column;padding:20px}.dashboard-hero h2{font-size:20px}.dashboard-hero-meta{border-left:0;border-top:1px solid rgba(255,255,255,.18);padding:10px 0 0;text-align:left;width:100%}.dashboard-quick{gap:9px}.dashboard-quick-link{padding:11px 10px}.shell{grid-template-columns:1fr}.sidebar{position:fixed;z-index:15;inset:0 auto 0 0;width:270px;transform:translateX(-105%);transition:.22s;box-shadow:0 0 0 100vmax transparent}.sidebar.open{transform:translateX(0);box-shadow:0 0 0 100vmax rgba(10,20,38,.42)}.hamb{display:block}.topbar{height:66px;padding:0 16px}.topbar h1{font-size:17px}.content{padding:20px 14px 38px}.page-head{align-items:flex-start;flex-direction:column}.page-head h2{font-size:21px}.stats{gap:10px}.stat{padding:14px}.stat-value{font-size:21px}.stat-icon{width:30px;height:30px}.field-grid,.settings-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.line-add{grid-template-columns:1fr 80px}.line-add .field:nth-child(3){grid-column:1}.line-add button{grid-column:2;grid-row:2}.actions .btn{flex:1}.card{padding:15px}.modal{padding:15px}.invoice-preview{padding:13px}.invoice-preview .inv-top{flex-direction:column}.invoice-preview .inv-meta{text-align:left}.top-actions .date-hide{display:none}}
     @media print{body{background:#fff}.shell,.modal-backdrop{display:none!important}#print-root{display:block!important}.print-page{display:block!important}.print-page .invoice-preview{border:0;border-radius:0;padding:0}.print-page table{white-space:normal}}
   </style>
@@ -540,7 +587,7 @@
   async function makePdfBlob(i){
     const pdfMake=window.pdfMake;
     if(!pdfMake||typeof pdfMake.createPdf!=='function')throw new Error('The local invoice PDF engine did not load. Close and reopen Prime Auto Care, then retry.');
-    if(!pdfMake.vfs||!Object.keys(pdfMake.vfs).length)throw new Error('The invoice PDF fonts did not load. Reopen Prime Auto Care and retry.');
+    if(!window.__primeAutoCarePdfFontsReady)throw new Error('The invoice PDF font bundle did not initialize. Update Prime Auto Care and reopen it before creating the PDF.');
     const b=i.businessSnapshot||db.business,registered=i.gstRegistered??b.registered;
     const txLines=invoiceTaxLines(i),cgst=sum(txLines,x=>x.cgst),sgst=sum(txLines,x=>x.sgst),igst=sum(txLines,x=>x.igst),gstTotal=Number(i.tax??sum(txLines,x=>x.tax))||0;
     const customer=db.customers.find(c=>c.id===i.customerId);
