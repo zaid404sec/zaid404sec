@@ -209,7 +209,7 @@ if (keyResults.phone91!=='9824823200' || keyResults.phone0091!=='9824823200' ||
 }
 console.log('PASS: duplicate customer/mobile/vehicle checks normalise 91, 0091 and registration formatting');
 
-const cloudSource = await readFile(new URL('../src/cloud-sync.js', import.meta.url), 'utf8');
+
 for (const token of [
   'https://jkjudmkqaebrgllemris.supabase.co',
   'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw',
