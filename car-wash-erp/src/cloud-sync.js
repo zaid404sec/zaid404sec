@@ -8,6 +8,7 @@ const DEFAULT_PROJECT_CONFIG = {
 };
 
 let supabase = null;
+let activeConfigFingerprint = '';
 let user = null;
 let workspace = null;
 let channel = null;
@@ -54,8 +55,10 @@ function stableStringify(value) {
   return JSON.stringify(normalize(value));
 }
 function initialize(config) {
-  if (supabase && supabase.supabaseUrl === config.url) return;
+  const fingerprint = config.url + '|' + config.anonKey;
+  if (supabase && activeConfigFingerprint === fingerprint) return;
   if (channel && supabase) void supabase.removeChannel(channel);
+  activeConfigFingerprint = fingerprint;
   supabase = createClient(config.url, config.anonKey, {
     auth: {
       persistSession: true,
