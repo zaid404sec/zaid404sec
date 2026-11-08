@@ -100,9 +100,28 @@ jobs:
           path.write_text(updated.replace('https:', r'https\:'))
           print(path.read_text())
           PY
-      - name: Build debug APK
+      - name: Cache Gradle distributions and build outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('car-wash-erp/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - name: Build debug APK (retry transient distribution timeouts)
         working-directory: car-wash-erp/android
-        run: ./gradlew assembleDebug
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew assembleDebug; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: WashDesk-Android-APK
