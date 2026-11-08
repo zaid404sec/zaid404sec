@@ -29,7 +29,7 @@ jobs:
           node-version: 22
       - name: Install app dependencies
         working-directory: car-wash-erp
-        run: npm install
+        run: npm install --omit=dev
       - name: Build local PDF, report and cloud assets
         working-directory: car-wash-erp
         run: npm run prepare:assets
