@@ -161,6 +161,12 @@ if (!html.includes('Enable Anonymous Sign-Ins') ||
     !html.includes('same code once on each of the four phones and the Windows laptop')) {
   throw new Error('Cloud settings do not explain the shared device-pairing workflow.');
 }
+if (!cloudSource.includes('workspace = readWorkspace();') ||
+    !cloudSource.includes('automatic sync will resume when internet returns') ||
+    !cloudSource.includes('void resume({ getLocal: localProvider, onRemote: remoteHandler })')) {
+  throw new Error('Saved device pairing does not recover automatically after an offline app restart.');
+}
+console.log('PASS: offline app restart restores pairing and retries sync after internet returns');
 console.log('PASS: email-link auth removed; anonymous authenticated devices join one shared workspace');
 
 
