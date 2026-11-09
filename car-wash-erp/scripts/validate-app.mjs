@@ -5,6 +5,11 @@ import { transform } from 'esbuild';
 
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v5') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v5.');
+}
+console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
