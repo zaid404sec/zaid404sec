@@ -6,8 +6,8 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v5') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v5.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v6') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v6.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 const mustContain = [
@@ -55,7 +55,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v5') throw new Error('Android stability release app ID v5 was not set.');
+if (appId !== 'com.washdesk.carwash.v6') throw new Error('Android stability release app ID v6 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
