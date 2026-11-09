@@ -151,9 +151,25 @@ const remoteReceiveStart = html.indexOf('function receiveCloudData(');
 const remoteReceiveEnd = html.indexOf('async function connectCloud', remoteReceiveStart);
 if (remoteReceiveStart < 0 || remoteReceiveEnd < 0) throw new Error('Remote sync handler not found.');
 const remoteReceive = html.slice(remoteReceiveStart, remoteReceiveEnd);
-if (!remoteReceive.includes('if(canRenderRemoteUpdate())render()') ||
+if (!remoteReceive.includes('if(shouldDeferRemoteUpdate())') ||
+    !remoteReceive.includes('return {__cloudSyncDeferred:true}') ||
     remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db));render();')) {
-  throw new Error('A remote sync event can still unconditionally replace the active app DOM.');
+  throw new Error('A remote sync event can still mutate local data or the active app DOM during billing.');
+}
+if (!html.includes('let pendingRemotePayload=null;') ||
+    !html.includes('function applyPendingRemoteData()') ||
+    !html.includes("if(page==='billing'&&p!=='billing')applyPendingRemoteData()")) {
+  throw new Error('Deferred cloud updates are not applied safely after billing is finished.');
+}
+if (!cloudSource.includes('if (applied?.__cloudSyncDeferred) return null;') ||
+    !cloudSource.includes("update queued until current billing is finished")) {
+  throw new Error('Cloud sync does not honor the billing-safe remote update deferral contract.');
+}
+const saveBillStart = html.indexOf('async function saveBill()');
+const saveBillEnd = html.indexOf('function applyConsumption', saveBillStart);
+const saveBillSource = html.slice(saveBillStart, saveBillEnd);
+if (!(saveBillSource.indexOf('await reserveInvoiceNo(invoiceDate)') < saveBillSource.indexOf('applyConsumption(billLines)'))) {
+  throw new Error('Stock is mutated before the shared invoice number request succeeds.');
 }
 if (!html.includes("if(page==='billing')return false") ||
     !html.includes("active.matches('input,textarea,select,[contenteditable=\"true\"]')") ||
