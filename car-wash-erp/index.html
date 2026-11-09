@@ -201,7 +201,7 @@
   function load(){try{const x=JSON.parse(localStorage.getItem(STORE));return x&&x.business?Object.assign(blank(),x):blank()}catch(e){return blank()}}
   function save(){try{const previous=JSON.parse(localStorage.getItem(STORE)||'{}');['customers','vehicles','services','invoices','products','purchases','expenses','staff','staffAdvances','payments'].forEach(k=>{const oldMap=new Map((previous[k]||[]).map(x=>[x.id,x]));(db[k]||[]).forEach(x=>{const old=oldMap.get(x.id);if(!old||JSON.stringify(old)!==JSON.stringify(x))x.updatedAt=Date.now()})});if(!previous.business||JSON.stringify(previous.business)!==JSON.stringify(db.business))db.business.updatedAt=Date.now();if(JSON.stringify(previous.settings||{})!==JSON.stringify(db.settings||{}))db.settings.updatedAt=Date.now();db._deletedIds=db._deletedIds||{};localStorage.setItem(STORE,JSON.stringify(db));window.WashDeskCloud?.schedulePush?.(db);return true}catch(e){notify('Storage is full. Export a backup and remove old records.');return false}}
   function notify(s){const t=document.getElementById('toast');t.textContent=s;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800)}
-  function setPage(p){page=p;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));document.getElementById('sidebar').classList.remove('open');document.getElementById('top-title').textContent=({dashboard:'Dashboard',billing:'New bill',invoices:'Invoices',customers:'Customers & vehicles',services:'Services & packages',inventory:'Inventory',purchases:'Purchases',expenses:'Expenses',staff:'Staff',reports:'Reports',offers:'Offers & WhatsApp',settings:'Business settings'})[p]||'Prime Auto Care';document.getElementById('top-subtitle').textContent=({dashboard:'Your business at a glance',billing:'Create a customer bill in a few steps',invoices:'Search, review and share every saved invoice',customers:'Customer contacts, vehicles and visit history',services:'Set service rates for private, taxi and commercial vehicles',inventory:'Track chemicals and consumables',purchases:'Record supplier purchases and stock received',expenses:'Daily, monthly and all-time business expenses',staff:'Staff profiles, monthly salaries and payments',reports:'Sales registers and Excel reports',offers:'Prepare WhatsApp offers for customers who agreed to receive them',settings:'Business profile, backups and connected cloud sync'})[p]||'';render()}
+  function setPage(p){if(page==='billing'&&p!=='billing')applyPendingRemoteData();page=p;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));document.getElementById('sidebar').classList.remove('open');document.getElementById('top-title').textContent=({dashboard:'Dashboard',billing:'New bill',invoices:'Invoices',customers:'Customers & vehicles',services:'Services & packages',inventory:'Inventory',purchases:'Purchases',expenses:'Expenses',staff:'Staff',reports:'Reports',offers:'Offers & WhatsApp',settings:'Business settings'})[p]||'Prime Auto Care';document.getElementById('top-subtitle').textContent=({dashboard:'Your business at a glance',billing:'Create a customer bill in a few steps',invoices:'Search, review and share every saved invoice',customers:'Customer contacts, vehicles and visit history',services:'Set service rates for private, taxi and commercial vehicles',inventory:'Track chemicals and consumables',purchases:'Record supplier purchases and stock received',expenses:'Daily, monthly and all-time business expenses',staff:'Staff profiles, monthly salaries and payments',reports:'Sales registers and Excel reports',offers:'Prepare WhatsApp offers for customers who agreed to receive them',settings:'Business profile, backups and connected cloud sync'})[p]||'';render()}
   function fy(d=today()){const x=new Date(d+'T00:00:00');let y=x.getFullYear();if(x.getMonth()+1<4)y--;return `${String(y).slice(-2)}-${String(y+1).slice(-2)}`}
   function nextInvoiceNo(date=today()){const prefix=(db.business.invoicePrefix||'CW').replace(/[^A-Za-z0-9-]/g,'').slice(0,4).toUpperCase()||'CW';const key=String(date).slice(2).replace(/-/g,'');const n=db.invoices.filter(x=>x.date===date).reduce((m,x)=>{const z=String(x.number||'').match(/-(\d{3,})$/);return Math.max(m,z?Number(z[1]):0)},0)+1;return `${prefix}-${key}-${String(n).padStart(3,'0')}`} async function reserveInvoiceNo(date=today()){try{if(window.WashDeskCloud?.nextInvoiceNumber)return await window.WashDeskCloud.nextInvoiceNumber({prefix:db.business.invoicePrefix||'CW',date,minNext:Number(nextInvoiceNo(date).match(/-(\d+)$/)?.[1]||1)});}catch(e){console.warn('Cloud invoice counter unavailable; using this device counter.',e)}return nextInvoiceNo(date)}
   function sum(a,fn){return a.reduce((s,x)=>s+(Number(fn?fn(x):x)||0),0)}
@@ -296,10 +296,9 @@
   function empty(title,desc,button){return `<div class="empty"><b>${esc(title)}</b>${esc(desc)}${button?`<div style="margin-top:14px"><button class="btn primary" data-action="${button.action}">${esc(button.label)}</button></div>`:''}</div>`}
   function pageHead(title,desc,actions=''){return `<div class="page-head"><div><h2>${title}</h2><p>${desc}</p></div><div class="actions">${actions}</div></div>`}
   let remoteRenderPending=false;
+  let pendingRemotePayload=null;
   function render(){const el=document.getElementById('app');const map={dashboard:dashboard,billing:billing,invoices:invoices,customers:customers,services:services,inventory:inventory,purchases:purchases,expenses:expenses,staff:staff,reports:reports,offers:offers,settings:settings};el.innerHTML=(map[page]||dashboard)();wirePage();remoteRenderPending=false}
   function canRenderRemoteUpdate(){
-    // Remote cloud commits must never replace the active billing form: replacing
-    // #app destroys the focused input and Android immediately dismisses Gboard.
     if(page==='billing')return false;
     const backdrop=document.getElementById('modal-backdrop');
     if(backdrop?.classList.contains('show'))return false;
@@ -308,6 +307,26 @@
       if(active.matches('input,textarea,select,[contenteditable="true"]'))return false;
       if(active.closest?.('form'))return false;
     }
+    return true;
+  }
+  function shouldDeferRemoteUpdate(){
+    if(page==='billing')return true;
+    const backdrop=document.getElementById('modal-backdrop');
+    if(backdrop?.classList.contains('show'))return true;
+    const active=document.activeElement;
+    return !!(active&&active!==document.body&&active!==document.documentElement&&(
+      active.matches('input,textarea,select,[contenteditable="true"]')||active.closest?.('form')
+    ));
+  }
+  function applyPendingRemoteData(){
+    if(!pendingRemotePayload)return false;
+    const remote=pendingRemotePayload;
+    pendingRemotePayload=null;
+    db=mergeWashDeskData(db,remote);
+    localStorage.setItem(STORE,JSON.stringify(db));
+    remoteRenderPending=false;
+    // Reconcile local edits made while the remote snapshot was deferred.
+    window.WashDeskCloud?.schedulePush?.(db);
     return true;
   }
   function stat(label,value,icon,note=''){return `<div class="stat"><div class="stat-top">${label}<span class="stat-icon">${icon}</span></div><div class="stat-value">${value}</div><div class="stat-note">${note}</div></div>`}
@@ -513,9 +532,11 @@
     billSaving=true;
     const saveButton=document.querySelector('[data-action="save-bill"]');if(saveButton)saveButton.disabled=true;
     try{
-      const stockCost=applyConsumption(billLines);
+      // Reserve the globally unique invoice number before mutating local stock.
+      // If the network/counter fails, no inventory quantity is changed.
       const biz=JSON.parse(JSON.stringify(db.business));
       const invoiceDate=today(),invoiceNumber=await reserveInvoiceNo(invoiceDate);
+      const stockCost=applyConsumption(billLines);
       const vehicleType=selectedVehicle?.type||document.getElementById('bill-type').value;
       const inv={
         id:id(),number:invoiceNumber,financialYear:fy(invoiceDate),date:invoiceDate,createdAt:Date.now(),
@@ -551,7 +572,7 @@
   function filterCustomers(){const q=document.getElementById('customer-search').value.toLowerCase();document.getElementById('customer-table').innerHTML=customerTable(db.customers.filter(c=>[c.name,c.phone,c.city,...db.vehicles.filter(v=>v.customerId===c.id).map(v=>v.number)].join(' ').toLowerCase().includes(q)))}
   function filterStock(){const q=document.getElementById('stock-search').value.toLowerCase();document.getElementById('stock-table').innerHTML=stockTable(db.products.filter(p=>[p.name,p.sku,p.category].join(' ').toLowerCase().includes(q)))}
   function openModal(title,html){document.getElementById('modal-title').textContent=title;document.getElementById('modal-body').innerHTML=html;document.getElementById('modal-backdrop').classList.add('show')}
-  function closeModal(){document.getElementById('modal-backdrop').classList.remove('show')}
+  function closeModal(){document.getElementById('modal-backdrop').classList.remove('show');if(page!=='billing')applyPendingRemoteData()}
   function openInvoice(invId){const i=db.invoices.find(x=>x.id===invId);if(!i)return;openModal(`${esc(i.number)} · ${esc(invoiceCustomerName(i))}`,`${invoiceHTML(i)}<div class="actions" style="margin-top:15px"><button class="btn" data-edit-invoice="${i.id}">✎ Edit invoice</button><button class="btn" data-save-pdf="${i.id}">⬇ Save PDF</button><button class="btn primary" data-share="${i.id}">Share PDF / WhatsApp</button><button class="btn" data-print="${i.id}">Print</button>${invoiceDue(i)>0?`<button class="btn" data-payment="${i.id}">Add payment</button>`:''}</div>`)}
   function invoiceEditLineRows(){return editingLines.map((l,n)=>`<tr data-edit-line="${n}"><td><input name="lineName" value="${esc(l.name)}" style="width:100%;min-width:135px" required /></td><td><input name="lineQty" type="number" min=".01" step=".01" value="${Number(l.qty)||1}" style="width:76px" required /></td><td><input name="lineRate" type="number" min="0" step=".01" value="${Number(l.rate)||0}" style="width:92px" required /></td><td><input name="lineDiscount" type="number" min="0" step=".01" value="${Number(l.discount)||0}" style="width:86px" /></td><td><input name="lineTax" type="number" min="0" max="100" step=".01" value="${Number(l.taxRate)||0}" style="width:70px" /></td><td><button type="button" class="btn small danger" data-remove-edit-line="${n}">×</button></td></tr>`).join('')}
   function readInvoiceEditLines(){return [...document.querySelectorAll('#edit-invoice-lines tr[data-edit-line]')].map(tr=>{const old=editingLines[Number(tr.dataset.editLine)]||{};const val=name=>tr.querySelector(`[name="${name}"]`)?.value;const qty=Number(val('lineQty')),rate=Number(val('lineRate')),discount=Number(val('lineDiscount')||0);return {...old,name:String(val('lineName')||'').trim(),qty,rate,discount,taxRate:Number(val('lineTax')||0),amount:Math.max(0,qty*rate-discount)}})}
@@ -1008,9 +1029,14 @@
   }
   function mergeWashDeskData(local,remote){const base=Object.assign(blank(),local||{},remote||{}),deleted={...(local?._deletedIds||{})};Object.entries(remote?._deletedIds||{}).forEach(([id,t])=>deleted[id]=Math.max(Number(deleted[id])||0,Number(t)||0));const collections=['customers','vehicles','services','invoices','products','purchases','expenses','staff','staffAdvances','payments'];collections.forEach(key=>{const map=new Map();[...(local?.[key]||[]),...(remote?.[key]||[])].forEach(record=>{if(!record?.id)return;const old=map.get(record.id),stamp=x=>Number(x?.updatedAt||x?.editedAt||x?.createdAt||0);if(!old||stamp(record)>=stamp(old))map.set(record.id,record)});base[key]=[...map.values()].filter(record=>(Number(deleted[record.id])||0)<=(Number(record.updatedAt||record.editedAt||record.createdAt||0)))});base._deletedIds=deleted;const stamp=x=>Number(x?.updatedAt||0);base.business=stamp(local?.business)>=stamp(remote?.business)?(local?.business||base.business):(remote?.business||base.business);base.settings=stamp(local?.settings)>=stamp(remote?.settings)?(local?.settings||base.settings):(remote?.settings||base.settings);base.meta={...(local?.meta||{}),...(remote?.meta||{})};return base}
   function receiveCloudData(remote){
-    // Apply remote records to the in-memory/local database immediately, but do
-    // not re-render over a live bill or any focused form. The billing search and
-    // selectors read from db, so they can still use newly synced customers.
+    // Never merge a full shared-workspace snapshot or write localStorage while
+    // the cashier is entering a bill. Both operations can block Android's UI
+    // thread and a DOM refresh would dismiss Gboard and erase the search text.
+    if(shouldDeferRemoteUpdate()){
+      pendingRemotePayload=remote;
+      remoteRenderPending=true;
+      return {__cloudSyncDeferred:true};
+    }
     db=mergeWashDeskData(db,remote);
     localStorage.setItem(STORE,JSON.stringify(db));
     if(canRenderRemoteUpdate())render();else remoteRenderPending=true;
