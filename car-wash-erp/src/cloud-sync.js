@@ -159,7 +159,9 @@ async function pairDevice({ url, anonKey, pairingCode, getLocal, onRemote }) {
 }
 function applyRemote(payload) {
   if (!remoteHandler || !payload) return payload;
-  return remoteHandler(clone(payload)) || payload;
+  const applied = remoteHandler(payload);
+  if (applied?.__cloudSyncDeferred) return null;
+  return applied || payload;
 }
 async function publishPayload(payload) {
   if (!supabase || !user || !workspace) return false;
@@ -174,7 +176,7 @@ async function publishPayload(payload) {
     retryDelay = 1500;
     lastPayloadString = stableStringify(canonical);
     const local = applyRemote(canonical);
-    if (stableStringify(local) !== lastPayloadString) queuedPayload = clone(local);
+    if (local && stableStringify(local) !== lastPayloadString) queuedPayload = local;
     setStatus('Connected · all devices synced');
     return true;
   } catch (error) {
@@ -225,11 +227,17 @@ function listenForChanges() {
       filter: 'user_id=eq.' + workspace.owner_user_id
     }, event => {
       const incoming = event.new?.payload;
-      if (!incoming) return;
-      const incomingText = stableStringify(incoming);
-      if (incomingText === lastPayloadString || !remoteHandler) return;
+      if (!incoming || !remoteHandler) return;
       try {
+        // The app can defer this event while a billing form is active. Do not
+        // stringify/clone the full business payload on that keystroke-sensitive path.
         const merged = applyRemote(incoming);
+        if (!merged) {
+          setStatus('Connected · update queued until current billing is finished');
+          return;
+        }
+        const incomingText = stableStringify(incoming);
+        if (incomingText === lastPayloadString) return;
         if (stableStringify(merged) !== incomingText) schedulePush(merged);
         else setStatus('Connected · live update received');
       } catch (error) {
@@ -252,8 +260,8 @@ async function initialSync() {
   if (error) throw error;
   if (data?.payload) {
     const merged = applyRemote(data.payload);
-    if (stableStringify(merged) !== stableStringify(data.payload)) await publishPayload(merged);
-    else {
+    if (merged && stableStringify(merged) !== stableStringify(data.payload)) await publishPayload(merged);
+    else if (merged) {
       lastPayloadString = stableStringify(data.payload);
       setStatus('Connected · live sync active on all paired devices');
     }
@@ -275,9 +283,11 @@ function startSafetyRefresh() {
         .eq('user_id', workspace.owner_user_id)
         .maybeSingle();
       if (error || !data?.payload) return;
-      const incomingText = stableStringify(data.payload);
-      if (incomingText === lastPayloadString || !remoteHandler) return;
+      if (!remoteHandler) return;
       const merged = applyRemote(data.payload);
+      if (!merged) return;
+      const incomingText = stableStringify(data.payload);
+      if (incomingText === lastPayloadString) return;
       if (stableStringify(merged) !== incomingText) await publishPayload(merged);
       else {
         lastPayloadString = incomingText;

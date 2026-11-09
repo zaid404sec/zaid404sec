@@ -5,6 +5,11 @@ import { transform } from 'esbuild';
 
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v5') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v5.');
+}
+console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -50,7 +55,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v4') throw new Error('Android migration-safe app ID was not set.');
+if (appId !== 'com.washdesk.carwash.v5') throw new Error('Android stability release app ID v5 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -151,9 +156,25 @@ const remoteReceiveStart = html.indexOf('function receiveCloudData(');
 const remoteReceiveEnd = html.indexOf('async function connectCloud', remoteReceiveStart);
 if (remoteReceiveStart < 0 || remoteReceiveEnd < 0) throw new Error('Remote sync handler not found.');
 const remoteReceive = html.slice(remoteReceiveStart, remoteReceiveEnd);
-if (!remoteReceive.includes('if(canRenderRemoteUpdate())render()') ||
+if (!remoteReceive.includes('if(shouldDeferRemoteUpdate())') ||
+    !remoteReceive.includes('return {__cloudSyncDeferred:true}') ||
     remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db));render();')) {
-  throw new Error('A remote sync event can still unconditionally replace the active app DOM.');
+  throw new Error('A remote sync event can still mutate local data or the active app DOM during billing.');
+}
+if (!html.includes('let pendingRemotePayload=null;') ||
+    !html.includes('function applyPendingRemoteData()') ||
+    !html.includes("if(page==='billing'&&p!=='billing')applyPendingRemoteData()")) {
+  throw new Error('Deferred cloud updates are not applied safely after billing is finished.');
+}
+if (!cloudSource.includes('if (applied?.__cloudSyncDeferred) return null;') ||
+    !cloudSource.includes("update queued until current billing is finished")) {
+  throw new Error('Cloud sync does not honor the billing-safe remote update deferral contract.');
+}
+const saveBillStart = html.indexOf('async function saveBill()');
+const saveBillEnd = html.indexOf('function applyConsumption', saveBillStart);
+const saveBillSource = html.slice(saveBillStart, saveBillEnd);
+if (!(saveBillSource.indexOf('await reserveInvoiceNo(invoiceDate)') < saveBillSource.indexOf('applyConsumption(billLines)'))) {
+  throw new Error('Stock is mutated before the shared invoice number request succeeds.');
 }
 if (!html.includes("if(page==='billing')return false") ||
     !html.includes("active.matches('input,textarea,select,[contenteditable=\"true\"]')") ||
