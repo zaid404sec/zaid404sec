@@ -265,7 +265,7 @@ Deno.serve(async (req) => {
           let spoken = String(settings.dlt_voice_template_text);
           for (const [key,value] of Object.entries(variables)) spoken=spoken.replaceAll(`{${key}}`,value);
           if (/\{[a-z_]+\}/i.test(spoken)) throw new Error('The registered voice script contains an unsupported variable.');
-          if (spoken.length > 55) throw new Error(`The rendered registered voice script for ${customer.name} is longer than 55 characters. Shorten the approved DLT voice template.`);
+          if (spoken.length > 120) throw new Error(`The rendered registered voice script for ${customer.name} is longer than 120 characters. Shorten the approved DLT voice template.`);
           payloadJob.message=spoken;
           payloadJob.voice_text=spoken;
           payloadJob.dlt_voice_template_id=settings.dlt_voice_template_id;
