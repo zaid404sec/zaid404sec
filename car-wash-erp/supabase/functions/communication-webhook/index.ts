@@ -16,6 +16,58 @@ async function verifyMetaSignature(raw: string, signature: string, secret: strin
   for (let i=0;i<expected.length;i++) diff |= expected.charCodeAt(i)^supplied.charCodeAt(i);
   return diff === 0;
 }
+function normalizeDigits(value: unknown) {
+  let digits=String(value||'').replace(/\D/g,'');
+  if(digits.length===10)digits='91'+digits;
+  return digits;
+}
+async function recordCustomerOptOut(service:any,channel:'whatsapp'|'sms',sender:unknown,details:any) {
+  const digits=normalizeDigits(sender);
+  if(digits.length<11)return {matched:0};
+  const {data:workspace,error:workspaceError}=await service.from('washdesk_workspaces')
+    .select('id,owner_auth_user_id').limit(1).maybeSingle();
+  if(workspaceError||!workspace?.id||!workspace?.owner_auth_user_id)return {matched:0};
+  const {data:sync,error:syncError}=await service.from('washdesk_sync')
+    .select('payload').eq('user_id',workspace.owner_auth_user_id).single();
+  if(syncError||!sync?.payload)return {matched:0};
+  const payload=sync.payload;
+  const customers=Array.isArray(payload.customers)?payload.customers:[];
+  const now=Date.now();
+  let matched=0;
+  for(const customer of customers){
+    if(normalizeDigits(customer.phone)!==digits)continue;
+    matched++;
+    if(channel==='whatsapp'){
+      customer.waOptIn=false;
+      customer.waServiceOptIn=false;
+    }else{
+      customer.smsOptIn=false;
+      customer.smsServiceOptIn=false;
+    }
+    customer.communicationConsentUpdatedAt=now;
+    customer.communicationConsentSource='provider-inbound-opt-out';
+    customer.communicationConsentHistory=Array.isArray(customer.communicationConsentHistory)?customer.communicationConsentHistory:[];
+    customer.communicationConsentHistory.push({channel,field:'all-'+channel+'-consent',granted:false,source:'provider-inbound-opt-out',at:now});
+    customer.communicationConsentHistory=customer.communicationConsentHistory.slice(-50);
+    customer.updatedAt=now;
+  }
+  if(matched){
+    payload.customers=customers;
+    const {error:updateError}=await service.from('washdesk_sync')
+      .update({payload,updated_at:new Date().toISOString()})
+      .eq('user_id',workspace.owner_auth_user_id);
+    if(updateError)throw updateError;
+    await service.from('pac_communication_events').insert({
+      workspace_id:workspace.id,job_id:null,channel,event_type:'customer_opt_out',
+      details:{matched_customers:matched,source:'provider-inbound',provider_details:details||{}}
+    });
+  }
+  return {matched};
+}
+function isOptOut(value:unknown) {
+  const text=String(value||'').trim().toLowerCase().replace(/[.!?]+$/,'');
+  return /^(stop|stop all|unsubscribe|un-subscribe|cancel|end|quit|opt ?out|remove me|do not message)$/.test(text);
+}
 async function serviceClient() {
   const url=env('SUPABASE_URL');
   let key=env('SUPABASE_SERVICE_ROLE_KEY');
@@ -67,6 +119,13 @@ Deno.serve(async(req)=>{
       const payload=JSON.parse(raw);
       for(const entry of payload.entry||[]){
         for(const change of entry.changes||[]){
+          for(const message of change.value?.messages||[]){
+            const text=message?.text?.body || message?.button?.text || message?.interactive?.button_reply?.title || message?.interactive?.list_reply?.title || '';
+            if(isOptOut(text)){
+              const sender=message?.from || change.value?.contacts?.[0]?.wa_id;
+              await recordCustomerOptOut(service,'whatsapp',sender,{message_id:message?.id,text});
+            }
+          }
           for(const statusItem of change.value?.statuses||[]){
             const providerId=String(statusItem.id||'');
             const status=String(statusItem.status||'');
@@ -88,6 +147,12 @@ Deno.serve(async(req)=>{
         const data=await req.formData();for(const [k,v] of data.entries())form[k]=String(v);
       }else{
         const text=await req.text();try{form=JSON.parse(text)}catch{form={raw:text}}
+      }
+      const inboundBody=form.Body||form.body||form.Message||form.message||'';
+      const inboundFrom=form.From||form.from||form.Sender||form.sender||'';
+      if(inboundFrom&&isOptOut(inboundBody)){
+        await recordCustomerOptOut(service,'sms',inboundFrom,{body:String(inboundBody),from:String(inboundFrom)});
+        return response('OK');
       }
       const jobId=url.searchParams.get('job_id')||String(form.CustomField||form.custom_field||'').match(/PAC:([0-9a-f-]{36})/i)?.[1]||'';
       if(!jobId)return response('OK');
