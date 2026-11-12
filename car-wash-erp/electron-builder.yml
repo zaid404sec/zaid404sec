@@ -18,6 +18,7 @@ files:
   - exceljs.bundle.min.js
   - report-export.bundle.js
   - cloud-sync.bundle.js
+  - notifications-native.bundle.js
   - cloud-sync-setup.sql
   - electron/**
   - package.json
