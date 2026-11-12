@@ -651,12 +651,23 @@ for (const token of ['auth.getUser(token)','member.role !== \'owner\'','waOptIn'
 for (const token of ['META_ACCESS_TOKEN','graph.facebook.com','pac_claim_communication_jobs','EXOTEL_API_KEY','Sms/send.json','Calls/connect.json','PAC_WORKER_SECRET','max_attempts','dlt_voice_template_id']) {
   if (!communicationsWorker.includes(token)) throw new Error('Communications worker is missing provider/queue feature: '+token);
 }
-if (!communicationsWebhook.includes('X-Hub-Signature-256') ||
+if (!communicationsWebhook.includes('x-hub-signature-256') ||
     !communicationsWebhook.includes('META_APP_SECRET') ||
     !communicationsWebhook.includes('EXOTEL_WEBHOOK_TOKEN') ||
     !communicationsWebhook.includes('pac_communication_events')) {
   throw new Error('Provider delivery webhooks must verify signatures/secrets and record delivery events.');
 }
+if (!communicationsWebhook.includes('recordCustomerOptOut') ||
+    !communicationsWebhook.includes('isOptOut') ||
+    !communicationsWebhook.includes('provider-inbound-opt-out')) {
+  throw new Error('Inbound STOP/UNSUBSCRIBE replies must update the shared customer consent ledger.');
+}
+if (!communicationsWorker.includes('CustomField',0) ||
+    !communicationsWorker.includes("form.set('CustomField', voiceText)") ||
+    !communicationsWorker.includes('voiceText.length>120')) {
+  throw new Error('The Exotel voice flow must receive the registered script within its CustomField limit.');
+}
+
 const communicationsCron = await readFile(new URL('../communications-cron-setup.sql', import.meta.url), 'utf8');
 if (!communicationsCron.includes('pg_cron') || !communicationsCron.includes('pg_net') ||
     !communicationsCron.includes('vault.decrypted_secrets') ||
