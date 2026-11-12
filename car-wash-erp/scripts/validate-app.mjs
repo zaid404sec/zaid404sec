@@ -601,7 +601,10 @@ for (const asset of ['communications.bundle.js']) {
   if (!existsSync(file) || statSync(file).size < 500) throw new Error('Missing communications runtime bundle: '+asset);
 }
 if (!html.includes('<script src="./communications.bundle.js"></script>') ||
-    !sw.includes("'./communications.bundle.js'")) {
+    !sw.includes("'./communications.bundle.js'") ||
+    !html.includes('whatsapp_marketing_image_template') ||
+    !html.includes('dlt_voice_template_id') ||
+    !html.includes('PAC_CRON_SETUP_COMPLETE')) {
   throw new Error('The communications client must be loaded and precached for offline-safe app startup.');
 }
 if (!html.includes('data-action="queue-whatsapp-cloud"') ||
@@ -611,7 +614,7 @@ if (!html.includes('data-action="queue-whatsapp-cloud"') ||
     !html.includes('function saveCommunicationSettings(e)') ||
     !html.includes('data-consent-field=') ||
     !html.includes("void shareInvoice(inv.id)") ||
-    !html.includes('window.PrimeAutoCareMessaging.sendInvoice')) {
+    !html.includes('PrimeAutoCareMessaging?.sendInvoice')) {
   throw new Error('The app must provide consent-aware WhatsApp/SMS/voice campaigns and automatic invoice queue handoff.');
 }
 const communicationsClient = await readFile(new URL('../src/communications.js', import.meta.url), 'utf8');
@@ -659,7 +662,9 @@ if (!communicationsWebhook.includes('x-hub-signature-256') ||
 }
 if (!communicationsWebhook.includes('recordCustomerOptOut') ||
     !communicationsWebhook.includes('isOptOut') ||
-    !communicationsWebhook.includes('provider-inbound-opt-out')) {
+    !communicationsWebhook.includes('provider-inbound-opt-out') ||
+    !communicationsWebhook.includes("channel==='voice'") ||
+    !communicationsWebhook.includes("digits==='9'")) {
   throw new Error('Inbound STOP/UNSUBSCRIBE replies must update the shared customer consent ledger.');
 }
 if (!communicationsWorker.includes('CustomField',0) ||
