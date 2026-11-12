@@ -16,6 +16,7 @@ function createWindow() {
     minHeight: 680,
     title: 'Prime Auto Care — Business Manager',
     backgroundColor: '#111111',
+    icon: path.join(__dirname, '..', 'prime-auto-care-icon-512.png'),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
