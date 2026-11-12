@@ -583,7 +583,7 @@ if (!sql.includes('washdesk_can_read_sync(user_id)') || !sql.includes('for updat
 console.log('PASS: database supports secure shared workspace membership and pairing-code provisioning');
 
 
-if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
+if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake'] || !packageJson.dependencies['@capacitor/local-notifications']) throw new Error('Excel, PDFMake, cloud sync or local notifications runtime dependency missing.');
 
 const electronBuilderAuth = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
 for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','cloud-sync-setup.sql']) {
