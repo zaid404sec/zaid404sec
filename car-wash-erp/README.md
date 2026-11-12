@@ -83,3 +83,14 @@ Open the published HTTPS site on your Android phone and choose **Install app** o
 - **Cloud merge:** Staff attendance is explicitly included in the server-side per-record merge so devices updating different staff/date rows do not replace the entire attendance array.
 - **Invoice numbers:** Paired online devices reserve numbers from the atomic PostgreSQL daily counter; a counter failure now blocks bill saving rather than guessing a local sequential number. Paired offline devices receive a visibly provisional `OFF` reference with a unique suffix. Online sequential numbering resumes when connected.
 - **Device pairing:** There is no app-enforced four-device limit. Six concurrent mobile sessions are the intended target, but an actual six-device load test still must be run on the real devices and Supabase project.
+
+
+## Version 2.5.2 — shared stock ledger and multi-device safeguards
+
+- **Stock movements:** Each invoice sale, invoice cancellation, invoice item edit, stock purchase and manual stock adjustment creates a uniquely identified stock movement. The app derives current stock from the opening balance plus the movement ledger; it no longer syncs stock as a last-writer absolute quantity.
+- **Server validation:** The shared workspace merge runs inside its existing locked PostgreSQL transaction, combines movements from all devices and rejects a transaction that would make shared stock negative. A rejected transaction remains local on its source device and is shown as a sync conflict; resolve the pending invoice or adjustment before syncing again.
+- **Version gate:** The updated Cloud Sync SQL marks the server stock-ledger schema version. The app blocks shared invoice numbering and stock sync until it receives that server confirmation. Older paired clients are rejected by the updated SQL until they are updated to 2.5.2; update all paired phones and computers before resuming shared operations.
+- **Migration:** Run the complete updated `cloud-sync-setup.sql` once in the existing Supabase SQL Editor. Existing product quantities become the opening stock baseline; existing historical invoices are not deducted again. The pairing code/workspace is retained.
+- **Offline behavior:** Offline stock movements remain locally saved and merge when online. The server validates the combined movements when they arrive. Paired offline invoices continue to use clearly provisional `OFF` references; sequential shared invoice numbers require a confirmed online server counter.
+- **Install:** Android uses `com.washdesk.carwash.v11` so it installs beside the 2.5.1 v10 APK and preserves its local storage. Keep previous builds until the new build has been paired and its cloud records verified.
+- **Release validation:** CI builds and source-level regression tests are required. The actual six-device concurrent billing/stock test still must be completed on the user's devices; CI alone does not certify physical multi-device reliability.
