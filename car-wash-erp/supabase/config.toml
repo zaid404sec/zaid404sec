@@ -1,0 +1,10 @@
+project_id = "prime-auto-care"
+
+[functions.communication-api]
+verify_jwt = false
+
+[functions.communication-worker]
+verify_jwt = false
+
+[functions.communication-webhook]
+verify_jwt = false

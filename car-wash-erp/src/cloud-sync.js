@@ -436,7 +436,23 @@ async function disconnect() {
   localStorage.removeItem(WORKSPACE_KEY);
   setStatus('This device disconnected · local records remain safe');
 }
+async function getApiContext() {
+  if (!supabase) initialize(readConfig());
+  if (!user) await ensureSession();
+  if (!workspace) workspace = await getWorkspaceFromServer();
+  if (!workspace) throw new Error('Pair this device with the Prime Auto Care shared workspace first.');
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data?.session?.access_token) throw new Error('The shared cloud session expired. Reconnect this device.');
+  const config = readConfig();
+  return {
+    url: config.url,
+    anonKey: config.anonKey,
+    accessToken: data.session.access_token,
+    workspace
+  };
+}
 window.WashDeskCloud = {
+  getApiContext,
   pairDevice,
   resume,
   schedulePush,

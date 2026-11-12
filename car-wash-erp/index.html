@@ -210,6 +210,7 @@
 <script src="./report-export.bundle.js"></script>
 <script src="./cloud-sync.bundle.js"></script>
 <script src="./notifications-native.bundle.js"></script>
+<script src="./communications.bundle.js"></script>
 <script>
 (() => {
   'use strict';
@@ -662,48 +663,90 @@
   function toggleWhatsAppConsent(cid){const c=db.customers.find(x=>x.id===cid);if(!c)return;c.waOptIn=!c.waOptIn;c.updatedAt=Date.now();if(!save())return;render();notify(c.waOptIn?'WhatsApp offer permission enabled.':'WhatsApp offer permission removed.')}
   function offerPhone(phone){let p=String(phone||'').replace(/\D/g,'');if(p.length===10)p='91'+p;return p}
   function offers(){
-    const eligible=db.customers.filter(c=>c.waOptIn&&offerPhone(c.phone).length>=11);
+    const eligible=db.customers.filter(c=>(c.waOptIn||c.smsOptIn||c.voiceOptIn)&&offerPhone(c.phone).length>=11);
     const withPhone=db.customers.filter(c=>offerPhone(c.phone).length>=11);
     const eligibleIds=new Set(eligible.map(c=>c.id));
     if(offerSelectedCustomerIds===null)offerSelectedCustomerIds=[...eligibleIds];
     else offerSelectedCustomerIds=offerSelectedCustomerIds.filter(id=>eligibleIds.has(id));
     const selected=eligible.filter(c=>offerSelectedCustomerIds.includes(c.id));
-    return `${pageHead('Offers & WhatsApp','Prepare one campaign message for opted-in customers, then choose WhatsApp Business in the Android share menu.','<button class="btn" data-nav="customers">Manage customers</button>')}
+    const cfg=window.PrimeAutoCareMessagingConfig||{};
+    return `${pageHead('Offers & Messaging','Send approved WhatsApp, SMS and voice campaigns through the secure server queue.','<button class="btn" data-nav="customers">Manage customers</button>')}
     <div class="card" style="margin-bottom:16px">
-      <div class="card-head"><h3>Daily opening announcement</h3><span>Manual share and local voice preview</span></div>
-      <p class="help">Your daily reminder prepares this message. Review the hours and contact details before sharing.</p>
+      <div class="card-head"><h3>Daily opening announcement</h3><span>Manual preview + scheduled server delivery</span></div>
+      <p class="help">The on-device reminder remains available. Enable server delivery below to send the configured announcement to customers who opted in for each channel.</p>
       <div class="actions">
         <button class="btn primary" data-action="prepare-opening-announcement">Prepare opening message</button>
         <button class="btn" data-action="share-opening-sms">Share via SMS</button>
         <button class="btn" data-action="preview-opening-voice">Play voice preview</button>
       </div>
-      <p class="help">The scheduled reminder is stored on this phone. SMS sharing requires you to choose the messaging app and press Send. Voice preview plays on this device only; automatic customer calls require a voice provider.</p>
     </div>
     <div class="grid two">
       <div class="card">
-        <div class="card-head"><h3>Write your offer</h3><span>WhatsApp Business share</span></div>
-        <div class="field"><label>Offer message</label><textarea id="offer-message" rows="5" placeholder="Example: This week only — get 20% off your next car wash. Visit us today!">${esc(offerDraft)}</textarea></div>
-        <div class="field" style="margin-top:12px"><label>Promotional image (optional)</label><input id="offer-image" type="file" accept="image/*" /></div>
-        <div class="success-note" style="margin-top:12px">Selected recipients: <b>${selected.length}</b> of <b>${eligible.length}</b> opted-in customers. Only selected contacts with a valid mobile number are counted.</div>
-        <div class="form-actions"><button class="btn primary" data-action="share-offer-whatsapp" ${selected.length?'':'disabled'}>Share selected offer via WhatsApp ↗</button></div>
-        <p class="help">Select customers below, then share once. In WhatsApp Business, select the same recipients in its recipient picker and press Send. WhatsApp controls the final recipients and sending; this app cannot silently send messages or force WhatsApp to select recipients on your behalf.</p>
+        <div class="card-head"><h3>Prepare a campaign</h3><span>Consent-checked delivery queue</span></div>
+        <div class="field"><label>Campaign message</label><textarea id="offer-message" rows="5" placeholder="Write the approved campaign message…">${esc(offerDraft)}</textarea></div>
+        <div class="field" style="margin-top:12px"><label>Promotional image (WhatsApp only, optional)</label><input id="offer-image" type="file" accept="image/jpeg,image/png,image/webp" /></div>
+        <div class="field" style="margin-top:12px"><label>Send at (optional — leave blank to queue now)</label><input id="offer-send-at" type="datetime-local" /></div>
+        <div class="success-note" style="margin-top:12px">Selected contacts: <b>${selected.length}</b>. Each channel will only receive messages for customers who opted in for that channel.</div>
+        <div class="actions" style="margin-top:12px;flex-wrap:wrap">
+          <button class="btn primary" data-action="queue-whatsapp-cloud" ${selected.some(c=>c.waOptIn)?'':'disabled'}>Queue WhatsApp Cloud API</button>
+          <button class="btn" data-action="queue-sms-gateway" ${selected.some(c=>c.smsOptIn)?'':'disabled'}>Queue SMS campaign</button>
+          <button class="btn" data-action="queue-voice-calls" ${selected.some(c=>c.voiceOptIn)?'':'disabled'}>Queue voice calls</button>
+          <button class="btn" data-action="share-offer-whatsapp" ${selected.some(c=>c.waOptIn)?'':'disabled'}>Manual WhatsApp share</button>
+        </div>
+        <p class="help">Automatic delivery uses approved Meta templates and provider accounts. If a provider is not configured, the server rejects the queue request instead of silently dropping it.</p>
       </div>
       <div class="card">
-        <div class="card-head"><h3>Bulk share steps</h3></div>
-        <div class="stock-alert"><span>1. Select opted-in customers</span><b>${selected.length} selected</b></div>
-        <div class="stock-alert"><span>2. Prepare text and image</span><b>One campaign</b></div>
-        <div class="stock-alert"><span>3. Tap Share once</span><b>Android share menu</b></div>
-        <div class="stock-alert"><span>4. Choose WhatsApp Business</span><b>Review and Send</b></div>
-        <div class="notice" style="margin-top:14px">Your new WhatsApp Business account can be selected from the Android share menu. Installing WhatsApp Business does not itself activate the official Cloud API. Automatic delivery, delivery reports and unattended schedules remain a separate API integration.</div>
+        <div class="card-head"><h3>Delivery status</h3><button class="btn small" data-action="refresh-message-status">Refresh</button></div>
+        <div id="messaging-provider-status" class="help">Checking secure messaging backend…</div>
+        <div class="divider" style="margin:12px 0"></div>
+        <div id="messaging-jobs-list" class="help">Recent message activity will appear here.</div>
       </div>
     </div>
     <div class="card" style="margin-top:16px">
       <div class="card-head"><h3>Choose campaign recipients</h3><div class="actions"><button class="btn small" data-action="offer-select-all">Select all opted-in</button><button class="btn small" data-action="offer-clear-selection">Clear selection</button></div></div>
-      <div class="table-wrap">${eligible.length?`<table><thead><tr><th>Select</th><th>Customer</th><th>Mobile</th><th>Offer permission</th></tr></thead><tbody>${eligible.map(c=>`<tr><td><input type="checkbox" data-offer-customer="${esc(c.id)}" ${offerSelectedCustomerIds.includes(c.id)?'checked':''} aria-label="Select ${esc(c.name)}" /></td><td><b>${esc(c.name)}</b></td><td>${esc(c.phone)}</td><td><span class="badge green">Opted in</span></td></tr>`).join('')}</tbody></table>`:empty('No eligible customers','Add customer mobile numbers and record their permission before including them in offer campaigns.')}</div>
+      <div class="table-wrap">${eligible.length?`<table><thead><tr><th>Select</th><th>Customer</th><th>Mobile</th><th>WhatsApp</th><th>SMS</th><th>Voice</th></tr></thead><tbody>${eligible.map(c=>`<tr><td><input type="checkbox" data-offer-customer="${esc(c.id)}" ${offerSelectedCustomerIds.includes(c.id)?'checked':''} aria-label="Select ${esc(c.name)}" /></td><td><b>${esc(c.name)}</b></td><td>${esc(c.phone)}</td><td>${c.waOptIn?'<span class="badge green">Opted in</span>':'—'}</td><td>${c.smsOptIn?'<span class="badge green">Opted in</span>':'—'}</td><td>${c.voiceOptIn?'<span class="badge green">Opted in</span>':'—'}</td></tr>`).join('')}</tbody></table>`:empty('No eligible customers','Add a valid mobile number and capture channel-specific consent before campaigns.')}</div>
     </div>
     <div class="card" style="margin-top:16px">
-      <div class="card-head"><h3>Offer permissions</h3><span>All customers with mobile numbers</span></div>
-      <div class="table-wrap">${withPhone.length?`<table><thead><tr><th>Customer</th><th>Mobile</th><th>Offer permission</th><th>Action</th></tr></thead><tbody>${withPhone.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.phone)}</td><td>${c.waOptIn?'<span class="badge green">Opted in</span>':'<span class="badge amber">Not opted in</span>'}</td><td><button class="btn small ${c.waOptIn?'':'primary'}" data-wa-toggle="${c.id}">${c.waOptIn?'Remove permission':'Mark opted in'}</button></td></tr>`).join('')}</tbody></table>`:empty('No mobile numbers found','Add customer mobile numbers to prepare WhatsApp offers.')}</div>
+      <div class="card-head"><h3>Customer communication permissions</h3><span>Update existing customer records</span></div>
+      <div class="table-wrap">${withPhone.length?`<table><thead><tr><th>Customer</th><th>WhatsApp offers</th><th>WhatsApp invoice</th><th>SMS marketing</th><th>SMS invoice</th><th>Voice calls</th></tr></thead><tbody>${withPhone.map(c=>`<tr><td><b>${esc(c.name)}</b><br/><span class="muted">${esc(c.phone)}</span></td>${[['waOptIn','WA marketing'],['waServiceOptIn','WA invoice'],['smsOptIn','SMS marketing'],['smsServiceOptIn','SMS invoice'],['voiceOptIn','Voice']].map(([field,label])=>`<td><input type="checkbox" data-consent-customer="${esc(c.id)}" data-consent-field="${field}" ${c[field]?'checked':''} aria-label="${label} permission for ${esc(c.name)}" /></td>`).join('')}</tr>`).join('')}</tbody></table>`:empty('No customer mobile numbers','Add customers to manage their consent.')}</div>
+      <p class="help" style="margin-top:10px">Only tick a permission after the customer has explicitly agreed to that type of communication. Changes are saved to the shared customer record and timestamped.</p>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-head"><h3>Provider and automation setup</h3><span>Credentials stay in Supabase, never in this app</span></div>
+      <form id="communication-settings-form">
+        <div class="field-grid">
+          <div class="field full"><b>WhatsApp Cloud API (Meta)</b><p class="help">Requires a Meta WhatsApp Business Account, Cloud API phone-number ID, access token and approved templates. The WhatsApp Business app registration alone does not supply these.</p></div>
+          <div class="field"><label>Business WhatsApp number</label><input name="whatsapp_business_number" value="${esc(cfg.whatsapp_business_number||db.business.phone||'')}" placeholder="+91…" /></div>
+          <div class="field"><label>Phone Number ID</label><input name="whatsapp_phone_number_id" value="${esc(cfg.whatsapp_phone_number_id||'')}" /></div>
+          <div class="field"><label>WhatsApp Business Account ID</label><input name="whatsapp_waba_id" value="${esc(cfg.whatsapp_waba_id||'')}" /></div>
+          <div class="field"><label>Approved marketing template</label><input name="whatsapp_marketing_template" value="${esc(cfg.whatsapp_marketing_template||'prime_auto_care_offer')}" /></div>
+          <div class="field"><label>Approved marketing image-header template</label><input name="whatsapp_marketing_image_template" value="${esc(cfg.whatsapp_marketing_image_template||'')}" placeholder="Template approved with an image header" /></div>
+          <div class="field"><label>Approved invoice (PDF header) template</label><input name="whatsapp_invoice_template" value="${esc(cfg.whatsapp_invoice_template||'prime_auto_care_invoice')}" /></div>
+          <div class="field"><label>Approved opening template</label><input name="whatsapp_opening_template" value="${esc(cfg.whatsapp_opening_template||'prime_auto_care_opening')}" /></div>
+          <div class="field"><label>Template language code</label><input name="whatsapp_language" value="${esc(cfg.whatsapp_language||'en')}" /></div>
+          <div class="field full"><b>SMS gateway + voice calls (Exotel)</b><p class="help">Requires Exotel account/API credentials, approved ExoPhone/caller ID, DLT Entity ID, sender header and approved message templates. Commercial voice calls require an allocated compliant 140/160 series CLI in India.</p></div>
+          <div class="field"><label>Exotel Account SID</label><input name="exotel_account_sid" value="${esc(cfg.exotel_account_sid||'')}" /></div>
+          <div class="field"><label>Exotel region</label><select name="exotel_region"><option value="in" ${cfg.exotel_region==='sg'?'':'selected'}>India / Mumbai</option><option value="sg" ${cfg.exotel_region==='sg'?'selected':''}>Singapore</option></select></div>
+          <div class="field"><label>Approved Exotel caller ID</label><input name="exotel_caller_id" value="${esc(cfg.exotel_caller_id||'')}" placeholder="140 / 160 series CLI" /></div>
+          <div class="field full"><label>Exotel voice flow URL (approved recorded / dynamic announcement flow)</label><input name="exotel_voice_flow_url" type="url" value="${esc(cfg.exotel_voice_flow_url||'')}" placeholder="https://my.exotel.com/…" /></div>
+          <div class="field"><label>DLT Entity / PE ID</label><input name="dlt_entity_id" value="${esc(cfg.dlt_entity_id||'')}" /></div>
+          <div class="field"><label>Approved DLT Sender Header</label><input name="dlt_sender_id" value="${esc(cfg.dlt_sender_id||'')}" /></div>
+          <div class="field"><label>Promotional DLT Template ID</label><input name="dlt_promo_template_id" value="${esc(cfg.dlt_promo_template_id||'')}" /></div>
+          <div class="field"><label>Service / invoice DLT Template ID</label><input name="dlt_service_template_id" value="${esc(cfg.dlt_service_template_id||'')}" /></div>
+          <div class="field"><label>Registered DLT voice template ID</label><input name="dlt_voice_template_id" value="${esc(cfg.dlt_voice_template_id||'')}" /></div>
+          <div class="field full"><label>Exact registered voice script (up to 120 characters; Exotel Flow reads CustomField)</label><textarea name="dlt_voice_template_text" rows="2">${esc(cfg.dlt_voice_template_text||'')}</textarea></div>
+          <div class="field full"><label>Exact approved promotional SMS text (use {name} and {message} only where approved as DLT variables)</label><textarea name="dlt_promo_template_text" rows="2">${esc(cfg.dlt_promo_template_text||'')}</textarea></div>
+          <div class="field full"><label>Exact approved invoice SMS text (approved variables: {name}, {invoice_number}, {date}, {total}, {paid}, {balance}, {vehicle})</label><textarea name="dlt_service_template_text" rows="2">${esc(cfg.dlt_service_template_text||'')}</textarea></div>
+          <div class="field full"><b>Daily unattended opening campaign</b><p class="help">Runs from the Supabase server even when all phones are closed. Each channel sends only to customers who opted in for that channel.</p></div>
+          <div class="field full"><label><input type="checkbox" name="server_opening_enabled" ${cfg.server_opening_enabled?'checked':''}/> Enable scheduled server opening campaign</label></div>
+          <div class="field"><label>Send announcement at</label><input type="time" name="server_opening_time" value="${esc(String(cfg.server_opening_time||'07:45').slice(0,5))}"/></div>
+          <div class="field"><label>Timezone</label><input value="Asia/Kolkata" disabled/></div>
+          <div class="field full"><label>Channels</label><div class="actions"><label><input type="checkbox" name="server_opening_channels" value="whatsapp" ${(cfg.server_opening_channels||['whatsapp']).includes('whatsapp')?'checked':''}/> WhatsApp</label><label><input type="checkbox" name="server_opening_channels" value="sms" ${(cfg.server_opening_channels||[]).includes('sms')?'checked':''}/> SMS</label><label><input type="checkbox" name="server_opening_channels" value="voice" ${(cfg.server_opening_channels||[]).includes('voice')?'checked':''}/> Voice call</label></div></div>
+          <div class="field full"><label>Opening announcement text</label><textarea name="server_opening_message" rows="3">${esc(cfg.server_opening_message||'Good morning! {business} is open today from {opening} to {closing}. Visit us for a fresh, spotless finish for your vehicle. Location: {location}. Contact: {phone}.')}</textarea></div>
+        </div>
+        <div class="form-actions"><button class="btn primary" type="submit">Save provider settings</button></div>
+      </form>
+      <p class="help">API key/token fields are intentionally not present here. Add provider credentials in Supabase Edge Function Secrets. Never paste permanent Meta or Exotel tokens into the app or a WhatsApp chat.</p>
     </div>`
   }
   async function shareOfferViaWhatsApp(){
@@ -731,6 +774,111 @@
       console.error('WhatsApp Business offer sharing failed:',err);
       notify(err?.message||'Could not open the WhatsApp share menu. Please retry.');
     }
+  }
+  async function refreshMessagingStatus(){
+    const statusBox=document.getElementById('messaging-provider-status');
+    const jobsBox=document.getElementById('messaging-jobs-list');
+    if(!statusBox||!window.PrimeAutoCareMessaging){if(statusBox)statusBox.textContent='Messaging backend bundle is not loaded.';return}
+    try{
+      const result=await window.PrimeAutoCareMessaging.status();
+      window.PrimeAutoCareMessagingConfig=result.config||{};
+      const providers=result.providers||{};
+      const line=(key,label)=>{const p=providers[key]||{};return `<div class="stock-alert"><span>${label}</span><b class="${p.ready?'text-success':'text-warning'}">${p.ready?'Ready':'Setup required'}</b></div>${p.missing?.length?`<p class="help">${p.missing.map(esc).join(', ')}</p>`:''}`};
+      statusBox.innerHTML=line('whatsapp','WhatsApp Cloud API')+line('sms','SMS gateway / DLT')+line('voice','Automated voice')+line('automationWorker','Server queue worker');
+      if(jobsBox){
+        const jobs=result.jobs||[];
+        jobsBox.innerHTML=jobs.length?jobs.slice(0,12).map(j=>`<div class="stock-alert"><span>${esc(j.channel)} · ${esc(j.recipient_name||'Customer')}<br/><small>${esc(j.created_at||'')}</small></span><b>${esc(j.status)}</b></div>`).join(''):'No message jobs have been queued yet.';
+      }
+      const form=document.getElementById('communication-settings-form');
+      if(form&&!form.dataset.loaded){
+        Object.entries(window.PrimeAutoCareMessagingConfig).forEach(([key,value])=>{
+          const field=form.elements.namedItem(key);
+          if(!field||value===null||value===undefined)return;
+          if(field instanceof RadioNodeList){
+            [...field].forEach(el=>{if(el.type==='checkbox')el.checked=Array.isArray(value)&&value.includes(el.value)});
+          }else if(field.type==='checkbox')field.checked=!!value;
+          else if(field.type==='time')field.value=String(value).slice(0,5);
+          else field.value=String(value);
+        });
+        form.dataset.loaded='1';
+      }
+    }catch(error){
+      statusBox.textContent=error?.message||'Messaging backend is not deployed or this device is not paired.';
+      if(jobsBox)jobsBox.textContent='Message history is unavailable until the server connection is ready.';
+    }
+  }
+  async function saveCommunicationSettings(e){
+    e.preventDefault();
+    const form=e.target,f=new FormData(form);
+    const channels=f.getAll('server_opening_channels').map(String);
+    const config={
+      whatsapp_business_number:String(f.get('whatsapp_business_number')||'').trim(),
+      whatsapp_phone_number_id:String(f.get('whatsapp_phone_number_id')||'').trim(),
+      whatsapp_waba_id:String(f.get('whatsapp_waba_id')||'').trim(),
+      whatsapp_marketing_template:String(f.get('whatsapp_marketing_template')||'').trim(),
+      whatsapp_marketing_image_template:String(f.get('whatsapp_marketing_image_template')||'').trim(),
+      whatsapp_invoice_template:String(f.get('whatsapp_invoice_template')||'').trim(),
+      whatsapp_opening_template:String(f.get('whatsapp_opening_template')||'').trim(),
+      whatsapp_language:String(f.get('whatsapp_language')||'en').trim(),
+      exotel_account_sid:String(f.get('exotel_account_sid')||'').trim(),
+      exotel_region:String(f.get('exotel_region')||'in'),
+      exotel_caller_id:String(f.get('exotel_caller_id')||'').trim(),
+      exotel_voice_flow_url:String(f.get('exotel_voice_flow_url')||'').trim(),
+      dlt_entity_id:String(f.get('dlt_entity_id')||'').trim(),
+      dlt_sender_id:String(f.get('dlt_sender_id')||'').trim(),
+      dlt_promo_template_id:String(f.get('dlt_promo_template_id')||'').trim(),
+      dlt_promo_template_text:String(f.get('dlt_promo_template_text')||'').trim(),
+      dlt_service_template_id:String(f.get('dlt_service_template_id')||'').trim(),
+      dlt_service_template_text:String(f.get('dlt_service_template_text')||'').trim(),
+      dlt_voice_template_id:String(f.get('dlt_voice_template_id')||'').trim(),
+      dlt_voice_template_text:String(f.get('dlt_voice_template_text')||'').trim(),
+      server_opening_enabled:f.get('server_opening_enabled')==='on',
+      server_opening_time:String(f.get('server_opening_time')||'07:45'),
+      server_opening_timezone:'Asia/Kolkata',
+      server_opening_channels:channels,
+      server_opening_message:String(f.get('server_opening_message')||'').trim()
+    };
+    try{
+      const result=await window.PrimeAutoCareMessaging.saveConfig(config);
+      window.PrimeAutoCareMessagingConfig=result.config||config;
+      notify('Messaging settings saved. Provider readiness is shown below. Add API credentials in Supabase Edge Function Secrets; never paste tokens in this form.');
+      form.dataset.loaded='1';
+      await refreshMessagingStatus();
+    }catch(error){console.error('Save messaging settings:',error);notify(error?.message||'Messaging settings could not be saved.')}
+  }
+  async function queueMarketingCampaign(channel){
+    const message=String(document.getElementById('offer-message')?.value||'').trim();
+    if(!message){notify('Write the campaign message first.');return}
+    const chosen=(Array.isArray(offerSelectedCustomerIds)?offerSelectedCustomerIds:[]);
+    if(!chosen.length){notify('Select at least one customer.');return}
+    const localSchedule=String(document.getElementById('offer-send-at')?.value||'');
+    let scheduledAt=null;
+    if(localSchedule){const date=new Date(localSchedule);if(Number.isNaN(date.getTime())||date.getTime()<Date.now()-60000){notify('Choose a future campaign time.');return}scheduledAt=date.toISOString()}
+    const image=document.getElementById('offer-image')?.files?.[0]||null;
+    try{
+      notify('Checking consent and queuing the campaign on the secure server…');
+      const result=await window.PrimeAutoCareMessaging.campaign({channel,customerIds:chosen,message,attachment:channel==='whatsapp'?image:null,scheduledAt,database:db});
+      notify(`${String(channel).toUpperCase()} campaign queued: ${result.queued} recipient(s). ${result.skipped_consent||0} skipped for missing channel consent.`);
+      await refreshMessagingStatus();
+    }catch(error){
+      console.error('Campaign queue failed:',error);
+      notify(error?.details?.length?`${error.message} Missing: ${error.details.join(', ')}`:error?.message||'Campaign could not be queued.');
+    }
+  }
+  function changeCommunicationConsent(customerId,field,granted){
+    const allowed=['waOptIn','waServiceOptIn','smsOptIn','smsServiceOptIn','voiceOptIn'];
+    if(!allowed.includes(field))return;
+    const customer=db.customers.find(c=>c.id===customerId);if(!customer)return;
+    customer[field]=!!granted;
+    customer.communicationConsentUpdatedAt=Date.now();
+    customer.communicationConsentSource='explicit-consent-confirmed-in-app';
+    customer.communicationConsentHistory=Array.isArray(customer.communicationConsentHistory)?customer.communicationConsentHistory:[];
+    customer.communicationConsentHistory.push({field,granted:!!granted,source:customer.communicationConsentSource,at:customer.communicationConsentUpdatedAt});
+    customer.communicationConsentHistory=customer.communicationConsentHistory.slice(-30);
+    if(granted&&!offerSelectedCustomerIds.includes(customerId))offerSelectedCustomerIds.push(customerId);
+    if(!granted&&!customer.waOptIn&&!customer.smsOptIn&&!customer.voiceOptIn)offerSelectedCustomerIds=offerSelectedCustomerIds.filter(x=>x!==customerId);
+    if(!save()){notify('Consent change could not be saved.');return}
+    notify(`${field.replace(/OptIn/g,'').replace(/([A-Z])/g,' $1').trim()} permission ${granted?'saved':'removed'} for ${customer.name}.`);
   }
   function openingAnnouncementMessage(){
     const b=db.business||{};
@@ -784,7 +932,7 @@
     <p class="help" style="margin-top:12px">The first device that pairs becomes the workspace owner. All later devices join that same workspace. Import your old WashDesk backup on the first device only, before pairing it. Do not import the same backup separately on the other devices. Keep the pairing code private; anyone who has it can add a device to your business workspace.</p>
     <p style="font-size:12px"><a href="./cloud-sync-setup.sql" download>Download latest Shared Cloud SQL setup</a> · <a href="https://supabase.com/dashboard/project/jkjudmkqaebrgllemris/sql/new" target="_blank" rel="noopener">Open SQL Editor</a> · <a href="https://supabase.com/dashboard/project/jkjudmkqaebrgllemris/auth/providers" target="_blank" rel="noopener">Enable Anonymous Sign-Ins</a></p>
   </div><div class="card"><div class="card-head"><h3>System status</h3></div><div class="stock-alert"><span>Local storage</span><b>Active</b></div><div class="stock-alert"><span>Offline install</span><b id="pwa-status">Checking…</b></div><div class="stock-alert"><span>WhatsApp offers</span><b>Manual send / opt-in</b></div><div class="stock-alert"><span>Cloud status</span><b>${esc(cloudStatus)}</b></div><div class="notice" style="margin-top:10px">Version 2.5.2 or later is required for the latest Cloud Sync SQL update and the same app version on every paired device before shared inventory and invoice numbering are enabled.</div><div class="help" style="margin-top:10px">Cloud data is protected by row-level security so each shared login sees only its own WashDesk records. All devices must use the same project and login.</div></div></div>`}
-  function wirePage(){document.getElementById('offer-message')?.addEventListener('input',e=>{offerDraft=e.target.value});document.getElementById('offer-customers')?.addEventListener('change',()=>{});document.querySelectorAll('[data-offer-customer]').forEach(input=>input.addEventListener('change',e=>{const id=e.target.dataset.offerCustomer;if(e.target.checked){if(!offerSelectedCustomerIds.includes(id))offerSelectedCustomerIds.push(id)}else offerSelectedCustomerIds=offerSelectedCustomerIds.filter(x=>x!==id);const count=document.querySelector('.success-note b');if(count)count.textContent=String(offerSelectedCustomerIds.length)}));document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>setPage(b.dataset.nav)));if(page==='billing'){document.getElementById('add-line')?.addEventListener('click',addLine);document.getElementById('bill-discount')?.addEventListener('input',updateBillSummary);document.getElementById('bill-paid')?.addEventListener('input',updateBillSummary);document.getElementById('bill-customer-search')?.addEventListener('input',e=>{document.getElementById('bill-customer').value='';renderBillCustomerMatches(e.target.value);document.getElementById('bill-customer-status').textContent='Choose a matching customer or add a new customer.';updateBillVehicleOptions()});document.getElementById('bill-number')?.addEventListener('input',updateBillVehicleDuplicateHint);document.getElementById('bill-vehicle')?.addEventListener('change',e=>{const v=db.vehicles.find(x=>x.id===e.target.value);if(v){selectBillCustomer(v.customerId,v.id);document.getElementById('bill-number').value=v.number;document.getElementById('bill-type').value=v.type||'Private Car';}updateBillVehicleDuplicateHint()});}if(page==='staff'){document.getElementById('attendance-date')?.addEventListener('change',()=>render());document.getElementById('payroll-month')?.addEventListener('change',()=>render());document.getElementById('attendance-form')?.addEventListener('submit',saveStaffAttendance)}if(page==='invoices'){document.getElementById('invoice-search')?.addEventListener('input',filterInvoices);document.getElementById('invoice-month')?.addEventListener('change',filterInvoices)}if(page==='customers')document.getElementById('customer-search')?.addEventListener('input',filterCustomers);if(page==='inventory')document.getElementById('stock-search')?.addEventListener('input',filterStock);if(page==='reports')document.getElementById('report-month')?.addEventListener('change',()=>render());document.getElementById('business-form')?.addEventListener('submit',saveBusiness);document.getElementById('tax-form')?.addEventListener('submit',saveTax);document.getElementById('cloud-form')?.addEventListener('submit',connectCloud);document.getElementById('pwa-status')&&(document.getElementById('pwa-status').textContent=('serviceWorker' in navigator)?'Supported':'Not supported')}
+  function wirePage(){document.getElementById('offer-message')?.addEventListener('input',e=>{offerDraft=e.target.value});document.querySelectorAll('[data-consent-customer]').forEach(input=>input.addEventListener('change',e=>changeCommunicationConsent(e.target.dataset.consentCustomer,e.target.dataset.consentField,e.target.checked)));document.querySelectorAll('[data-offer-customer]').forEach(input=>input.addEventListener('change',e=>{const id=e.target.dataset.offerCustomer;if(e.target.checked){if(!offerSelectedCustomerIds.includes(id))offerSelectedCustomerIds.push(id)}else offerSelectedCustomerIds=offerSelectedCustomerIds.filter(x=>x!==id);const count=document.querySelector('.success-note b');if(count)count.textContent=String(offerSelectedCustomerIds.length)}));document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>setPage(b.dataset.nav)));if(page==='billing'){document.getElementById('add-line')?.addEventListener('click',addLine);document.getElementById('bill-discount')?.addEventListener('input',updateBillSummary);document.getElementById('bill-paid')?.addEventListener('input',updateBillSummary);document.getElementById('bill-customer-search')?.addEventListener('input',e=>{document.getElementById('bill-customer').value='';renderBillCustomerMatches(e.target.value);document.getElementById('bill-customer-status').textContent='Choose a matching customer or add a new customer.';updateBillVehicleOptions()});document.getElementById('bill-number')?.addEventListener('input',updateBillVehicleDuplicateHint);document.getElementById('bill-vehicle')?.addEventListener('change',e=>{const v=db.vehicles.find(x=>x.id===e.target.value);if(v){selectBillCustomer(v.customerId,v.id);document.getElementById('bill-number').value=v.number;document.getElementById('bill-type').value=v.type||'Private Car';}updateBillVehicleDuplicateHint()});}if(page==='staff'){document.getElementById('attendance-date')?.addEventListener('change',()=>render());document.getElementById('payroll-month')?.addEventListener('change',()=>render());document.getElementById('attendance-form')?.addEventListener('submit',saveStaffAttendance)}if(page==='invoices'){document.getElementById('invoice-search')?.addEventListener('input',filterInvoices);document.getElementById('invoice-month')?.addEventListener('change',filterInvoices)}if(page==='customers')document.getElementById('customer-search')?.addEventListener('input',filterCustomers);if(page==='inventory')document.getElementById('stock-search')?.addEventListener('input',filterStock);if(page==='reports')document.getElementById('report-month')?.addEventListener('change',()=>render());document.getElementById('business-form')?.addEventListener('submit',saveBusiness);document.getElementById('tax-form')?.addEventListener('submit',saveTax);document.getElementById('cloud-form')?.addEventListener('submit',connectCloud);document.getElementById('communication-settings-form')?.addEventListener('submit',saveCommunicationSettings);if(page==='offers')void refreshMessagingStatus();document.getElementById('pwa-status')&&(document.getElementById('pwa-status').textContent=('serviceWorker' in navigator)?'Supported':'Not supported')}
   function addLine(){const val=document.getElementById('line-item').value;const qty=Number(document.getElementById('line-qty').value);const disc=Number(document.getElementById('line-discount').value||0);if(!val||qty<=0||disc<0){notify('Choose an item and enter valid quantity and discount.');return}let l;if(val.startsWith('product:')){const p=db.products.find(x=>x.id===val.slice(8));if(!p)return;if(qty>Number(p.qty)){notify(`Only ${p.qty} ${p.unit||'units'} available.`);return}l={kind:'product',refId:p.id,name:p.name,qty,rate:Number(p.sellPrice||0),taxRate:db.business.registered?Number(p.taxRate||0):0,sac:p.hsn||'',discount:disc,unit:p.unit||'unit',cost:Number(p.cost||0)}}else{const svc=db.services.find(x=>x.id===val);if(!svc)return;const vtype=document.getElementById('bill-type')?.value||'Private Car';const key=({'Private Car':'private','Taxi':'taxi','Commercial Vehicle':'commercial','SUV':'suv'})[vtype]||'private';const custom=svc.prices?.[key];const rate=custom!==undefined&&custom!==null&&custom!==''?Number(custom):Number(svc.price||0);l={kind:'service',refId:svc.id,name:svc.name,qty,rate,taxRate:db.business.registered?Number(svc.taxRate||0):0,sac:svc.sac||'',discount:disc,unit:'service',consumption:svc.consumption||[]}}if(disc>qty*l.rate){notify('Line discount cannot exceed that line amount.');return}l.amount=Math.max(0,l.qty*l.rate-l.discount);billLines.push(l);document.getElementById('bill-lines').innerHTML=billLineTable();document.querySelector('[data-action="save-bill"]').disabled=false;document.getElementById('line-item').value='';document.getElementById('line-qty').value='1';document.getElementById('line-discount').value='0';updateBillSummary()}  function updateBillSummary(){document.getElementById('bill-summary').innerHTML=billSummary()}
   async function saveBill(){
     if(billSaving){notify('This bill is already being saved.');return}
@@ -855,7 +1003,7 @@
         db.vehicles.push({id:id(),customerId:custId,number,type:vehicleType,createdAt:Date.now(),updatedAt:Date.now()});
       }
       if(!save()){restoreDatabase(dbBefore);throw new Error('The invoice could not be saved locally. No inventory or invoice changes were kept. Please free storage space and retry.')}
-      billLines=[];setPage('invoices');openInvoice(inv.id);if(custId&&cust?.phone&&window.WashDeskFileSharer?.share){notify('Invoice saved. Preparing the customer-specific PDF and WhatsApp message…');void shareInvoice(inv.id)}else{notify(custId?'Invoice saved. Use Share PDF / WhatsApp; add the customer mobile number to prepare a customer-specific message.':'Invoice saved. Use Share PDF / WhatsApp when you are ready to share it.')}
+      billLines=[];setPage('invoices');openInvoice(inv.id);if(custId&&cust?.phone&&(cust.waServiceOptIn||cust.smsServiceOptIn)&&window.PrimeAutoCareMessaging?.sendInvoice){notify('Invoice saved. Preparing automatic customer notifications…');void (async()=>{try{const pdf=await makePdfBlob(inv),result=await window.PrimeAutoCareMessaging.sendInvoice({invoice:inv,customer:cust,pdfBlob:pdf,database:db,paidAmount:paid(inv),balanceDue:invoiceDue(inv)});if(result.queued>0)notify(`Invoice ${inv.number} queued for ${result.queued} automatic channel(s). Delivery status will update in Messages.`);else{notify('Invoice saved, but automatic delivery is not configured or this customer has not enabled service notifications. Opening manual sharing.');await shareInvoice(inv.id)}}catch(shareError){console.error('Automatic invoice delivery:',shareError);notify('Invoice saved. Automatic delivery could not be queued; opening manual PDF sharing.');await shareInvoice(inv.id)}})()}else if(custId&&cust?.phone&&window.WashDeskFileSharer?.share){notify('Invoice saved. Preparing the customer-specific PDF and WhatsApp message…');void shareInvoice(inv.id)}else{notify(custId?'Invoice saved. Use Share PDF / WhatsApp; add the customer mobile number to prepare a customer-specific message.':'Invoice saved. Use Share PDF / WhatsApp when you are ready to share it.')}
     }catch(error){
       console.error('Invoice save failed:',error);
       notify(error?.message||'The invoice could not be saved. Check the data and retry.');
@@ -1225,7 +1373,11 @@
       <div class="field"><label>State</label><input name="state" value="Gujarat" /></div>
       <div class="field full"><label>Full address</label><input name="address" /></div>
       <div class="field full"><label>Customer GSTIN (optional)</label><input name="gstin" maxlength="15" /></div>
-      <div class="field full"><label><input name="waOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer agreed to receive WhatsApp offers from this business</label></div>
+      <div class="field full"><label><input name="waOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer explicitly agreed to receive WhatsApp marketing offers</label></div>
+      <div class="field full"><label><input name="waServiceOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer agreed to receive WhatsApp service and invoice notifications</label></div>
+      <div class="field full"><label><input name="smsOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer explicitly agreed to receive SMS marketing</label></div>
+      <div class="field full"><label><input name="smsServiceOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer agreed to receive SMS invoice/service notifications</label></div>
+      <div class="field full"><label><input name="voiceOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer explicitly agreed to receive automated voice announcements/calls</label></div>
     </div><div id="customer-duplicate-status" class="duplicate-hint">Customer ID is generated automatically as the primary key. Customer names may repeat; each mobile number must be unique.</div>
     <div class="form-actions"><button type="button" class="btn" id="cancel-modal">Cancel</button><button class="btn primary" type="submit">Save customer</button></div></form>`);
     const form=document.getElementById('customer-form');
@@ -1236,7 +1388,7 @@
       if(normalized.length!==10){notify('Enter a valid 10-digit Indian mobile number.');return}
       const duplicate=findCustomerByMobile(phone);
       if(duplicate){notify(`This mobile number is already saved for ${duplicate.name}. Search and select that customer instead.`);updateCustomerDuplicateHint();return}
-      const obj={id:id(),name,phone,city:String(f.get('city')||'').trim(),state:String(f.get('state')||'').trim(),address:String(f.get('address')||'').trim(),gstin:String(f.get('gstin')||'').trim().toUpperCase(),waOptIn:f.get('waOptIn')==='on',createdAt:Date.now(),updatedAt:Date.now()};
+      const obj={id:id(),name,phone,city:String(f.get('city')||'').trim(),state:String(f.get('state')||'').trim(),address:String(f.get('address')||'').trim(),gstin:String(f.get('gstin')||'').trim().toUpperCase(),waOptIn:f.get('waOptIn')==='on',waServiceOptIn:f.get('waServiceOptIn')==='on',smsOptIn:f.get('smsOptIn')==='on',smsServiceOptIn:f.get('smsServiceOptIn')==='on',voiceOptIn:f.get('voiceOptIn')==='on',communicationConsentSource:'customer-record',communicationConsentUpdatedAt:Date.now(),createdAt:Date.now(),updatedAt:Date.now()};
       db.customers.push(obj);if(!save())return;closeModal();
       if(page==='billing'){render();selectBillCustomer(obj.id);notify('New customer added and selected for this bill.')}
       else{render();notify('Customer saved.')}
@@ -1396,7 +1548,7 @@
     });
   }
   function addPaymentForm(invId){const i=db.invoices.find(x=>x.id===invId);if(!i||i.cancelled){notify('Payments cannot be added to a cancelled invoice.');return}const due=invoiceDue(i);openModal('Record payment',`<p class="muted" style="font-size:12px">Invoice ${esc(i.number)} · Balance due ${INR(due)}</p><form id="payment-form"><div class="field-grid"><div class="field"><label>Amount received (₹)</label><input name="amount" type="number" min=".01" max="${due}" step=".01" required /></div><div class="field"><label>Payment mode</label><select name="mode"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option><option>Mixed</option></select></div><div class="field"><label>Date</label><input name="date" type="date" value="${today()}" required /></div></div><div class="form-actions"><button type="button" class="btn" id="cancel-modal">Cancel</button><button class="btn primary">Save payment</button></div></form>`);document.getElementById('payment-form').addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.target);const amount=Number(f.get('amount'));if(amount<=0||amount>due+.009){notify('Enter a payment within the outstanding balance.');return}db.payments.push({id:id(),invoiceId:invId,date:f.get('date'),amount,mode:f.get('mode'),createdAt:Date.now()});if(!save())return;closeModal();openInvoice(invId);notify('Payment recorded.')})}
-  document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.action;if(b.dataset.selectBillCustomer){selectBillCustomer(b.dataset.selectBillCustomer);return}if(a==='new-bill'){billLines=[];setPage('billing')}else if(a==='add-customer'||a==='quick-customer')addCustomerForm();else if(a==='add-service')addServiceForm();else if(a==='add-product')addProductForm();else if(a==='add-expense')addExpenseForm();else if(a==='add-purchase')addPurchaseForm();else if(a==='add-staff')addStaffForm();else if(a==='manager-pin')manageStaffManagerPin();else if(a==='add-staff-advance')addStaffAdvanceForm();else if(a==='export')exportBackup();else if(a==='import')importBackup();else if(a==='export-csv')exportCsv();else if(a==='export-excel')exportSalesExcel();else if(a==='stock-adjust')stockAdjustForm();else if(a==='clear-bill'){billLines=[];setPage('billing')}else if(a==='save-bill')saveBill();else if(a==='add-vehicle')addVehicleForm(b.dataset.customerId);else if(a==='add-edit-line')addInvoiceEditLine();else if(a==='share-offer-whatsapp')shareOfferViaWhatsApp();else if(a==='prepare-opening-announcement'){offerDraft=openingAnnouncementMessage();setPage('offers');notify('Opening announcement prepared in the offer message box.')}else if(a==='share-opening-sms')shareOpeningAnnouncement('sms');else if(a==='preview-opening-voice')previewOpeningAnnouncement();else if(a==='offer-select-all'){offerSelectedCustomerIds=db.customers.filter(c=>c.waOptIn&&offerPhone(c.phone).length>=11).map(c=>c.id);render()}else if(a==='offer-clear-selection'){offerSelectedCustomerIds=[];render()} else if(a==='cloud-sync-now')syncCloudNow();else if(a==='cloud-check-status')refreshCloudSession();else if(a==='cloud-disconnect')disconnectCloud();if(b.dataset.nav)setPage(b.dataset.nav);if(b.dataset.invoice)openInvoice(b.dataset.invoice);if(b.dataset.cancelInvoice)cancelInvoice(b.dataset.cancelInvoice);if(b.dataset.editInvoice)editInvoice(b.dataset.editInvoice);if(b.dataset.customer)showCustomer(b.dataset.customer);if(b.dataset.savePdf)saveInvoicePdf(b.dataset.savePdf);if(b.dataset.share)shareInvoice(b.dataset.share);if(b.dataset.print)printInvoice(b.dataset.print);if(b.dataset.payment)addPaymentForm(b.dataset.payment);if(b.dataset.editService)addServiceForm(db.services.find(x=>x.id===b.dataset.editService));if(b.dataset.deleteService){if(confirm('Delete this service? Existing invoices will remain unchanged.'))markRecordDeleted('services',b.dataset.deleteService)}if(b.dataset.editProduct)addProductForm(db.products.find(x=>x.id===b.dataset.editProduct));if(b.dataset.deleteExpense){if(confirm('Delete this expense entry?'))markRecordDeleted('expenses',b.dataset.deleteExpense)}if(b.dataset.deleteStaff)removeStaffMember(b.dataset.deleteStaff);if(b.dataset.editStaffShift)editStaffShift(b.dataset.editStaffShift);if(b.dataset.editStaff)addStaffForm(db.staff.find(x=>x.id===b.dataset.editStaff));if(b.dataset.paySalary)payStaffSalaryForm(b.dataset.paySalary);if(b.dataset.addStaffAdvance!==undefined)addStaffAdvanceForm(b.dataset.addStaffAdvance);if(b.dataset.waToggle)toggleWhatsAppConsent(b.dataset.waToggle);if(b.dataset.removeEditLine!==undefined)removeInvoiceEditLine(Number(b.dataset.removeEditLine));if(b.id==='modal-close'||b.id==='cancel-modal')closeModal();if(b.dataset.removeLine!==undefined){billLines.splice(Number(b.dataset.removeLine),1);render()}});
+  document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.action;if(b.dataset.selectBillCustomer){selectBillCustomer(b.dataset.selectBillCustomer);return}if(a==='new-bill'){billLines=[];setPage('billing')}else if(a==='add-customer'||a==='quick-customer')addCustomerForm();else if(a==='add-service')addServiceForm();else if(a==='add-product')addProductForm();else if(a==='add-expense')addExpenseForm();else if(a==='add-purchase')addPurchaseForm();else if(a==='add-staff')addStaffForm();else if(a==='manager-pin')manageStaffManagerPin();else if(a==='add-staff-advance')addStaffAdvanceForm();else if(a==='export')exportBackup();else if(a==='import')importBackup();else if(a==='export-csv')exportCsv();else if(a==='export-excel')exportSalesExcel();else if(a==='stock-adjust')stockAdjustForm();else if(a==='clear-bill'){billLines=[];setPage('billing')}else if(a==='save-bill')saveBill();else if(a==='add-vehicle')addVehicleForm(b.dataset.customerId);else if(a==='add-edit-line')addInvoiceEditLine();else if(a==='share-offer-whatsapp')shareOfferViaWhatsApp();else if(a==='prepare-opening-announcement'){offerDraft=openingAnnouncementMessage();setPage('offers');notify('Opening announcement prepared in the offer message box.')}else if(a==='share-opening-sms')shareOpeningAnnouncement('sms');else if(a==='preview-opening-voice')previewOpeningAnnouncement();else if(a==='offer-select-all'){offerSelectedCustomerIds=db.customers.filter(c=>(c.waOptIn||c.smsOptIn||c.voiceOptIn)&&offerPhone(c.phone).length>=11).map(c=>c.id);render()}else if(a==='offer-clear-selection'){offerSelectedCustomerIds=[];render()}else if(a==='queue-whatsapp-cloud')queueMarketingCampaign('whatsapp');else if(a==='queue-sms-gateway')queueMarketingCampaign('sms');else if(a==='queue-voice-calls')queueMarketingCampaign('voice');else if(a==='refresh-message-status')refreshMessagingStatus();else if(a==='cloud-sync-now')syncCloudNow();else if(a==='cloud-check-status')refreshCloudSession();else if(a==='cloud-disconnect')disconnectCloud();if(b.dataset.nav)setPage(b.dataset.nav);if(b.dataset.invoice)openInvoice(b.dataset.invoice);if(b.dataset.cancelInvoice)cancelInvoice(b.dataset.cancelInvoice);if(b.dataset.editInvoice)editInvoice(b.dataset.editInvoice);if(b.dataset.customer)showCustomer(b.dataset.customer);if(b.dataset.savePdf)saveInvoicePdf(b.dataset.savePdf);if(b.dataset.share)shareInvoice(b.dataset.share);if(b.dataset.print)printInvoice(b.dataset.print);if(b.dataset.payment)addPaymentForm(b.dataset.payment);if(b.dataset.editService)addServiceForm(db.services.find(x=>x.id===b.dataset.editService));if(b.dataset.deleteService){if(confirm('Delete this service? Existing invoices will remain unchanged.'))markRecordDeleted('services',b.dataset.deleteService)}if(b.dataset.editProduct)addProductForm(db.products.find(x=>x.id===b.dataset.editProduct));if(b.dataset.deleteExpense){if(confirm('Delete this expense entry?'))markRecordDeleted('expenses',b.dataset.deleteExpense)}if(b.dataset.deleteStaff)removeStaffMember(b.dataset.deleteStaff);if(b.dataset.editStaffShift)editStaffShift(b.dataset.editStaffShift);if(b.dataset.editStaff)addStaffForm(db.staff.find(x=>x.id===b.dataset.editStaff));if(b.dataset.paySalary)payStaffSalaryForm(b.dataset.paySalary);if(b.dataset.addStaffAdvance!==undefined)addStaffAdvanceForm(b.dataset.addStaffAdvance);if(b.dataset.waToggle)toggleWhatsAppConsent(b.dataset.waToggle);if(b.dataset.removeEditLine!==undefined)removeInvoiceEditLine(Number(b.dataset.removeEditLine));if(b.id==='modal-close'||b.id==='cancel-modal')closeModal();if(b.dataset.removeLine!==undefined){billLines.splice(Number(b.dataset.removeLine),1);render()}});
   document.getElementById('modal-close').addEventListener('click',closeModal);document.getElementById('modal-backdrop').addEventListener('click',e=>{if(e.target.id==='modal-backdrop')closeModal()});document.getElementById('hamb').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('open'));document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)setPage(b.dataset.page)});document.getElementById('today-label').textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});document.getElementById('avatar').textContent=(db.business.name||'W').slice(0,1).toUpperCase();
   render();
   if(db.business.openingReminderEnabled)void updateOpeningReminder(false).catch(e=>console.warn('Prime Auto Care opening reminder restore:',e));
