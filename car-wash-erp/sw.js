@@ -1,4 +1,4 @@
-const CACHE='prime-auto-care-shell-v11';
+const CACHE='prime-auto-care-shell-v12';
 const CORE=['./','./index.html','./manifest.webmanifest','./icon.svg','./prime-auto-care-icon-192.png','./prime-auto-care-icon-512.png','./prime-auto-care-logo.jpg','./prime-auto-care-car-photo.jpg','./pdfmake.bundle.min.js','./pdfmake-vfs.js','./html2pdf.bundle.min.js','./invoice-native.bundle.js','./exceljs.bundle.min.js','./report-export.bundle.js','./cloud-sync.bundle.js','./cloud-sync-setup.sql'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
