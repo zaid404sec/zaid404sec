@@ -368,8 +368,12 @@ async function resume({ getLocal, onRemote }) {
     const message = String(error?.message || error || '');
     if (workspace && !navigator.onLine) {
       setStatus('Offline · shared workspace saved; automatic sync will resume when internet returns');
+    } else if (message.includes('CLOUD_SCHEMA_UPDATE_REQUIRED')) {
+      setStatus('Cloud SQL update required · run the latest Cloud Sync SQL file once in Supabase, then tap Sync now.');
+    } else if (message.includes('APP_UPDATE_REQUIRED')) {
+      setStatus('App update required · update every paired phone and computer to Prime Auto Care 2.5.2.');
     } else {
-      setStatus(message.includes('washdesk_sync') ? 'Signed in · run the shared database SQL setup' : 'Cloud reconnect needed · retrying when internet returns');
+      setStatus(message.includes('washdesk_sync') ? 'Signed in · run the shared database SQL setup' : 'Cloud reconnect needed · retry when internet returns');
     }
     return false;
   }
@@ -377,6 +381,7 @@ async function resume({ getLocal, onRemote }) {
 async function syncNow(payload) {
   if (!supabase || !user || !workspace) throw new Error('Connect this device with the shared device pairing code first.');
   schemaBlocked = false;
+  queuedPayload = null;
   return await publishPayload(payload);
 }
 async function nextInvoiceNumber({ prefix, date, minNext }) {
@@ -403,6 +408,8 @@ async function disconnect() {
   workspace = null;
   lastPayloadString = '';
   queuedPayload = null;
+  schemaBlocked = false;
+  stockLedgerSchemaReady = false;
   localStorage.removeItem(WORKSPACE_KEY);
   setStatus('This device disconnected · local records remain safe');
 }
