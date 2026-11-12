@@ -1225,7 +1225,11 @@
       <div class="field"><label>State</label><input name="state" value="Gujarat" /></div>
       <div class="field full"><label>Full address</label><input name="address" /></div>
       <div class="field full"><label>Customer GSTIN (optional)</label><input name="gstin" maxlength="15" /></div>
-      <div class="field full"><label><input name="waOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer agreed to receive WhatsApp offers from this business</label></div>
+      <div class="field full"><label><input name="waOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer explicitly agreed to receive WhatsApp marketing offers</label></div>
+      <div class="field full"><label><input name="waServiceOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer agreed to receive WhatsApp service and invoice notifications</label></div>
+      <div class="field full"><label><input name="smsOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer explicitly agreed to receive SMS marketing</label></div>
+      <div class="field full"><label><input name="smsServiceOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer agreed to receive SMS invoice/service notifications</label></div>
+      <div class="field full"><label><input name="voiceOptIn" type="checkbox" style="width:auto;vertical-align:middle" /> Customer explicitly agreed to receive automated voice announcements/calls</label></div>
     </div><div id="customer-duplicate-status" class="duplicate-hint">Customer ID is generated automatically as the primary key. Customer names may repeat; each mobile number must be unique.</div>
     <div class="form-actions"><button type="button" class="btn" id="cancel-modal">Cancel</button><button class="btn primary" type="submit">Save customer</button></div></form>`);
     const form=document.getElementById('customer-form');
@@ -1236,7 +1240,7 @@
       if(normalized.length!==10){notify('Enter a valid 10-digit Indian mobile number.');return}
       const duplicate=findCustomerByMobile(phone);
       if(duplicate){notify(`This mobile number is already saved for ${duplicate.name}. Search and select that customer instead.`);updateCustomerDuplicateHint();return}
-      const obj={id:id(),name,phone,city:String(f.get('city')||'').trim(),state:String(f.get('state')||'').trim(),address:String(f.get('address')||'').trim(),gstin:String(f.get('gstin')||'').trim().toUpperCase(),waOptIn:f.get('waOptIn')==='on',createdAt:Date.now(),updatedAt:Date.now()};
+      const obj={id:id(),name,phone,city:String(f.get('city')||'').trim(),state:String(f.get('state')||'').trim(),address:String(f.get('address')||'').trim(),gstin:String(f.get('gstin')||'').trim().toUpperCase(),waOptIn:f.get('waOptIn')==='on',waServiceOptIn:f.get('waServiceOptIn')==='on',smsOptIn:f.get('smsOptIn')==='on',smsServiceOptIn:f.get('smsServiceOptIn')==='on',voiceOptIn:f.get('voiceOptIn')==='on',communicationConsentSource:'customer-record',communicationConsentUpdatedAt:Date.now(),createdAt:Date.now(),updatedAt:Date.now()};
       db.customers.push(obj);if(!save())return;closeModal();
       if(page==='billing'){render();selectBillCustomer(obj.id);notify('New customer added and selected for this bill.')}
       else{render();notify('Customer saved.')}
