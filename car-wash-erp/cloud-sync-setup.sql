@@ -266,12 +266,6 @@ create table if not exists public.washdesk_schema_version (
 );
 alter table public.washdesk_schema_version enable row level security;
 revoke all on public.washdesk_schema_version from anon, authenticated;
-insert into public.washdesk_schema_version(singleton, stock_ledger_version)
-values (true, 1)
-on conflict (singleton) do update
-  set stock_ledger_version = greatest(public.washdesk_schema_version.stock_ledger_version, excluded.stock_ledger_version),
-      updated_at = now();
-
 create or replace function public.washdesk_get_stock_ledger_version()
 returns integer
 language sql
@@ -287,44 +281,7 @@ $;
 revoke all on function public.washdesk_get_stock_ledger_version() from public, anon;
 grant execute on function public.washdesk_get_stock_ledger_version() to authenticated;
 
--- Mark existing shared payloads as migrated without replaying historical invoices.
--- The current cloud quantity is the opening balance; only new movement rows affect it.
-update public.washdesk_sync as sync
-set payload = jsonb_set(
-  jsonb_set(
-    jsonb_set(
-      coalesce(sync.payload, '{}'::jsonb),
-      '{products}',
-      coalesce((
-        select jsonb_agg(
-          case
-            when product.item ? 'stockOpeningQty' then product.item
-            else jsonb_set(
-              product.item,
-              '{stockOpeningQty}',
-              to_jsonb(public.washdesk_safe_number(product.item->>'qty')),
-              true
-            )
-          end
-          order by product.item->>'id'
-        )
-        from jsonb_array_elements(
-          case when jsonb_typeof(sync.payload->'products') = 'array'
-            then sync.payload->'products' else '[]'::jsonb end
-        ) as product(item)
-      ), '[]'::jsonb),
-      true
-    ),
-    '{stockMovements}',
-    case when jsonb_typeof(sync.payload->'stockMovements') = 'array'
-      then sync.payload->'stockMovements' else '[]'::jsonb end,
-    true
-  ),
-  '{meta}',
-  coalesce(sync.payload->'meta', '{}'::jsonb) ||
-    jsonb_build_object('stockLedgerVersion', 1, 'serverStockLedgerVersion', 1),
-  true
-);
+-- The version row is intentionally inserted only after every migration function is defined.
 
 -- Customer names may repeat. Mobile numbers and vehicle registrations may not.
 create or replace function public.washdesk_assert_unique_customer_keys(p_payload jsonb)
@@ -633,4 +590,53 @@ end $$;
 
 -- The final query returns a long random pairing code. Keep it private and use it
 -- once on every device. Re-running this file returns the same code.
+-- Final migration step: seed current stock as opening balances and only then publish
+-- stock-ledger version 1. Until this statement completes, the read-only status RPC
+-- returns NULL and upgraded apps refuse to send any shared data writes.
+-- Mark existing shared payloads as migrated without replaying historical invoices.
+-- The current cloud quantity is the opening balance; only new movement rows affect it.
+update public.washdesk_sync as sync
+set payload = jsonb_set(
+  jsonb_set(
+    jsonb_set(
+      coalesce(sync.payload, '{}'::jsonb),
+      '{products}',
+      coalesce((
+        select jsonb_agg(
+          case
+            when product.item ? 'stockOpeningQty' then product.item
+            else jsonb_set(
+              product.item,
+              '{stockOpeningQty}',
+              to_jsonb(public.washdesk_safe_number(product.item->>'qty')),
+              true
+            )
+          end
+          order by product.item->>'id'
+        )
+        from jsonb_array_elements(
+          case when jsonb_typeof(sync.payload->'products') = 'array'
+            then sync.payload->'products' else '[]'::jsonb end
+        ) as product(item)
+      ), '[]'::jsonb),
+      true
+    ),
+    '{stockMovements}',
+    case when jsonb_typeof(sync.payload->'stockMovements') = 'array'
+      then sync.payload->'stockMovements' else '[]'::jsonb end,
+    true
+  ),
+  '{meta}',
+  coalesce(sync.payload->'meta', '{}'::jsonb) ||
+    jsonb_build_object('stockLedgerVersion', 1, 'serverStockLedgerVersion', 1),
+  true
+);
+
+
+insert into public.washdesk_schema_version(singleton, stock_ledger_version)
+values (true, 1)
+on conflict (singleton) do update
+  set stock_ledger_version = greatest(public.washdesk_schema_version.stock_ledger_version, excluded.stock_ledger_version),
+      updated_at = now();
+
 select public.washdesk_create_pairing_code() as "Prime Auto Care device pairing code";
