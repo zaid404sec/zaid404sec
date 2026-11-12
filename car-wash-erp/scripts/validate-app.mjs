@@ -6,7 +6,7 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.5.2') throw new Error('The package version must be 2.5.2.');
+if (packageJson.version !== '2.5.3') throw new Error('The package version must be 2.5.3.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v11') {
   throw new Error('The stability release must use the safe side-by-side Android app ID v11.');
 }
@@ -32,12 +32,16 @@ if (!saveFunction.includes("previousRaw=localStorage.getItem(STORE)") ||
 console.log('PASS: all normal save paths stop on local storage failure and the shared save handler restores durable records');
 
 if (!html.includes('data-action="share-offer-whatsapp"') ||
-    !html.includes('navigator.share({title,text:message})') ||
-    !html.includes('https://wa.me/?text=') ||
+    !html.includes('data-offer-customer=') ||
+    !html.includes('offer-select-all') ||
+    !html.includes('offer-clear-selection') ||
+    !html.includes('navigator.share(filePayload)') ||
+    !html.includes('Choose WhatsApp Business') ||
+    !html.includes('select those recipients and press Send') ||
     html.includes('start-offer-campaign') || html.includes('open-offer-whatsapp')) {
-  throw new Error('Offers must use one manual WhatsApp share action, not a per-customer auto-campaign loop.');
+  throw new Error('Offers must support selected opted-in contacts and one manual WhatsApp Business share, with no automated send loop.');
 }
-console.log('PASS: offers use the Android share menu / existing WhatsApp app; official API automation remains separate and pending');
+console.log('PASS: bulk offers select opted-in customers, support a promo image and use one manual WhatsApp Business share action');
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -445,7 +449,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v13')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v14')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
