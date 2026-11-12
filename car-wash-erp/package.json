@@ -1,6 +1,6 @@
 {
   "name": "prime-auto-care-manager",
-  "version": "2.5.3",
+  "version": "2.5.4",
   "private": true,
   "description": "Prime Auto Care Business Manager",
   "main": "electron/main.cjs",
@@ -22,6 +22,7 @@
     "@supabase/supabase-js": "^2.119.0",
     "@andreeewill/exceljs": "5.0.3",
     "pdfmake": "0.2.23",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "@capacitor/local-notifications": "^8.0.0"
   }
 }
