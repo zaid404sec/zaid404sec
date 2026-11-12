@@ -272,12 +272,12 @@ language sql
 stable
 security definer
 set search_path = ''
-as $
+as $$
   select stock_ledger_version
   from public.washdesk_schema_version
   where singleton = true
   limit 1;
-$;
+$$;
 revoke all on function public.washdesk_get_stock_ledger_version() from public, anon;
 grant execute on function public.washdesk_get_stock_ledger_version() to authenticated;
 
