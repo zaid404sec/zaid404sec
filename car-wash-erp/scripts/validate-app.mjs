@@ -334,7 +334,7 @@ if (!cloudSource.includes('if (applied?.__cloudSyncDeferred) return null;') ||
 const saveBillStart = html.indexOf('async function saveBill()');
 const saveBillEnd = html.indexOf('function applyConsumption', saveBillStart);
 const saveBillSource = html.slice(saveBillStart, saveBillEnd);
-if (!(saveBillSource.indexOf('await reserveInvoiceNo(invoiceDate)') < saveBillSource.indexOf('applyConsumption(billLines)'))) {
+if (!(saveBillSource.indexOf('await reserveInvoiceNo(invoiceDate)') < saveBillSource.indexOf('applyConsumption(billLines,invoiceId)'))) {
   throw new Error('Stock is mutated before the shared invoice number request succeeds.');
 }
 if (!html.includes("if(page==='billing')return false") ||
@@ -474,6 +474,18 @@ if (!cloudSource.includes('Number(canonical?.meta?.serverStockLedgerVersion) !==
     !cloudSource.includes('if (!stockLedgerSchemaReady) throw new Error')) {
   throw new Error('Cloud sync must require server-side stock-ledger confirmation and surface blocked inventory sync.');
 }
+const stockHelperStart=html.indexOf('function reconcileStockLedger(data){');
+const stockHelperEnd=html.indexOf('let db=load()',stockHelperStart);
+if(stockHelperStart<0||stockHelperEnd<0)throw new Error('Stock ledger helpers are not available for testing.');
+const stockHelperSource=html.slice(stockHelperStart,stockHelperEnd);
+const stockLedgerResult=vm.runInNewContext(stockHelperSource+String.fromCharCode(10)+`const first=recordStockMovement('soap',-3,'invoice','bill-1','movement-1');const duplicate=recordStockMovement('soap',-3,'invoice','bill-1','movement-1');const second=recordStockMovement('soap',-2,'invoice','bill-2','movement-2');const purchased=recordStockMovement('soap',4,'purchase','purchase-1','movement-3');const returned=recordStockMovement('soap',3,'invoice-cancellation','bill-1','movement-4');reconcileStockLedger(db);({first,duplicate,second,purchased,returned,qty:db.products[0].qty,movements:db.stockMovements.length})`,{
+  db:{products:[{id:'soap',qty:10,stockOpeningQty:10}],stockMovements:[]},
+  id:()=>'movement-random'
+});
+if(!stockLedgerResult.first||stockLedgerResult.duplicate||!stockLedgerResult.second||!stockLedgerResult.purchased||!stockLedgerResult.returned||stockLedgerResult.qty!==12||stockLedgerResult.movements!==4) {
+  throw new Error('Stock ledger failed duplicate-retry, multi-device delta, purchase or cancellation reconciliation: '+JSON.stringify(stockLedgerResult));
+}
+console.log('PASS: unique stock movement IDs prevent retry double-counting and separate device movements reconcile with purchases/cancellations');
 console.log('PASS: stock movements are recorded for invoice, cancellation, edit, purchase and adjustment workflows');
 console.log('PASS: server merge reconciles unique movements under the workspace lock and rejects negative stock');
 console.log('PASS: shared invoice numbering is disabled until updated server SQL confirms the ledger schema');
