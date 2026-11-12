@@ -21,7 +21,7 @@ function normalizeDigits(value: unknown) {
   if(digits.length===10)digits='91'+digits;
   return digits;
 }
-async function recordCustomerOptOut(service:any,channel:'whatsapp'|'sms',sender:unknown,details:any) {
+async function recordCustomerOptOut(service:any,channel:'whatsapp'|'sms'|'voice',sender:unknown,details:any) {
   const digits=normalizeDigits(sender);
   if(digits.length<11)return {matched:0};
   const {data:workspace,error:workspaceError}=await service.from('washdesk_workspaces')
@@ -40,9 +40,11 @@ async function recordCustomerOptOut(service:any,channel:'whatsapp'|'sms',sender:
     if(channel==='whatsapp'){
       customer.waOptIn=false;
       customer.waServiceOptIn=false;
-    }else{
+    }else if(channel==='sms'){
       customer.smsOptIn=false;
       customer.smsServiceOptIn=false;
+    }else{
+      customer.voiceOptIn=false;
     }
     customer.communicationConsentUpdatedAt=now;
     customer.communicationConsentSource='provider-inbound-opt-out';
@@ -156,6 +158,11 @@ Deno.serve(async(req)=>{
       }
       const jobId=url.searchParams.get('job_id')||String(form.CustomField||form.custom_field||'').match(/PAC:([0-9a-f-]{36})/i)?.[1]||'';
       if(!jobId)return response('OK');
+      const digits=String(form.Digits||form.digits||'').trim();
+      if(digits==='9'||String(form.OptOut||form.opt_out||'').toLowerCase()==='true'){
+        const {data:voiceJob}=await service.from('pac_communication_jobs').select('recipient_e164,channel').eq('id',jobId).maybeSingle();
+        if(voiceJob?.channel==='voice')await recordCustomerOptOut(service,'voice',voiceJob.recipient_e164,{job_id:jobId,digits,source:'voice-flow-opt-out'});
+      }
       const rawStatus=String(form.Status||form.status||form.CallStatus||form.SmsStatus||'').toLowerCase();
       const isCall=provider==='exotel'&&(form.CallSid||form.Call||form.Direction||form.CallDuration);
       const status=isCall
