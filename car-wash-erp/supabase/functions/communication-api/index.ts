@@ -253,8 +253,23 @@ Deno.serve(async (req) => {
         if (channel === 'voice' && !/^1(?:40|60)\d{2,}$/.test(String(settings.exotel_caller_id || '').replace(/\D/g,''))) {
           throw new Error('Automated commercial voice calls require an approved 140/160 series caller ID in India.');
         }
-        if (channel === 'voice' && (!settings.dlt_voice_template_id || !settings.dlt_voice_template_text || !settings.dlt_entity_id)) {
-          throw new Error('Register your voice script/template and Principal Entity on DLT before queuing commercial voice calls.');
+        if (channel === 'voice') {
+          if (!settings.dlt_voice_template_id || !settings.dlt_voice_template_text || !settings.dlt_entity_id) {
+            throw new Error('Register your voice script/template and Principal Entity on DLT before queuing commercial voice calls.');
+          }
+          const variables: Record<string,string> = {
+            name:String(customer.name || 'Customer'),
+            message,
+            business:String(workspace.business_name || 'Prime Auto Care')
+          };
+          let spoken = String(settings.dlt_voice_template_text);
+          for (const [key,value] of Object.entries(variables)) spoken=spoken.replaceAll(`{${key}}`,value);
+          if (/\{[a-z_]+\}/i.test(spoken)) throw new Error('The registered voice script contains an unsupported variable.');
+          if (spoken.length > 55) throw new Error(`The rendered registered voice script for ${customer.name} is longer than 55 characters. Shorten the approved DLT voice template.`);
+          payloadJob.message=spoken;
+          payloadJob.voice_text=spoken;
+          payloadJob.dlt_voice_template_id=settings.dlt_voice_template_id;
+          payloadJob.dlt_voice_template_text=settings.dlt_voice_template_text;
         }
         addJob(rows, { workspaceId: workspace.id, customer, channel, purpose: 'marketing', payload: payloadJob, campaignId, key: `campaign:${campaignId}:${customer.id}:${channel}`, scheduledAt: scheduledAt.toISOString() });
       }
