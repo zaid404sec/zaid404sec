@@ -114,3 +114,12 @@ Open the published HTTPS site on your Android phone and choose **Install app** o
 The existing **Offers & WhatsApp → Share by WhatsApp** action remains available and opens the Android share menu for the user's existing WhatsApp account. The user chooses the destination and presses Send.
 
 The following are planned, not implemented or enabled in 2.5.2: official WhatsApp Business Cloud API automatic bulk delivery; scheduled morning opening announcements; automatic invoice messages and PDF delivery; SMS gateway automation; and voice announcements. These require later provider onboarding, consent/templates and server-side credentials as applicable. No unofficial WhatsApp automation or silent personal-account sending is used in this release.
+
+
+## Version 2.5.3 — WhatsApp Business share workflow
+
+- Offers & WhatsApp now lets staff select opted-in customers, select all eligible contacts or clear the selection, compose one campaign message and optionally attach a promotional image.
+- One Android share action opens the system share sheet; choose WhatsApp Business, then select the same intended recipients in WhatsApp and manually send. The app does not send automatically or bypass WhatsApp recipient controls.
+- Existing invoice PDF sharing already prepares the customer-specific invoice message and PDF for the share sheet. The operator reviews the destination and sends.
+- Official WhatsApp Cloud API automation, unattended bulk delivery, delivery receipts, scheduled opening announcements, SMS and voice automation remain future integrations. WhatsApp Business app activation alone does not provide Cloud API credentials or webhook access.
+- No WhatsApp OTP, access token or Meta secret is stored in the app or repository.
