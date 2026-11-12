@@ -6,8 +6,8 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v7') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v7.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v8') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v8.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 const mustContain = [
@@ -17,7 +17,7 @@ const mustContain = [
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'pairDevice', 'pairingCode', 'Connect / Pair this device', 'Prime-Auto-Care-',
-  'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'function staffMonthDayCount', 'function staffAttendanceSummary', 'function staffPayrollBreakdown', 'Monthly payroll calculator', 'Daily staff attendance', 'Present', 'Absent', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
+  'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'function staffMonthDayCount', 'function staffAttendanceSummary', 'function staffPayrollBreakdown', 'Monthly payroll calculator', 'function staffAttendanceForDate', 'function setStaffAttendanceEntry', 'function removeStaffMember', 'function staffShiftEnd', 'function staffManagerPinDigest', 'function verifyStaffManagerPin', 'staff-attendance-row', 'Manager PIN', 'Daily staff attendance', 'Present', 'Absent', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -55,7 +55,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v7') throw new Error('Android stability release app ID v7 was not set.');
+if (appId !== 'com.washdesk.carwash.v8') throw new Error('Android stability release app ID v8 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -154,6 +154,92 @@ if (februaryPayroll.calendarDays !== 28 || februaryPayroll.absentDays !== 1 ||
   throw new Error('28-day payroll calculation failed: ' + JSON.stringify(februaryPayroll));
 }
 console.log('PASS: 28-day payroll uses the correct calendar-day rate');
+const staffHelpersStart = html.indexOf('function staffAttendanceForDate(');
+const staffHelpersEnd = html.indexOf('function staff(){', staffHelpersStart);
+if (staffHelpersStart < 0 || staffHelpersEnd < 0) throw new Error('Staff attendance and shift helper functions were not found.');
+const staffHelpers = html.slice(staffHelpersStart, staffHelpersEnd);
+const shiftTimes = vm.runInNewContext(
+  staffHelpers + String.fromCharCode(10) + "({eight:staffShiftEnd('08:00',11),nine:staffShiftEnd('09:00',11),ten:staffShiftEnd('10:00',11),label:staffShiftLabel({shiftStart:'09:00',shiftHours:11})})",
+  { db: { staff:[], attendance:[], _deletedIds:{} } }
+);
+if (shiftTimes.eight !== '19:00' || shiftTimes.nine !== '20:00' || shiftTimes.ten !== '21:00' ||
+    !shiftTimes.label.includes('9:00 AM') || !shiftTimes.label.includes('8:00 PM')) {
+  throw new Error('Individual 11-hour staff shift schedule mapping failed: ' + JSON.stringify(shiftTimes));
+}
+console.log('PASS: individual staff schedules map 8 AM to 7 PM, 9 AM to 8 PM and 10 AM to 9 PM');
+
+const attendanceContext = {
+  db: { staff:[{id:'staff-1'}], attendance:[], _deletedIds:{} }
+};
+const attendanceChanges = vm.runInNewContext(
+  staffHelpers + String.fromCharCode(10) +
+  "setStaffAttendanceEntry('staff-1','Worker One','2026-11-12','Absent');" +
+  "setStaffAttendanceEntry('staff-1','Worker One','2026-11-12','Present');" +
+  "({count:db.attendance.length,status:db.attendance[0]?.status,activeCount:staffAttendanceForDate('2026-11-12').length})",
+  attendanceContext
+);
+if (attendanceChanges.count !== 1 || attendanceChanges.status !== 'Present' || attendanceChanges.activeCount !== 1) {
+  throw new Error('Absent-to-Present attendance correction did not update the same staff/date record: ' + JSON.stringify(attendanceChanges));
+}
+console.log('PASS: a staff member can be corrected from Absent to Present without creating a duplicate');
+const clearContext = {
+  db: { staff:[{id:'staff-1'}], attendance:[{id:'attendance_2026-11-12_staff-1',staffId:'staff-1',date:'2026-11-12',status:'Absent'}], _deletedIds:{} }
+};
+const cleared = vm.runInNewContext(
+  staffHelpers + String.fromCharCode(10) +
+  "setStaffAttendanceEntry('staff-1','Worker One','2026-11-12','Clear');" +
+  "({count:db.attendance.length,tombstone:!!db._deletedIds['attendance_2026-11-12_staff-1']})",
+  clearContext
+);
+if (cleared.count !== 0 || !cleared.tombstone) throw new Error('Clearing an attendance entry did not create a cloud deletion tombstone.');
+console.log('PASS: clearing a mistaken attendance entry removes it and syncs the deletion tombstone');
+
+const noStaffRows = vm.runInNewContext(
+  staffHelpers + String.fromCharCode(10) + "staffAttendanceForDate('2026-11-12').length",
+  { db: { staff:[], attendance:[{id:'orphan-1',staffId:'removed-staff',date:'2026-11-12',status:'Absent'},{id:'orphan-2',staffId:'removed-staff',date:'2026-11-12',status:'Present'}], _deletedIds:{} } }
+);
+if (noStaffRows !== 0) throw new Error('Attendance summary still counts records for removed staff.');
+console.log('PASS: removed staff do not appear in Present / Absent counts');
+
+const removalContext = {
+  db: {
+    staff:[{id:'staff-1',name:'Worker One'}],
+    attendance:[{id:'attendance_2026-11-12_staff-1',staffId:'staff-1',date:'2026-11-12',status:'Absent'}],
+    expenses:[{id:'salary-1',category:'Salary',staffId:'staff-1',amount:500}],
+    _deletedIds:{}
+  },
+  confirm:()=>true, save:()=>{}, render:()=>{}, notify:()=>{}
+};
+const removal = vm.runInNewContext(
+  staffHelpers + String.fromCharCode(10) +
+  "removeStaffMember('staff-1');" +
+  "({staff:db.staff.length,attendance:db.attendance.length,expenseHistory:db.expenses.length,staffTombstone:!!db._deletedIds['staff-1'],attendanceTombstone:!!db._deletedIds['attendance_2026-11-12_staff-1']})",
+  removalContext
+);
+if (removal.staff !== 0 || removal.attendance !== 0 || removal.expenseHistory !== 1 ||
+    !removal.staffTombstone || !removal.attendanceTombstone) {
+  throw new Error('Staff removal must clear attendance and preserve financial history: ' + JSON.stringify(removal));
+}
+console.log('PASS: removing staff clears their attendance tombstones while retaining salary history');
+
+if (!html.includes("if(!(await verifyStaffManagerPin()))return;") ||
+    !html.includes("db.settings.staffManagerAccess={salt,hash:await staffManagerPinDigest(pin,salt)")) {
+  throw new Error('Staff shift changes are not protected by the synced Manager PIN.');
+}
+console.log('PASS: shift-time editing is guarded by the shared salted Manager PIN');
+
+const brandSvg = await readFile(new URL('../icon.svg', import.meta.url), 'utf8');
+const brandManifest = JSON.parse(await readFile(new URL('../manifest.webmanifest', import.meta.url), 'utf8'));
+for (const asset of ['prime-auto-care-icon-192.png','prime-auto-care-icon-512.png','prime-auto-care-icon.ico']) {
+  if (!existsSync(new URL('../'+asset, import.meta.url))) throw new Error('Generated brand icon asset missing: '+asset);
+}
+if (!brandSvg.includes('data:image/jpeg;base64') ||
+    !brandManifest.icons.some(icon=>icon.src==='./prime-auto-care-icon-192.png') ||
+    !brandManifest.icons.some(icon=>icon.src==='./prime-auto-care-icon-512.png')) {
+  throw new Error('Prime Auto Care logo is not wired into the app / PWA icon assets.');
+}
+console.log('PASS: Prime Auto Care wordmark is used by the app, PWA and Windows icon assets');
+
 
 
 // Verify normalized unique identifiers. Customer names are intentionally repeatable.
