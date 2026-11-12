@@ -6,8 +6,8 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v9') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v9.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v10') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v10.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -71,7 +71,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v9') throw new Error('Android stability release app ID v9 was not set.');
+if (appId !== 'com.washdesk.carwash.v10') throw new Error('Android stability release app ID v10 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -87,6 +87,17 @@ const nextResult = vm.runInNewContext(nextFunction + String.fromCharCode(10) + "
 });
 if (nextResult !== 'CW-261107-006') throw new Error('Daily invoice sequence test failed: ' + nextResult);
 console.log('PASS: invoice numbering resets daily and advances past saved bills');
+const reserveStart=html.indexOf('async function reserveInvoiceNo('),reserveEnd=html.indexOf('  function sum(',reserveStart);
+if(reserveStart<0||reserveEnd<0)throw new Error('Shared invoice reservation function not found.');
+const reserveSource=html.slice(html.indexOf('function offlineInvoiceNo(',reserveStart),reserveEnd);
+const cloudReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-001',navigator:{onLine:true},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'}),nextInvoiceNumber:async()=>'CW-261107-021'}}});
+if(await cloudReserve!=='CW-261107-021')throw new Error('Online invoice numbering did not use the shared server counter.');
+const offlineReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-001',navigator:{onLine:false},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'})}}});
+if(offlineReserve!=='CW-261107-OFF-DEVICE-UNIQUE-001')throw new Error('Paired offline bills must receive a unique provisional reference: '+offlineReserve);
+const failedReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-002',navigator:{onLine:true},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'}),nextInvoiceNumber:async()=>{throw new Error('counter unavailable')}}}});
+let counterRejected=false;try{await failedReserve}catch{counterRejected=true}
+if(!counterRejected)throw new Error('Paired online billing must fail closed when the shared invoice counter fails.');
+console.log('PASS: paired online billing fails closed on counter errors; offline paired bills use unique provisional numbers');
 
 const calcStart = html.indexOf('function calculateEditedInvoice(');
 const calcEnd = html.indexOf('  function saveInvoiceEdits', calcStart);
@@ -349,7 +360,8 @@ if (cloudSource.includes('localhost:3000') || html.includes('localhost:3000') ||
 }
 if (!html.includes('Enable Anonymous Sign-Ins') ||
     !html.includes('Connect / Pair this device') ||
-    !html.includes('same code once on each of the four phones and the Windows laptop')) {
+    !html.includes('no four-device cap is built into the app') ||
+    !html.includes('every authorised phone or computer')) {
   throw new Error('Cloud settings do not explain the shared device-pairing workflow.');
 }
 if (!cloudSource.includes('workspace = readWorkspace();') ||
@@ -439,13 +451,15 @@ if (html.includes('Files → Downloads → WashDesk') ||
 console.log('PASS: invoice PDFs and full backups use the Prime Auto Care Downloads folder');
 
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
-for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'device_not_paired']) {
+for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'attendance', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'device_not_paired']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
 }
 if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
 const phone0091Rule = String.raw`when digits ~ '^0091[0-9]{10}$' then right(digits, 10)`;
 if (!sql.includes(phone0091Rule)) throw new Error('Cloud SQL does not normalise 0091-prefixed mobile numbers.');
-console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
+if (!sql.includes("'staffAdvances', 'attendance', 'payments'")) throw new Error('Server-side workspace merge is missing attendance records.');
+if (!sql.includes('on conflict (user_id, invoice_date) do update') || !sql.includes('public.washdesk_invoice_counters.next_value + 1') || !sql.includes('returning next_value into v_seq')) throw new Error('Daily invoice numbers must use an atomic shared PostgreSQL counter.');
+console.log('PASS: cloud schema merges attendance and reserves invoice numbers atomically');
 if (!sql.includes("grant execute on function public.washdesk_join_workspace(text) to authenticated;") ||
     !sql.includes("grant execute on function public.washdesk_merge_sync(jsonb) to authenticated;") ||
     !sql.includes("to authenticated") ||
