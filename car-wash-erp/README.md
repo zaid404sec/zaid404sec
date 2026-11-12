@@ -55,3 +55,11 @@ Then open `http://localhost:8000`.
 The repository workflow at `.github/workflows/pages.yml` deploys the contents of this folder. In GitHub, open **Settings → Pages → Build and deployment → Source**, select **GitHub Actions**, then check the Actions tab for the deployment result. When the workflow succeeds, the site will be available at the Pages URL shown in the deployment output.
 
 Open the published HTTPS site on your Android phone and choose **Install app** or **Add to Home screen** in the browser. Each browser/device has its own local records; export and restore a backup when moving devices.
+
+
+## Version 2.3.0 payroll calculation and safe Android install
+
+- **Staff payroll:** The monthly payroll calculator uses the actual calendar-day count (28/29/30/31), subtracts one daily rate for every saved Absent day, then shows earned salary, salary already paid/adjusted, open staff advances and net payable. Unmarked dates are not counted as absent.
+- **Advance handling:** Open advances appear as a proposed deduction in net payable. Saving a salary settlement confirms the adjustment and updates the advance register so the same advance is not deducted twice.
+- **Android:** The 2.3.0 APK uses application ID `com.washdesk.carwash.v7`, allowing it to install beside the existing v6 app without replacing its local data or depending on the previous debug-signing key. After installing, connect it to the same Prime Auto Care shared cloud workspace using the existing pairing code. Do not import the same old backup again when the cloud workspace already contains the correct records.
+- **Windows:** Install the 2.3.0 setup over the existing Windows app; its Electron user-data folder remains unchanged.
