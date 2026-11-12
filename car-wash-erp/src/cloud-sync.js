@@ -221,7 +221,7 @@ async function publishPayload(payload) {
       stockLedgerSchemaReady = false;
       queuedPayload = body;
       clearTimeout(pushTimer);
-      setStatus('App update required · update every paired device to Prime Auto Care 2.5.2 before syncing.');
+      setStatus('App update required · update every paired device to Prime Auto Care 2.5.2 or later before syncing.');
       window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'This device is using an older Prime Auto Care build. Update every paired phone and computer to version 2.5.2 before syncing stock changes.' }));
     } else if (message.includes('INSUFFICIENT_STOCK')) {
       schemaBlocked = true;
@@ -393,7 +393,7 @@ async function resume({ getLocal, onRemote }) {
     } else if (message.includes('CLOUD_SCHEMA_UPDATE_REQUIRED')) {
       setStatus('Cloud SQL update required · run the latest Cloud Sync SQL file once in Supabase, then tap Sync now.');
     } else if (message.includes('APP_UPDATE_REQUIRED')) {
-      setStatus('App update required · update every paired phone and computer to Prime Auto Care 2.5.2.');
+      setStatus('App update required · update every paired phone and computer to Prime Auto Care 2.5.2 or later.');
     } else {
       setStatus(message.includes('washdesk_sync') ? 'Signed in · run the shared database SQL setup' : 'Cloud reconnect needed · retry when internet returns');
     }

@@ -123,3 +123,12 @@ The following are planned, not implemented or enabled in 2.5.2: official WhatsAp
 - Existing invoice PDF sharing already prepares the customer-specific invoice message and PDF for the share sheet. The operator reviews the destination and sends.
 - Official WhatsApp Cloud API automation, unattended bulk delivery, delivery receipts, scheduled opening announcements, SMS and voice automation remain future integrations. WhatsApp Business app activation alone does not provide Cloud API credentials or webhook access.
 - No WhatsApp OTP, access token or Meta secret is stored in the app or repository.
+
+## Version 2.5.4 — invoice share handoff and opening reminders
+
+- **Customer-specific invoice handoff:** after a bill is safely saved, Android opens the system share sheet with the generated PDF attached and a prefilled customer-specific message containing invoice number, date, amount, paid balance and vehicle. The share title identifies the customer and saved mobile number so the operator can choose the correct WhatsApp Business chat. The invoice remains saved if the operator cancels the share. A saved customer mobile number is required for automatic share-sheet opening; otherwise use the invoice's Share PDF / WhatsApp action manually.
+- **Daily opening reminder:** configure opening hours, business closing time, and a local reminder time in Business settings. Android schedules a repeating on-device notification. Tapping it opens Offers & WhatsApp with the opening message prepared. Each phone schedules its own reminder and must grant Android notification permission. This is a reminder, not an unattended message.
+- **Manual SMS share:** the opening announcement can be passed to the Android share sheet; choose an SMS app and send manually.
+- **Voice preview:** the announcement can be spoken on the current device using its speech engine. This is a local preview, not an automated phone call or voice message to customers.
+- **WhatsApp Cloud API, automatic bulk delivery, delivery receipts, SMS gateway delivery and automated voice calls** remain pending provider onboarding and server credentials. The WhatsApp Business app registration by itself does not enable Cloud API sending.
+- **Install:** Android application ID is `com.washdesk.carwash.v12`, keeping the prior v11 app installed separately. The Prime Auto Care launcher logo and Windows branding assets remain part of the build.

@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.5.3') throw new Error('The package version must be 2.5.3.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v11') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v11.');
+if (packageJson.version !== '2.5.4') throw new Error('The package version must be 2.5.4.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v12') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v12.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -42,6 +42,29 @@ if (!html.includes('data-action="share-offer-whatsapp"') ||
   throw new Error('Offers must support selected opted-in contacts and one manual WhatsApp Business share, with no automated send loop.');
 }
 console.log('PASS: bulk offers select opted-in customers, support a promo image and use one manual WhatsApp Business share action');
+if (!html.includes('if(custId&&cust?.phone&&window.WashDeskFileSharer?.share)') ||
+    !html.includes("notify('Invoice saved. Preparing the customer-specific PDF and WhatsApp message…')") ||
+    !html.includes('void shareInvoice(inv.id)')) {
+  throw new Error('A saved invoice with a customer mobile number must automatically open the customer-specific PDF/message share sheet.');
+}
+const invoiceShareStart=html.indexOf('async function shareInvoice(invId)');
+const invoiceShareEnd=html.indexOf('function printInvoice',invoiceShareStart);
+const invoiceShareSource=html.slice(invoiceShareStart,invoiceShareEnd);
+for (const token of ['invoiceCustomerName(i)', 'customer?.phone', 'makePdfBlob(i)', 'contentType:\'application/pdf\'', 'text:message', 'chooserTitle:']) {
+  if (!invoiceShareSource.includes(token)) throw new Error('Customer-specific invoice share is missing: '+token);
+}
+if (!html.includes("Opening announcement prepared in the offer message box.") ||
+    !html.includes('data-action="share-opening-sms"') ||
+    !html.includes('data-action="preview-opening-voice"') ||
+    !html.includes('function openingAnnouncementMessage()') ||
+    !html.includes('function previewOpeningAnnouncement()') ||
+    !html.includes('openingReminderEnabled') ||
+    !html.includes('openingReminderTime') ||
+    !html.includes('scheduleOpeningReminder')) {
+  throw new Error('Daily opening announcement, SMS share and local voice preview workflow is incomplete.');
+}
+console.log('PASS: saved customer invoices open the personalised message + PDF share sheet without sending automatically');
+console.log('PASS: daily opening reminder, opening-hours message, manual SMS share and local voice preview are present');
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -63,7 +86,7 @@ if (inlineStart < 0 || inlineEnd < 0) throw new Error('No inline application scr
 const inlineSource = html.slice(inlineStart + '<script>'.length, inlineEnd);
 await transform(inlineSource, { loader: 'js', target: 'es2020', logLevel: 'silent' });
 console.log('PASS: inline application JavaScript syntax');
-for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
   const path = new URL('../' + asset, import.meta.url);
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
   console.log('PASS: bundled asset ' + asset);
@@ -87,7 +110,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v11') throw new Error('Android stability release app ID v11 was not set.');
+if (appId !== 'com.washdesk.carwash.v12') throw new Error('Android stability release app ID v12 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -449,7 +472,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v14')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v15')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
@@ -560,10 +583,10 @@ if (!sql.includes('washdesk_can_read_sync(user_id)') || !sql.includes('for updat
 console.log('PASS: database supports secure shared workspace membership and pairing-code provisioning');
 
 
-if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake']) throw new Error('Excel, PDFMake or cloud-sync runtime dependency missing.');
+if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake'] || !packageJson.dependencies['@capacitor/local-notifications']) throw new Error('Excel, PDFMake, cloud sync or local notifications runtime dependency missing.');
 
 const electronBuilderAuth = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
-for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','cloud-sync-setup.sql']) {
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','cloud-sync-setup.sql']) {
   if (!electronBuilderAuth.includes('- ' + asset)) throw new Error('Windows installer is missing a required runtime asset: ' + asset);
 }
 console.log('PASS: Windows installer includes PDFMake, fonts, images, Excel and cloud-sync assets');
