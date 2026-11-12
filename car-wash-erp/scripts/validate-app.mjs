@@ -20,6 +20,17 @@ if (html.includes('location.reload(') || html.includes('window.location.reload('
   throw new Error('The app must not force-reload the active business screen.');
 }
 console.log('PASS: cloud snapshots defer outside the passive dashboard; navigation applies them safely and preserves scroll');
+const saveFunctionStart=html.indexOf('function save(){');
+const saveFunctionEnd=html.indexOf('function notify(',saveFunctionStart);
+const saveFunction=html.slice(saveFunctionStart,saveFunctionEnd);
+if (!saveFunction.includes("previousRaw=localStorage.getItem(STORE)") ||
+    !saveFunction.includes("db=reconcileStockLedger(Object.assign(blank(),JSON.parse(previousRaw)))") ||
+    !html.includes('if(!save())return;') ||
+    html.includes('save();')) {
+  throw new Error('Failed local persistence must restore the last durable database and stop success flows.');
+}
+console.log('PASS: all normal save paths stop on local storage failure and the shared save handler restores durable records');
+
 if (!html.includes('data-action="share-offer-whatsapp"') ||
     !html.includes('navigator.share({title,text:message})') ||
     !html.includes('https://wa.me/?text=') ||
@@ -460,6 +471,11 @@ if (!html.includes('function reconcileStockLedger(data)') ||
     !html.includes("recordStockMovement(p.id,q,'purchase',purchaseId") ||
     !html.includes("recordStockMovement(p.id,delta,'manual-adjustment',movementId")) {
   throw new Error('Stock movements must be recorded for every stock-changing workflow and merged by unique ID.');
+}
+if (!(sql.indexOf("insert into public.washdesk_schema_version") > sql.indexOf("create or replace function public.washdesk_merge_sync")) ||
+    !(sql.indexOf("insert into public.washdesk_schema_version") > sql.indexOf("create or replace function public.washdesk_next_invoice_number")) ||
+    !(sql.indexOf("insert into public.washdesk_schema_version") > sql.indexOf("alter publication supabase_realtime"))) {
+  throw new Error('Cloud stock-ledger readiness must only be published after all updated SQL functions are defined.');
 }
 if (!sql.includes("'products', 'stockMovements'") ||
     !sql.includes("coalesce(p_payload->'meta'->>'stockLedgerVersion','') <> '1'") ||
