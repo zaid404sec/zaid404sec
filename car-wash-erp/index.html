@@ -720,6 +720,7 @@
           <div class="field"><label>Phone Number ID</label><input name="whatsapp_phone_number_id" value="${esc(cfg.whatsapp_phone_number_id||'')}" /></div>
           <div class="field"><label>WhatsApp Business Account ID</label><input name="whatsapp_waba_id" value="${esc(cfg.whatsapp_waba_id||'')}" /></div>
           <div class="field"><label>Approved marketing template</label><input name="whatsapp_marketing_template" value="${esc(cfg.whatsapp_marketing_template||'prime_auto_care_offer')}" /></div>
+          <div class="field"><label>Approved marketing image-header template</label><input name="whatsapp_marketing_image_template" value="${esc(cfg.whatsapp_marketing_image_template||'')}" placeholder="Template approved with an image header" /></div>
           <div class="field"><label>Approved invoice (PDF header) template</label><input name="whatsapp_invoice_template" value="${esc(cfg.whatsapp_invoice_template||'prime_auto_care_invoice')}" /></div>
           <div class="field"><label>Approved opening template</label><input name="whatsapp_opening_template" value="${esc(cfg.whatsapp_opening_template||'prime_auto_care_opening')}" /></div>
           <div class="field"><label>Template language code</label><input name="whatsapp_language" value="${esc(cfg.whatsapp_language||'en')}" /></div>
@@ -815,6 +816,7 @@
       whatsapp_phone_number_id:String(f.get('whatsapp_phone_number_id')||'').trim(),
       whatsapp_waba_id:String(f.get('whatsapp_waba_id')||'').trim(),
       whatsapp_marketing_template:String(f.get('whatsapp_marketing_template')||'').trim(),
+      whatsapp_marketing_image_template:String(f.get('whatsapp_marketing_image_template')||'').trim(),
       whatsapp_invoice_template:String(f.get('whatsapp_invoice_template')||'').trim(),
       whatsapp_opening_template:String(f.get('whatsapp_opening_template')||'').trim(),
       whatsapp_language:String(f.get('whatsapp_language')||'en').trim(),
