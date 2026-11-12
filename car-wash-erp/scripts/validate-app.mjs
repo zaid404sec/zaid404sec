@@ -17,7 +17,7 @@ const mustContain = [
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'pairDevice', 'pairingCode', 'Connect / Pair this device', 'Prime-Auto-Care-',
-  'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'Daily staff attendance', 'Present', 'Absent', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
+  'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'function staffMonthDayCount', 'function staffAttendanceSummary', 'function staffPayrollBreakdown', 'Monthly payroll calculator', 'Daily staff attendance', 'Present', 'Absent', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -113,6 +113,48 @@ const advancesOpen = vm.runInNewContext(advancesFunction + String.fromCharCode(1
 });
 if (advancesOpen !== 900) throw new Error('Staff advance outstanding calculation failed: ' + advancesOpen);
 console.log('PASS: staff advance register calculates adjusted and open balances by staff member');
+const payrollStart = html.indexOf('function staffAdvancesOutstanding(');
+const payrollEnd = html.indexOf('function staff(){', payrollStart);
+if (payrollStart < 0 || payrollEnd < 0) throw new Error('Staff payroll calculation helpers not found.');
+const payrollFunctions = html.slice(payrollStart, payrollEnd);
+const novemberPayroll = vm.runInNewContext(
+  payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2026-11')",
+  {
+    db: {
+      staffAdvances: [{ staffId:'staff-1', amount:3000, recoveredAmount:0 }],
+      attendance: [
+        { staffId:'staff-1', date:'2026-11-02', status:'Absent', updatedAt:1 },
+        { staffId:'staff-1', date:'2026-11-04', status:'Absent', updatedAt:1 },
+        { staffId:'staff-1', date:'2026-11-05', status:'Present', updatedAt:1 }
+      ],
+      expenses: []
+    },
+    monthKey: date => date ? String(date).slice(0,7) : '2026-11',
+    sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
+  }
+);
+if (novemberPayroll.calendarDays !== 30 || novemberPayroll.absentDays !== 2 ||
+    Math.abs(novemberPayroll.absenceDeduction-933.33) > 0.01 ||
+    Math.abs(novemberPayroll.earnedSalary-13066.67) > 0.01 ||
+    Math.abs(novemberPayroll.netPayable-10066.67) > 0.01) {
+  throw new Error('30-day payroll calculation failed: ' + JSON.stringify(novemberPayroll));
+}
+console.log('PASS: 30-day payroll deducts absence days and outstanding advances from monthly salary');
+const februaryPayroll = vm.runInNewContext(
+  payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2027-02')",
+  {
+    db: { staffAdvances:[], attendance:[{staffId:'staff-1',date:'2027-02-10',status:'Absent'}], expenses:[] },
+    monthKey: date => date ? String(date).slice(0,7) : '2027-02',
+    sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
+  }
+);
+if (februaryPayroll.calendarDays !== 28 || februaryPayroll.absentDays !== 1 ||
+    Math.abs(februaryPayroll.absenceDeduction-500) > 0.01 ||
+    Math.abs(februaryPayroll.netPayable-13500) > 0.01) {
+  throw new Error('28-day payroll calculation failed: ' + JSON.stringify(februaryPayroll));
+}
+console.log('PASS: 28-day payroll uses the correct calendar-day rate');
+
 
 // Verify normalized unique identifiers. Customer names are intentionally repeatable.
 const uniqueStart = html.indexOf('function normalizeMobile(');
