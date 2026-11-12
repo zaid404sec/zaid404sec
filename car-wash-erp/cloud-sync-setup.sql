@@ -287,6 +287,45 @@ $;
 revoke all on function public.washdesk_get_stock_ledger_version() from public, anon;
 grant execute on function public.washdesk_get_stock_ledger_version() to authenticated;
 
+-- Mark existing shared payloads as migrated without replaying historical invoices.
+-- The current cloud quantity is the opening balance; only new movement rows affect it.
+update public.washdesk_sync as sync
+set payload = jsonb_set(
+  jsonb_set(
+    jsonb_set(
+      coalesce(sync.payload, '{}'::jsonb),
+      '{products}',
+      coalesce((
+        select jsonb_agg(
+          case
+            when product.item ? 'stockOpeningQty' then product.item
+            else jsonb_set(
+              product.item,
+              '{stockOpeningQty}',
+              to_jsonb(public.washdesk_safe_number(product.item->>'qty')),
+              true
+            )
+          end
+          order by product.item->>'id'
+        )
+        from jsonb_array_elements(
+          case when jsonb_typeof(sync.payload->'products') = 'array'
+            then sync.payload->'products' else '[]'::jsonb end
+        ) as product(item)
+      ), '[]'::jsonb),
+      true
+    ),
+    '{stockMovements}',
+    case when jsonb_typeof(sync.payload->'stockMovements') = 'array'
+      then sync.payload->'stockMovements' else '[]'::jsonb end,
+    true
+  ),
+  '{meta}',
+  coalesce(sync.payload->'meta', '{}'::jsonb) ||
+    jsonb_build_object('stockLedgerVersion', 1, 'serverStockLedgerVersion', 1),
+  true
+);
+
 -- Customer names may repeat. Mobile numbers and vehicle registrations may not.
 create or replace function public.washdesk_assert_unique_customer_keys(p_payload jsonb)
 returns void
