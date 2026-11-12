@@ -94,7 +94,7 @@ const reserveSource=html.slice(reserveStart,reserveEnd);
 const cloudReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-001',navigator:{onLine:true},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'}),nextInvoiceNumber:async()=>'CW-261107-021'}}});
 if(await cloudReserve!=='CW-261107-021')throw new Error('Online invoice numbering did not use the shared server counter.');
 const offlineReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-001',navigator:{onLine:false},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'})}}});
-if(offlineReserve!=='CW-261107-OFF-DEVICE-UNIQUE-001')throw new Error('Paired offline bills must receive a unique provisional reference: '+offlineReserve);
+if(await offlineReserve!=='CW-261107-OFF-DEVICE-UNIQUE-001')throw new Error('Paired offline bills must receive a unique provisional reference: '+offlineReserve);
 const failedReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-002',navigator:{onLine:true},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'}),nextInvoiceNumber:async()=>{throw new Error('counter unavailable')}}}});
 let counterRejected=false;try{await failedReserve}catch{counterRejected=true}
 if(!counterRejected)throw new Error('Paired online billing must fail closed when the shared invoice counter fails.');
