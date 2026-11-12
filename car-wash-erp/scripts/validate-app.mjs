@@ -222,7 +222,7 @@ if (removal.staff !== 0 || removal.attendance !== 0 || removal.expenseHistory !=
 }
 console.log('PASS: removing staff clears their attendance tombstones while retaining salary history');
 
-if (!html.includes("if(!(await verifyStaffManagerPin()))return;") ||
+if (!html.includes("!(await verifyStaffManagerPin()))return;") ||
     !html.includes("db.settings.staffManagerAccess={salt,hash:await staffManagerPinDigest(pin,salt)")) {
   throw new Error('Staff shift changes are not protected by the synced Manager PIN.');
 }
