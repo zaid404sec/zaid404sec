@@ -603,8 +603,7 @@ for (const asset of ['communications.bundle.js']) {
 if (!html.includes('<script src="./communications.bundle.js"></script>') ||
     !sw.includes("'./communications.bundle.js'") ||
     !html.includes('whatsapp_marketing_image_template') ||
-    !html.includes('dlt_voice_template_id') ||
-    !html.includes('PAC_CRON_SETUP_COMPLETE')) {
+    !html.includes('dlt_voice_template_id')) {
   throw new Error('The communications client must be loaded and precached for offline-safe app startup.');
 }
 if (!html.includes('data-action="queue-whatsapp-cloud"') ||
@@ -648,10 +647,10 @@ for (const token of [
 const communicationsApi = await readFile(new URL('../supabase/functions/communication-api/index.ts', import.meta.url), 'utf8');
 const communicationsWorker = await readFile(new URL('../supabase/functions/communication-worker/index.ts', import.meta.url), 'utf8');
 const communicationsWebhook = await readFile(new URL('../supabase/functions/communication-webhook/index.ts', import.meta.url), 'utf8');
-for (const token of ['auth.getUser(token)','member.role !== \'owner\'','waOptIn','smsOptIn','voiceOptIn','waServiceOptIn','smsServiceOptIn','idempotency_key','whatsapp_phone_number_id']) {
+for (const token of ['auth.getUser(token)','member.role !== \'owner\'','waOptIn','smsOptIn','voiceOptIn','waServiceOptIn','smsServiceOptIn','idempotency_key','whatsapp_phone_number_id','PAC_CRON_SETUP_COMPLETE','automationWorker.ready']) {
   if (!communicationsApi.includes(token)) throw new Error('Communications API is missing access/consent guard: '+token);
 }
-for (const token of ['META_ACCESS_TOKEN','graph.facebook.com','pac_claim_communication_jobs','EXOTEL_API_KEY','Sms/send.json','Calls/connect.json','PAC_WORKER_SECRET','max_attempts','dlt_voice_template_id']) {
+for (const token of ['META_ACCESS_TOKEN','graph.facebook.com','pac_claim_communication_jobs','EXOTEL_API_KEY','Sms/send','calls/connect','PAC_WORKER_SECRET','max_attempts','dlt_voice_template_id']) {
   if (!communicationsWorker.includes(token)) throw new Error('Communications worker is missing provider/queue feature: '+token);
 }
 if (!communicationsWebhook.includes('x-hub-signature-256') ||
