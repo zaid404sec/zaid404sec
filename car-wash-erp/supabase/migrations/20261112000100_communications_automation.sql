@@ -35,6 +35,8 @@ create table if not exists public.pac_communication_settings (
   dlt_promo_template_text text,
   dlt_service_template_id text,
   dlt_service_template_text text,
+  dlt_voice_template_id text,
+  dlt_voice_template_text text,
   server_opening_enabled boolean not null default false,
   server_opening_time time not null default '08:00',
   server_opening_timezone text not null default 'Asia/Kolkata',
@@ -47,6 +49,8 @@ create table if not exists public.pac_communication_settings (
   constraint pac_opening_channels_valid check (server_opening_channels <@ array['whatsapp','sms','voice']::text[])
 );
 alter table public.pac_communication_settings add column if not exists whatsapp_marketing_image_template text not null default '';
+alter table public.pac_communication_settings add column if not exists dlt_voice_template_id text;
+alter table public.pac_communication_settings add column if not exists dlt_voice_template_text text;
 alter table public.pac_communication_settings enable row level security;
 revoke all on public.pac_communication_settings from anon, authenticated;
 drop policy if exists pac_communication_settings_read on public.pac_communication_settings;
