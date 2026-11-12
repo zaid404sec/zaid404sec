@@ -88,9 +88,9 @@ const nextResult = vm.runInNewContext(nextFunction + String.fromCharCode(10) + "
 });
 if (nextResult !== 'CW-261107-006') throw new Error('Daily invoice sequence test failed: ' + nextResult);
 console.log('PASS: invoice numbering resets daily and advances past saved bills');
-const reserveStart=html.indexOf('async function reserveInvoiceNo('),reserveEnd=html.indexOf('  function sum(',reserveStart);
+const reserveStart=html.indexOf('function nextInvoiceNo('),reserveEnd=html.indexOf('  function sum(',reserveStart);
 if(reserveStart<0||reserveEnd<0)throw new Error('Shared invoice reservation function not found.');
-const reserveSource=html.slice(html.indexOf('function offlineInvoiceNo(',reserveStart),reserveEnd);
+const reserveSource=html.slice(reserveStart,reserveEnd);
 const cloudReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-001',navigator:{onLine:true},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'}),nextInvoiceNumber:async()=>'CW-261107-021'}}});
 if(await cloudReserve!=='CW-261107-021')throw new Error('Online invoice numbering did not use the shared server counter.');
 const offlineReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-001',navigator:{onLine:false},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'})}}});
