@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.5.4') throw new Error('The package version must be 2.5.4.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v12') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v12.');
+if (packageJson.version !== '2.6.0') throw new Error('The package version must be 2.6.0.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v13') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v13.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -86,7 +86,7 @@ if (inlineStart < 0 || inlineEnd < 0) throw new Error('No inline application scr
 const inlineSource = html.slice(inlineStart + '<script>'.length, inlineEnd);
 await transform(inlineSource, { loader: 'js', target: 'es2020', logLevel: 'silent' });
 console.log('PASS: inline application JavaScript syntax');
-for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','communications.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
   const path = new URL('../' + asset, import.meta.url);
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
   console.log('PASS: bundled asset ' + asset);
@@ -110,7 +110,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v12') throw new Error('Android stability release app ID v12 was not set.');
+if (appId !== 'com.washdesk.carwash.v13') throw new Error('Android stability release app ID v13 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -472,7 +472,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v15')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v16')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
@@ -583,13 +583,93 @@ if (!sql.includes('washdesk_can_read_sync(user_id)') || !sql.includes('for updat
 console.log('PASS: database supports secure shared workspace membership and pairing-code provisioning');
 
 
-if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake'] || !packageJson.dependencies['@capacitor/local-notifications']) throw new Error('Excel, PDFMake, cloud sync or local notifications runtime dependency missing.');
+if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake'] || !packageJson.dependencies['@capacitor/local-notifications'] || !packageJson.dependencies['@capacitor/core']) throw new Error('Excel, PDFMake, cloud sync or local notifications runtime dependency missing.');
 
 const electronBuilderAuth = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
-for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','cloud-sync-setup.sql']) {
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','communications.bundle.js','cloud-sync-setup.sql']) {
   if (!electronBuilderAuth.includes('- ' + asset)) throw new Error('Windows installer is missing a required runtime asset: ' + asset);
 }
 console.log('PASS: Windows installer includes PDFMake, fonts, images, Excel and cloud-sync assets');
+
+
+// Communications automation: client integration, server functions, consent and queue.
+if (!packageJson.dependencies['@capacitor/local-notifications']) {
+  throw new Error('The scheduled opening reminder notification dependency is missing.');
+}
+for (const asset of ['communications.bundle.js']) {
+  const file = new URL('../' + asset, import.meta.url);
+  if (!existsSync(file) || statSync(file).size < 500) throw new Error('Missing communications runtime bundle: '+asset);
+}
+if (!html.includes('<script src="./communications.bundle.js"></script>') ||
+    !sw.includes("'./communications.bundle.js'")) {
+  throw new Error('The communications client must be loaded and precached for offline-safe app startup.');
+}
+if (!html.includes('data-action="queue-whatsapp-cloud"') ||
+    !html.includes('data-action="queue-sms-gateway"') ||
+    !html.includes('data-action="queue-voice-calls"') ||
+    !html.includes('function queueMarketingCampaign(channel)') ||
+    !html.includes('function saveCommunicationSettings(e)') ||
+    !html.includes('data-consent-field=') ||
+    !html.includes("void shareInvoice(inv.id)") ||
+    !html.includes('window.PrimeAutoCareMessaging.sendInvoice')) {
+  throw new Error('The app must provide consent-aware WhatsApp/SMS/voice campaigns and automatic invoice queue handoff.');
+}
+const communicationsClient = await readFile(new URL('../src/communications.js', import.meta.url), 'utf8');
+if (!communicationsClient.includes("functions/v1/communication-api") ||
+    !communicationsClient.includes('getApiContext') ||
+    communicationsClient.includes('META_ACCESS_TOKEN') ||
+    communicationsClient.includes('EXOTEL_API_TOKEN')) {
+  throw new Error('The client must authenticate to the communications Edge Function without embedding provider credentials.');
+}
+const edgeFunctionPaths = [
+  '../supabase/functions/communication-api/index.ts',
+  '../supabase/functions/communication-worker/index.ts',
+  '../supabase/functions/communication-webhook/index.ts'
+];
+for (const path of edgeFunctionPaths) {
+  const source = await readFile(new URL(path, import.meta.url), 'utf8');
+  await transform(source, { loader:'ts', target:'es2022', format:'esm', logLevel:'silent' });
+  if (!source.includes('Deno.serve')) throw new Error('Supabase Edge Function entrypoint is missing Deno.serve: '+path);
+}
+const communicationsMigration = await readFile(new URL('../supabase/migrations/20261112000100_communications_automation.sql', import.meta.url), 'utf8');
+for (const token of [
+  'pac_communication_settings','pac_communication_jobs','pac_communication_events',
+  'pac_claim_communication_jobs','pac_claim_due_opening_schedules',
+  'for update skip locked','unique (workspace_id, idempotency_key)',
+  'pac-communication-media','dlt_voice_template_id'
+]) {
+  if (!communicationsMigration.toLowerCase().includes(token.toLowerCase())) {
+    throw new Error('Communications queue migration is missing: '+token);
+  }
+}
+const communicationsApi = await readFile(new URL('../supabase/functions/communication-api/index.ts', import.meta.url), 'utf8');
+const communicationsWorker = await readFile(new URL('../supabase/functions/communication-worker/index.ts', import.meta.url), 'utf8');
+const communicationsWebhook = await readFile(new URL('../supabase/functions/communication-webhook/index.ts', import.meta.url), 'utf8');
+for (const token of ['auth.getUser(token)','member.role !== \'owner\'','waOptIn','smsOptIn','voiceOptIn','waServiceOptIn','smsServiceOptIn','idempotency_key','whatsapp_phone_number_id']) {
+  if (!communicationsApi.includes(token)) throw new Error('Communications API is missing access/consent guard: '+token);
+}
+for (const token of ['META_ACCESS_TOKEN','graph.facebook.com','pac_claim_communication_jobs','EXOTEL_API_KEY','Sms/send.json','Calls/connect.json','PAC_WORKER_SECRET','max_attempts','dlt_voice_template_id']) {
+  if (!communicationsWorker.includes(token)) throw new Error('Communications worker is missing provider/queue feature: '+token);
+}
+if (!communicationsWebhook.includes('X-Hub-Signature-256') ||
+    !communicationsWebhook.includes('META_APP_SECRET') ||
+    !communicationsWebhook.includes('EXOTEL_WEBHOOK_TOKEN') ||
+    !communicationsWebhook.includes('pac_communication_events')) {
+  throw new Error('Provider delivery webhooks must verify signatures/secrets and record delivery events.');
+}
+const communicationsCron = await readFile(new URL('../communications-cron-setup.sql', import.meta.url), 'utf8');
+if (!communicationsCron.includes('pg_cron') || !communicationsCron.includes('pg_net') ||
+    !communicationsCron.includes('vault.decrypted_secrets') ||
+    !communicationsCron.includes('prime-auto-care-communications-worker')) {
+  throw new Error('Unattended messaging needs the Vault-backed server queue cron setup.');
+}
+const deployWorkflow = await readFile(new URL('../../.github/workflows/deploy-communications.yml', import.meta.url), 'utf8');
+for (const token of ['SUPABASE_ACCESS_TOKEN','SUPABASE_PROJECT_REF','SUPABASE_DB_PASSWORD','supabase db push','communication-api','communication-worker','communication-webhook']) {
+  if (!deployWorkflow.includes(token)) throw new Error('Communications backend deployment workflow is incomplete: '+token);
+}
+console.log('PASS: communications Edge Functions parse as TypeScript and the client bundle contains no provider API tokens');
+console.log('PASS: server queue enforces device authentication, channel consent, deduplication, retries and delivery callbacks');
+console.log('PASS: WhatsApp, DLT SMS, registered voice script, and Vault-backed scheduled worker setup are present');
 
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
