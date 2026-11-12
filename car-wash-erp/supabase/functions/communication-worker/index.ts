@@ -142,8 +142,12 @@ async function sendVoice(job: any, config: any) {
   const sid = String(config.exotel_account_sid || env('EXOTEL_ACCOUNT_SID') || '');
   const callerId = String(config.exotel_caller_id || env('EXOTEL_CALLER_ID') || '');
   const flowUrl = String(config.exotel_voice_flow_url || '');
+  const voiceTemplateId = String(job.payload.dlt_voice_template_id || config.dlt_voice_template_id || '');
+  const voiceTemplateText = String(job.payload.dlt_voice_template_text || config.dlt_voice_template_text || '');
+  const entityId = String(job.payload.dlt_entity_id || config.dlt_entity_id || '');
   if (!apiKey || !apiToken || !sid || !callerId || !flowUrl) throw new Error('Exotel voice account, approved Caller ID and configured voice flow are required.');
   if (!/^1(?:40|60)\d{2,}$/.test(callerId.replace(/\D/g,''))) throw new Error('Automated commercial calls require a compliant 140/160 caller ID in India.');
+  if (!voiceTemplateId || !voiceTemplateText || !entityId) throw new Error('Registered DLT voice script/template and Principal Entity are required before automated calls.');
   const region = config.exotel_region === 'sg' ? 'api.exotel.com' : 'api.in.exotel.com';
   const form = new URLSearchParams();
   form.set('From', job.recipient_e164);
@@ -151,7 +155,8 @@ async function sendVoice(job: any, config: any) {
   form.set('Url', flowUrl);
   if (job.purpose === 'invoice' || job.purpose === 'service') form.set('CallType','trans');
   form.set('TimeLimit', '60');
-  form.set('CustomField', `PAC:${job.id}:${String(job.payload.message || 'Prime Auto Care announcement').slice(0,80)}`);
+  const voiceText = String(job.payload.message || voiceTemplateText).slice(0,55);
+  form.set('CustomField', `PAC:${job.id}:${voiceTemplateId}:${voiceText}`);
   const callbackSecret = env('EXOTEL_WEBHOOK_TOKEN');
   if (callbackSecret) {
     form.set('StatusCallback', `${env('SUPABASE_URL')}/functions/v1/communication-webhook?provider=exotel&token=${encodeURIComponent(callbackSecret)}&job_id=${job.id}`);
@@ -209,7 +214,10 @@ async function enqueueOpening(service: any) {
         } : {
           message,
           voice_flow_url:config.exotel_voice_flow_url,
-          exotel_caller_id:config.exotel_caller_id
+          exotel_caller_id:config.exotel_caller_id,
+          dlt_voice_template_id:config.dlt_voice_template_id,
+          dlt_voice_template_text:config.dlt_voice_template_text,
+          dlt_entity_id:config.dlt_entity_id
         };
         rows.push({
           workspace_id:config.workspace_id, customer_id:String(customer.id), channel, purpose:'opening',
