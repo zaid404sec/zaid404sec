@@ -361,7 +361,7 @@ if (cloudSource.includes('localhost:3000') || html.includes('localhost:3000') ||
 }
 if (!html.includes('Enable Anonymous Sign-Ins') ||
     !html.includes('Connect / Pair this device') ||
-    !html.includes('no four-device cap is built into the app') ||
+    !html.includes('No four-device cap is built into the app') ||
     !html.includes('every authorised phone or computer')) {
   throw new Error('Cloud settings do not explain the shared device-pairing workflow.');
 }
