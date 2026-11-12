@@ -21,6 +21,7 @@ create table if not exists public.pac_communication_settings (
   whatsapp_phone_number_id text,
   whatsapp_waba_id text,
   whatsapp_marketing_template text not null default 'prime_auto_care_offer',
+  whatsapp_marketing_image_template text not null default '',
   whatsapp_invoice_template text not null default 'prime_auto_care_invoice',
   whatsapp_opening_template text not null default 'prime_auto_care_opening',
   whatsapp_language text not null default 'en',
@@ -45,6 +46,7 @@ create table if not exists public.pac_communication_settings (
   constraint pac_opening_timezone_length check (length(server_opening_timezone) between 3 and 80),
   constraint pac_opening_channels_valid check (server_opening_channels <@ array['whatsapp','sms','voice']::text[])
 );
+alter table public.pac_communication_settings add column if not exists whatsapp_marketing_image_template text not null default '';
 alter table public.pac_communication_settings enable row level security;
 revoke all on public.pac_communication_settings from anon, authenticated;
 drop policy if exists pac_communication_settings_read on public.pac_communication_settings;
