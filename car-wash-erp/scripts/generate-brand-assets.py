@@ -84,7 +84,7 @@ def transparent_foreground(size: int = 432) -> Image.Image:
     if not bbox:
         raise SystemExit("The Prime Auto Care adaptive logo foreground is fully transparent.")
     cropped = rgba.crop(bbox)
-    fitted = fit_logo(cropped, size, 0.68, 0.52)
+    fitted = fit_logo(cropped, size, 0.64, 0.50)
     foreground = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     foreground.alpha_composite(fitted, ((size - fitted.width) // 2, (size - fitted.height) // 2))
     return foreground
