@@ -7,6 +7,8 @@ create extension if not exists pg_net;
 
 -- Create/update these two Vault entries. Use the actual Supabase project URL.
 -- The PAC_WORKER_SECRET value must exactly match the Edge Function secret.
+-- After this schedule is created and verified, set the Edge Function secret
+-- PAC_CRON_SETUP_COMPLETE=true so the app can safely enable unattended sending.
 -- Replace the two placeholder values before running:
 -- select vault.create_secret('https://YOUR_PROJECT_REF.supabase.co','pac_project_url');
 -- select vault.create_secret('PASTE_THE_SAME_RANDOM_WORKER_SECRET_HERE','pac_worker_secret');
