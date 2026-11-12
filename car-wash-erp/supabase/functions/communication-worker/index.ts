@@ -165,7 +165,7 @@ async function sendVoice(job: any, config: any) {
     form.set('StatusCallbackContentType','application/json');
   }
   const auth = btoa(`${apiKey}:${apiToken}`);
-  const response = await fetch(`https://${region}/v1/Accounts/${sid}/Calls/connect`, {
+  const response = await fetch(`https://${region}/v1/accounts/${sid}/calls/connect`, {
     method:'POST', headers:{ Authorization:`Basic ${auth}`, 'Content-Type':'application/x-www-form-urlencoded' }, body:form
   });
   const text = await response.text();
