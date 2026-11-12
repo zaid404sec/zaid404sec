@@ -211,14 +211,31 @@ async function enqueueOpening(service: any) {
           dlt_template_text:config.dlt_promo_template_text,
           dlt_entity_id:config.dlt_entity_id, dlt_sender_id:config.dlt_sender_id,
           text_values:{ name:String(customer.name || 'Customer'), message }
-        } : {
-          message,
-          voice_flow_url:config.exotel_voice_flow_url,
-          exotel_caller_id:config.exotel_caller_id,
-          dlt_voice_template_id:config.dlt_voice_template_id,
-          dlt_voice_template_text:config.dlt_voice_template_text,
-          dlt_entity_id:config.dlt_entity_id
-        };
+        } : (() => {
+          let spoken = String(config.dlt_voice_template_text || '');
+          const variables: Record<string,string> = {
+            name:String(customer.name || 'Customer'),
+            business:String(business.name || 'Prime Auto Care'),
+            opening,
+            closing,
+            location,
+            phone:String(business.phone || ''),
+            message
+          };
+          for (const [key,value] of Object.entries(variables)) spoken=spoken.replaceAll(`{${key}}`,value);
+          if (/\{[a-z_]+\}/i.test(spoken) || spoken.length > 55) {
+            throw new Error('The registered DLT opening voice script must resolve every variable and fit within 55 characters for the configured Exotel flow.');
+          }
+          return {
+            message:spoken,
+            voice_text:spoken,
+            voice_flow_url:config.exotel_voice_flow_url,
+            exotel_caller_id:config.exotel_caller_id,
+            dlt_voice_template_id:config.dlt_voice_template_id,
+            dlt_voice_template_text:config.dlt_voice_template_text,
+            dlt_entity_id:config.dlt_entity_id
+          };
+        })();
         rows.push({
           workspace_id:config.workspace_id, customer_id:String(customer.id), channel, purpose:'opening',
           recipient_e164:jobPhone(customer.phone), recipient_name:String(customer.name || 'Customer'),
@@ -234,7 +251,8 @@ async function enqueueOpening(service: any) {
     }
     // Mark the local business date as enqueued only after all channel jobs
     // have either been durably inserted or the day had no opted-in recipients.
-    const day = new Intl.DateTimeFormat('en-CA',{timeZone:config.server_opening_timezone || 'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+    const dayParts = new Intl.DateTimeFormat('en-CA',{timeZone:config.server_opening_timezone || 'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).reduce((out:any,p:any)=>{if(p.type!=='literal')out[p.type]=p.value;return out;},{} as Record<string,string>);
+    const day = `${dayParts.year}-${dayParts.month}-${dayParts.day}`;
     const {error:markError}=await service.from('pac_communication_settings')
       .update({server_opening_last_enqueued:day,updated_at:new Date().toISOString()})
       .eq('workspace_id',config.workspace_id);
@@ -259,7 +277,7 @@ Deno.serve(async (req) => {
     if (!env('SUPABASE_URL') || !serviceKey) throw new Error('Supabase service role secret is not configured for the worker.');
     const service = createClient(env('SUPABASE_URL'), serviceKey, { auth:{persistSession:false,autoRefreshToken:false} });
     const scheduled = await enqueueOpening(service);
-    const { data: jobs, error } = await service.rpc('pac_claim_communication_jobs',{p_limit:10});
+    const { data: jobs, error } = await service.rpc('pac_claim_communication_jobs',{p_limit:25});
     if (error) throw error;
     const results: any[] = [];
     for (const job of jobs || []) {
