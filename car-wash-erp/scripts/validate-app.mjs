@@ -6,10 +6,26 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v8') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v8.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v9') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v9.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
+if (!html.includes("if(page!=='dashboard')return true;") ||
+    !html.includes("if(page!==p)applyPendingRemoteData();") ||
+    !html.includes("requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY))")) {
+  throw new Error('Remote updates must not replace active modules and same-page renders must preserve scroll.');
+}
+if (html.includes('location.reload(') || html.includes('window.location.reload(')) {
+  throw new Error('The app must not force-reload the active business screen.');
+}
+console.log('PASS: cloud snapshots defer outside the passive dashboard; navigation applies them safely and preserves scroll');
+if (!html.includes('data-action="share-offer-whatsapp"') ||
+    !html.includes('navigator.share({title,text:message})') ||
+    !html.includes('https://wa.me/?text=') ||
+    html.includes('start-offer-campaign') || html.includes('open-offer-whatsapp')) {
+  throw new Error('Offers must use one manual WhatsApp share action, not a per-customer auto-campaign loop.');
+}
+console.log('PASS: offers use the Android share menu / existing WhatsApp app; official API automation remains separate and pending');
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -55,7 +71,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v8') throw new Error('Android stability release app ID v8 was not set.');
+if (appId !== 'com.washdesk.carwash.v9') throw new Error('Android stability release app ID v9 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -291,12 +307,17 @@ if (!remoteReceive.includes('if(shouldDeferRemoteUpdate())') ||
 }
 if (!html.includes('let pendingRemotePayload=null;') ||
     !html.includes('function applyPendingRemoteData()') ||
-    !html.includes("if(page==='billing'&&p!=='billing')applyPendingRemoteData()")) {
-  throw new Error('Deferred cloud updates are not applied safely after billing is finished.');
+    !html.includes('if(page!==p)applyPendingRemoteData();')) {
+  throw new Error('Deferred cloud updates are not applied safely when navigating between modules.');
+}
+if (!html.includes('function render(preserveScroll=true)') ||
+    !html.includes('if(preserveScroll&&(scrollX||scrollY))requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY))') ||
+    !html.includes("})[p]||'';render(false);window.scrollTo(0,0)}")) {
+  throw new Error('Same-page rerenders must preserve scroll, while deliberate module navigation must start at the top.');
 }
 if (!cloudSource.includes('if (applied?.__cloudSyncDeferred) return null;') ||
-    !cloudSource.includes("update queued until current billing is finished")) {
-  throw new Error('Cloud sync does not honor the billing-safe remote update deferral contract.');
+    !cloudSource.includes("update queued until you leave the current screen")) {
+  throw new Error('Cloud sync does not honor the active-screen-safe remote update deferral contract.');
 }
 const saveBillStart = html.indexOf('async function saveBill()');
 const saveBillEnd = html.indexOf('function applyConsumption', saveBillStart);
@@ -400,7 +421,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v10')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v11')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');

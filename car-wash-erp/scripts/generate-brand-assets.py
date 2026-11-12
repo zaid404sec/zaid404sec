@@ -106,7 +106,24 @@ def make_android_resources() -> None:
         xml = manifest.read_text(encoding="utf-8")
         xml = re.sub(r'android:icon="[^"]+"', 'android:icon="@mipmap/ic_launcher"', xml)
         xml = re.sub(r'android:roundIcon="[^"]+"', 'android:roundIcon="@mipmap/ic_launcher_round"', xml)
+        # Explicitly add both attributes if the Capacitor manifest template omits them.
+        app_tag = re.search(r'<application\b[^>]*>', xml)
+        if not app_tag:
+            raise SystemExit("AndroidManifest.xml has no application element.")
+        opening = app_tag.group(0)
+        if "android:icon=" not in opening:
+            opening = opening[:-1] + ' android:icon="@mipmap/ic_launcher">'
+        if "android:roundIcon=" not in opening:
+            opening = opening[:-1] + ' android:roundIcon="@mipmap/ic_launcher_round">'
+        xml = xml[:app_tag.start()] + opening + xml[app_tag.end():]
+        if '@mipmap/ic_launcher' not in xml or '@mipmap/ic_launcher_round' not in xml:
+            raise SystemExit("Prime Auto Care launcher icon references were not applied.")
         manifest.write_text(xml, encoding="utf-8")
+
+    foreground = res / "drawable" / "ic_launcher_foreground.png"
+    with Image.open(foreground) as icon:
+        if icon.getchannel("A").getbbox() is None:
+            raise SystemExit("Prime Auto Care launcher foreground is fully transparent.")
 
 
 def main() -> None:

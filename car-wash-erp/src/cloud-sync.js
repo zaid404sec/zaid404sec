@@ -233,7 +233,7 @@ function listenForChanges() {
         // stringify/clone the full business payload on that keystroke-sensitive path.
         const merged = applyRemote(incoming);
         if (!merged) {
-          setStatus('Connected · update queued until current billing is finished');
+          setStatus('Connected · update queued until you leave the current screen');
           return;
         }
         const incomingText = stableStringify(incoming);
