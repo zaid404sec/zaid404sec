@@ -167,24 +167,20 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Read due schedules under row locks, but do not mark them complete here.
+  -- The worker marks the date only AFTER it has durably inserted all queue rows.
+  -- This makes a worker crash/retry safe: the next minute can re-read the schedule,
+  -- and the queue's unique idempotency key prevents duplicate recipient jobs.
   return query
-  with due as (
-    select s.workspace_id
+    select s.*
     from public.pac_communication_settings s
     where s.server_opening_enabled
       and (now() at time zone s.server_opening_timezone)::date
           is distinct from s.server_opening_last_enqueued
       and (now() at time zone s.server_opening_timezone)::time >= s.server_opening_time
     order by s.server_opening_time
-    for update skip locked
     limit greatest(1, least(coalesce(p_limit,5),20))
-  )
-  update public.pac_communication_settings s
-    set server_opening_last_enqueued = (now() at time zone s.server_opening_timezone)::date,
-        updated_at = now()
-    from due d
-    where s.workspace_id = d.workspace_id
-  returning s.*;
+    for update skip locked;
 end;
 $$;
 revoke all on function public.pac_claim_due_opening_schedules(integer) from public, anon, authenticated;
