@@ -733,7 +733,7 @@
           <div class="field"><label>Promotional DLT Template ID</label><input name="dlt_promo_template_id" value="${esc(cfg.dlt_promo_template_id||'')}" /></div>
           <div class="field"><label>Service / invoice DLT Template ID</label><input name="dlt_service_template_id" value="${esc(cfg.dlt_service_template_id||'')}" /></div>
           <div class="field"><label>Registered DLT voice template ID</label><input name="dlt_voice_template_id" value="${esc(cfg.dlt_voice_template_id||'')}" /></div>
-          <div class="field full"><label>Exact registered voice script (up to 55 characters in the configured Exotel flow)</label><textarea name="dlt_voice_template_text" rows="2">${esc(cfg.dlt_voice_template_text||'')}</textarea></div>
+          <div class="field full"><label>Exact registered voice script (up to 120 characters; Exotel Flow reads CustomField)</label><textarea name="dlt_voice_template_text" rows="2">${esc(cfg.dlt_voice_template_text||'')}</textarea></div>
           <div class="field full"><label>Exact approved promotional SMS text (use `{name}` and `{message}` only where approved as DLT variables)</label><textarea name="dlt_promo_template_text" rows="2">${esc(cfg.dlt_promo_template_text||'')}</textarea></div>
           <div class="field full"><label>Exact approved invoice SMS text (approved variables: `{name}`, `{invoice_number}`, `{date}`, `{total}`, `{paid}`, `{balance}`, `{vehicle}`)</label><textarea name="dlt_service_template_text" rows="2">${esc(cfg.dlt_service_template_text||'')}</textarea></div>
           <div class="field full"><b>Daily unattended opening campaign</b><p class="help">Runs from the Supabase server even when all phones are closed. Each channel sends only to customers who opted in for that channel.</p></div>
