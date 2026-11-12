@@ -771,6 +771,108 @@
       notify(err?.message||'Could not open the WhatsApp share menu. Please retry.');
     }
   }
+  async function refreshMessagingStatus(){
+    const statusBox=document.getElementById('messaging-provider-status');
+    const jobsBox=document.getElementById('messaging-jobs-list');
+    if(!statusBox||!window.PrimeAutoCareMessaging){if(statusBox)statusBox.textContent='Messaging backend bundle is not loaded.';return}
+    try{
+      const result=await window.PrimeAutoCareMessaging.status();
+      window.PrimeAutoCareMessagingConfig=result.config||{};
+      const providers=result.providers||{};
+      const line=(key,label)=>{const p=providers[key]||{};return `<div class="stock-alert"><span>${label}</span><b class="${p.ready?'text-success':'text-warning'}">${p.ready?'Ready':'Setup required'}</b></div>${p.missing?.length?`<p class="help">${p.missing.map(esc).join(', ')}</p>`:''}`};
+      statusBox.innerHTML=line('whatsapp','WhatsApp Cloud API')+line('sms','SMS gateway / DLT')+line('voice','Automated voice')+line('automationWorker','Server queue worker');
+      if(jobsBox){
+        const jobs=result.jobs||[];
+        jobsBox.innerHTML=jobs.length?jobs.slice(0,12).map(j=>`<div class="stock-alert"><span>${esc(j.channel)} · ${esc(j.recipient_name||'Customer')}<br/><small>${esc(j.created_at||'')}</small></span><b>${esc(j.status)}</b></div>`).join(''):'No message jobs have been queued yet.';
+      }
+      const form=document.getElementById('communication-settings-form');
+      if(form&&!form.dataset.loaded){
+        Object.entries(window.PrimeAutoCareMessagingConfig).forEach(([key,value])=>{
+          const field=form.elements.namedItem(key);
+          if(!field||value===null||value===undefined)return;
+          if(field instanceof RadioNodeList){
+            [...field].forEach(el=>{if(el.type==='checkbox')el.checked=Array.isArray(value)&&value.includes(el.value)});
+          }else if(field.type==='checkbox')field.checked=!!value;
+          else if(field.type==='time')field.value=String(value).slice(0,5);
+          else field.value=String(value);
+        });
+        form.dataset.loaded='1';
+      }
+    }catch(error){
+      statusBox.textContent=error?.message||'Messaging backend is not deployed or this device is not paired.';
+      if(jobsBox)jobsBox.textContent='Message history is unavailable until the server connection is ready.';
+    }
+  }
+  async function saveCommunicationSettings(e){
+    e.preventDefault();
+    const form=e.target,f=new FormData(form);
+    const channels=f.getAll('server_opening_channels').map(String);
+    const config={
+      whatsapp_business_number:String(f.get('whatsapp_business_number')||'').trim(),
+      whatsapp_phone_number_id:String(f.get('whatsapp_phone_number_id')||'').trim(),
+      whatsapp_waba_id:String(f.get('whatsapp_waba_id')||'').trim(),
+      whatsapp_marketing_template:String(f.get('whatsapp_marketing_template')||'').trim(),
+      whatsapp_invoice_template:String(f.get('whatsapp_invoice_template')||'').trim(),
+      whatsapp_opening_template:String(f.get('whatsapp_opening_template')||'').trim(),
+      whatsapp_language:String(f.get('whatsapp_language')||'en').trim(),
+      exotel_account_sid:String(f.get('exotel_account_sid')||'').trim(),
+      exotel_region:String(f.get('exotel_region')||'in'),
+      exotel_caller_id:String(f.get('exotel_caller_id')||'').trim(),
+      exotel_voice_flow_url:String(f.get('exotel_voice_flow_url')||'').trim(),
+      dlt_entity_id:String(f.get('dlt_entity_id')||'').trim(),
+      dlt_sender_id:String(f.get('dlt_sender_id')||'').trim(),
+      dlt_promo_template_id:String(f.get('dlt_promo_template_id')||'').trim(),
+      dlt_promo_template_text:String(f.get('dlt_promo_template_text')||'').trim(),
+      dlt_service_template_id:String(f.get('dlt_service_template_id')||'').trim(),
+      dlt_service_template_text:String(f.get('dlt_service_template_text')||'').trim(),
+      server_opening_enabled:f.get('server_opening_enabled')==='on',
+      server_opening_time:String(f.get('server_opening_time')||'07:45'),
+      server_opening_timezone:'Asia/Kolkata',
+      server_opening_channels:channels,
+      server_opening_message:String(f.get('server_opening_message')||'').trim()
+    };
+    try{
+      const result=await window.PrimeAutoCareMessaging.saveConfig(config);
+      window.PrimeAutoCareMessagingConfig=result.config||config;
+      notify('Messaging settings saved. Provider readiness is shown below. Add API credentials in Supabase Edge Function Secrets; never paste tokens in this form.');
+      form.dataset.loaded='1';
+      await refreshMessagingStatus();
+    }catch(error){console.error('Save messaging settings:',error);notify(error?.message||'Messaging settings could not be saved.')}
+  }
+  async function queueMarketingCampaign(channel){
+    const message=String(document.getElementById('offer-message')?.value||'').trim();
+    if(!message){notify('Write the campaign message first.');return}
+    const chosen=(Array.isArray(offerSelectedCustomerIds)?offerSelectedCustomerIds:[]);
+    if(!chosen.length){notify('Select at least one customer.');return}
+    const localSchedule=String(document.getElementById('offer-send-at')?.value||'');
+    let scheduledAt=null;
+    if(localSchedule){const date=new Date(localSchedule);if(Number.isNaN(date.getTime())||date.getTime()<Date.now()-60000){notify('Choose a future campaign time.');return}scheduledAt=date.toISOString()}
+    const image=document.getElementById('offer-image')?.files?.[0]||null;
+    try{
+      notify('Checking consent and queuing the campaign on the secure server…');
+      const result=await window.PrimeAutoCareMessaging.campaign({channel,customerIds:chosen,message,attachment:channel==='whatsapp'?image:null,scheduledAt,database:db});
+      notify(`${String(channel).toUpperCase()} campaign queued: ${result.queued} recipient(s). ${result.skipped_consent||0} skipped for missing channel consent.`);
+      await refreshMessagingStatus();
+    }catch(error){
+      console.error('Campaign queue failed:',error);
+      notify(error?.details?.length?`${error.message} Missing: ${error.details.join(', ')}`:error?.message||'Campaign could not be queued.');
+    }
+  }
+  function changeCommunicationConsent(customerId,field,granted){
+    const allowed=['waOptIn','waServiceOptIn','smsOptIn','smsServiceOptIn','voiceOptIn'];
+    if(!allowed.includes(field))return;
+    const customer=db.customers.find(c=>c.id===customerId);if(!customer)return;
+    customer[field]=!!granted;
+    customer.communicationConsentUpdatedAt=Date.now();
+    customer.communicationConsentSource='explicit-consent-confirmed-in-app';
+    customer.communicationConsentHistory=Array.isArray(customer.communicationConsentHistory)?customer.communicationConsentHistory:[];
+    customer.communicationConsentHistory.push({field,granted:!!granted,source:customer.communicationConsentSource,at:customer.communicationConsentUpdatedAt});
+    customer.communicationConsentHistory=customer.communicationConsentHistory.slice(-30);
+    if(granted&&!offerSelectedCustomerIds.includes(customerId))offerSelectedCustomerIds.push(customerId);
+    if(!granted&&!customer.waOptIn&&!customer.smsOptIn&&!customer.voiceOptIn)offerSelectedCustomerIds=offerSelectedCustomerIds.filter(x=>x!==customerId);
+    if(!save()){notify('Consent change could not be saved.');return}
+    notify(`${field.replace(/OptIn/g,'').replace(/([A-Z])/g,' $1').trim()} permission ${granted?'saved':'removed'} for ${customer.name}.`);
+  }
   function openingAnnouncementMessage(){
     const b=db.business||{};
     const name=b.name||'Prime Auto Care';
