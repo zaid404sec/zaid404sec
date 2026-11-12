@@ -332,6 +332,13 @@ declare
   v_deleted jsonb := '{}'::jsonb;
   v_records jsonb;
   v_collection text;
+  v_product jsonb;
+  v_existing_product jsonb;
+  v_products jsonb := '[]'::jsonb;
+  v_product_id text;
+  v_opening numeric;
+  v_movement_delta numeric;
+  v_stock_qty numeric;
 begin
   if v_auth_user is null then
     raise exception 'Authentication required';
@@ -351,6 +358,12 @@ begin
   end if;
   if octet_length(p_payload::text) > 8000000 then
     raise exception 'Business data exceeds the 8 MB sync limit. Export a backup and contact support.';
+  end if;
+  if coalesce(p_payload->'meta'->>'stockLedgerVersion','') <> '1' then
+    raise exception using
+      errcode = 'P0001',
+      message = 'APP_UPDATE_REQUIRED',
+      detail = 'Install Prime Auto Care 2.5.2 on this device before syncing stock changes.';
   end if;
 
   insert into public.washdesk_sync(user_id, payload)
@@ -380,7 +393,7 @@ begin
   v_merged := jsonb_set(v_merged, '{_deletedIds}', v_deleted, true);
 
   foreach v_collection in array array[
-    'customers', 'vehicles', 'services', 'invoices', 'products',
+    'customers', 'vehicles', 'services', 'invoices', 'products', 'stockMovements',
     'purchases', 'expenses', 'staff', 'staffAdvances', 'attendance', 'payments'
   ] loop
     execute format(
@@ -414,6 +427,56 @@ begin
     v_merged,
     '{meta}',
     coalesce(v_existing->'meta', '{}'::jsonb) || coalesce(p_payload->'meta', '{}'::jsonb),
+    true
+  );
+
+  -- The canonical opening quantity is captured from the current server snapshot
+  -- on first migration. New/edited stock is never taken from a stale client qty;
+  -- only unique append-only stock movement rows change the authoritative balance.
+  for v_product in
+    select item
+      from jsonb_array_elements(coalesce(v_merged->'products', '[]'::jsonb)) as product_rows(item)
+  loop
+    v_product_id := coalesce(v_product->>'id', '');
+    select item into v_existing_product
+      from jsonb_array_elements(coalesce(v_existing->'products', '[]'::jsonb)) as existing_rows(item)
+      where item->>'id' = v_product_id
+      limit 1;
+
+    if v_existing_product is not null then
+      v_opening := public.washdesk_safe_number(
+        coalesce(v_existing_product->>'stockOpeningQty', v_existing_product->>'qty')
+      );
+    else
+      v_opening := public.washdesk_safe_number(
+        coalesce(v_product->>'stockOpeningQty', v_product->>'qty')
+      );
+    end if;
+
+    select coalesce(sum(public.washdesk_safe_number(item->>'delta')), 0)
+      into v_movement_delta
+      from jsonb_array_elements(coalesce(v_merged->'stockMovements', '[]'::jsonb)) as movement_rows(item)
+      where item->>'productId' = v_product_id;
+
+    v_stock_qty := v_opening + coalesce(v_movement_delta, 0);
+    if v_stock_qty < -0.000001 then
+      raise exception using
+        errcode = '23514',
+        message = 'INSUFFICIENT_STOCK',
+        detail = 'The combined stock movements would make product ' || v_product_id || ' negative. The cloud transaction was rejected; review the pending invoice or adjustment on its source device.';
+    end if;
+
+    v_product := jsonb_set(v_product, '{stockOpeningQty}', to_jsonb(v_opening), true);
+    v_product := jsonb_set(v_product, '{qty}', to_jsonb(greatest(0, v_stock_qty)), true);
+    v_products := v_products || jsonb_build_array(v_product);
+    v_existing_product := null;
+  end loop;
+
+  v_merged := jsonb_set(v_merged, '{products}', v_products, true);
+  v_merged := jsonb_set(
+    v_merged,
+    '{meta,serverStockLedgerVersion}',
+    '1'::jsonb,
     true
   );
 
