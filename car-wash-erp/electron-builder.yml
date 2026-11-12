@@ -6,6 +6,9 @@ files:
   - index.html
   - manifest.webmanifest
   - icon.svg
+  - prime-auto-care-icon-192.png
+  - prime-auto-care-icon-512.png
+  - prime-auto-care-icon.ico
   - pdfmake.bundle.min.js
   - pdfmake-vfs.js
   - prime-auto-care-logo.jpg
@@ -19,6 +22,7 @@ files:
   - electron/**
   - package.json
 win:
+  icon: prime-auto-care-icon.ico
   target:
     - target: nsis
       arch:

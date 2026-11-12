@@ -28,6 +28,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate Prime Auto Care Windows and PWA icons
+        run: |
+          python -m pip install --disable-pip-version-check Pillow
+          python scripts/generate-brand-assets.py
       - name: Install dependencies (retry transient download failures)
         shell: pwsh
         run: |
@@ -77,6 +84,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate Prime Auto Care PWA and Windows icon assets
+        run: |
+          python -m pip install --disable-pip-version-check Pillow
+          python scripts/generate-brand-assets.py
       - name: Install Capacitor without desktop-only development dependencies
         run: npm install --omit=dev --no-save esbuild@^0.25.0 @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
       - name: Prepare local PDF, reports and cloud assets
@@ -86,11 +100,13 @@ jobs:
       - name: Prepare web assets
         run: |
           mkdir www
-          cp index.html manifest.webmanifest icon.svg prime-auto-care-logo.jpg prime-auto-care-car-photo.jpg pdfmake.bundle.min.js pdfmake-vfs.js invoice-native.bundle.js exceljs.bundle.min.js report-export.bundle.js cloud-sync.bundle.js cloud-sync-setup.sql www/
+          cp index.html manifest.webmanifest icon.svg prime-auto-care-icon-192.png prime-auto-care-icon-512.png prime-auto-care-logo.jpg prime-auto-care-car-photo.jpg pdfmake.bundle.min.js pdfmake-vfs.js invoice-native.bundle.js exceljs.bundle.min.js report-export.bundle.js cloud-sync.bundle.js cloud-sync-setup.sql www/
       - name: Add Android platform
         run: npx cap add android
       - name: Sync web app
         run: npx cap sync android
+      - name: Apply Prime Auto Care Android launcher and splash branding
+        run: python scripts/generate-brand-assets.py --android
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:

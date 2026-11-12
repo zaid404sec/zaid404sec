@@ -1,6 +1,6 @@
 {
   "name": "prime-auto-care-manager",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "description": "Prime Auto Care Business Manager",
   "main": "electron/main.cjs",
@@ -8,7 +8,8 @@
     "desktop": "npm run prepare:assets && electron .",
     "dist:win": "npm run prepare:assets && npm run validate && electron-builder --win nsis --x64",
     "prepare:assets": "node scripts/prepare-assets.mjs",
-    "validate": "node scripts/validate-app.mjs"
+    "validate": "node scripts/validate-app.mjs",
+    "prepare:branding": "python scripts/generate-brand-assets.py"
   },
   "devDependencies": {
     "electron": "^35.0.0",

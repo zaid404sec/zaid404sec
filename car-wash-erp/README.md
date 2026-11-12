@@ -63,3 +63,14 @@ Open the published HTTPS site on your Android phone and choose **Install app** o
 - **Advance handling:** Open advances appear as a proposed deduction in net payable. Saving a salary settlement confirms the adjustment and updates the advance register so the same advance is not deducted twice.
 - **Android:** The 2.3.0 APK uses application ID `com.washdesk.carwash.v7`, allowing it to install beside the existing v6 app without replacing its local data or depending on the previous debug-signing key. After installing, connect it to the same Prime Auto Care shared cloud workspace using the existing pairing code. Do not import the same old backup again when the cloud workspace already contains the correct records.
 - **Windows:** Install the 2.3.0 setup over the existing Windows app; its Electron user-data folder remains unchanged.
+
+
+## Version 2.4.0 — staff controls, shift schedules and Prime Auto Care branding
+
+- **Staff removal:** Removing an employee also removes that employee's daily attendance rows; old salary and advance entries remain in the financial audit history.
+- **Individual attendance:** Each employee has an independent Present / Absent selector. Blank rows are left unchanged, Present can replace an earlier Absent entry, and a mistaken status can be cleared. Payroll uses the latest saved status for each date.
+- **Shift timing:** Each employee has a separate schedule. The default is an 11-hour shift: 8:00 AM to 7:00 PM. Examples: 9:00 AM to 8:00 PM and 10:00 AM to 9:00 PM. The manager can change the start time and duration per employee.
+- **Manager-only timing edits:** Shift changes require a 6-digit Manager PIN. The PIN is stored as a salted SHA-256 hash in shared settings and syncs to paired devices. Set it before staff use the app.
+- **Branding:** Use the supplied Prime Auto Care wordmark for Android launcher / system launch icon, Windows installer and window icon, and PWA icons.
+- **Responsive layout:** Attendance rows are easier to use on phones, payroll stays in a controlled horizontal scroll region, and laptop spacing is tuned for medium and wide screens.
+- **Android:** This release uses application ID `com.washdesk.carwash.v8` so it installs beside v7 rather than overwriting its local app data.
