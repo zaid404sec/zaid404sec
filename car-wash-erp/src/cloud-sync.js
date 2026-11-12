@@ -21,6 +21,7 @@ let statusText = 'Not connected';
 let syncing = false;
 let retryDelay = 1500;
 let schemaBlocked = false;
+let stockLedgerSchemaReady = false;
 let pollingTimer = null;
 
 function readConfig() {
@@ -180,6 +181,7 @@ async function publishPayload(payload) {
       throw schemaError;
     }
     schemaBlocked = false;
+    stockLedgerSchemaReady = true;
     retryDelay = 1500;
     lastPayloadString = stableStringify(canonical);
     const local = applyRemote(canonical);
@@ -191,18 +193,21 @@ async function publishPayload(payload) {
     const message = String(error?.message || error || '');
     if (message.includes('CLOUD_SCHEMA_UPDATE_REQUIRED')) {
       schemaBlocked = true;
+      stockLedgerSchemaReady = false;
       queuedPayload = body;
       clearTimeout(pushTimer);
       setStatus('Cloud SQL update required · open Business settings and run the latest Cloud Sync SQL file once.');
       window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'Cloud inventory protection is not enabled yet. Run the latest Prime Auto Care Cloud Sync SQL file once in Supabase SQL Editor, then tap Sync now.' }));
     } else if (message.includes('APP_UPDATE_REQUIRED')) {
       schemaBlocked = true;
+      stockLedgerSchemaReady = false;
       queuedPayload = body;
       clearTimeout(pushTimer);
       setStatus('App update required · update every paired device to Prime Auto Care 2.5.2 before syncing.');
       window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'This device is using an older Prime Auto Care build. Update every paired phone and computer to version 2.5.2 before syncing stock changes.' }));
     } else if (message.includes('INSUFFICIENT_STOCK')) {
       schemaBlocked = true;
+      stockLedgerSchemaReady = false;
       queuedPayload = body;
       clearTimeout(pushTimer);
       setStatus('Stock conflict · this device has a pending change that would make shared stock negative.');
@@ -277,6 +282,7 @@ function listenForChanges() {
 }
 async function initialSync() {
   if (!supabase || !user || !workspace) throw new Error('Pair this device with the shared Prime Auto Care business first.');
+  stockLedgerSchemaReady = false;
   setStatus('Loading shared Prime Auto Care data…');
   const { data, error } = await supabase.from('washdesk_sync')
     .select('payload,updated_at')
@@ -284,14 +290,20 @@ async function initialSync() {
     .maybeSingle();
   if (error) throw error;
   if (data?.payload) {
+    stockLedgerSchemaReady = Number(data.payload?.meta?.serverStockLedgerVersion) === 1;
     const merged = applyRemote(data.payload);
-    if (merged && stableStringify(merged) !== stableStringify(data.payload)) await publishPayload(merged);
-    else if (merged) {
+    if (merged && (!stockLedgerSchemaReady || stableStringify(merged) !== stableStringify(data.payload))) {
+      await publishPayload(merged);
+    } else if (merged) {
       lastPayloadString = stableStringify(data.payload);
       setStatus('Connected · live sync active on all paired devices');
     }
   } else if (localProvider) {
     await publishPayload(localProvider());
+  }
+  if (!stockLedgerSchemaReady) {
+    setStatus('Cloud SQL update required · run the latest Cloud Sync SQL file before using shared inventory.');
+    throw new Error('CLOUD_SCHEMA_UPDATE_REQUIRED');
   }
   listenForChanges();
   startSafetyRefresh();
@@ -370,6 +382,7 @@ async function syncNow(payload) {
 }
 async function nextInvoiceNumber({ prefix, date, minNext }) {
   if (!supabase || !user || !workspace) throw new Error('Shared cloud database is not connected.');
+  if (!stockLedgerSchemaReady) throw new Error('Run the latest Prime Auto Care Cloud Sync SQL update before reserving shared invoice numbers.');
   const { data, error } = await supabase.rpc('washdesk_next_invoice_number', {
     p_prefix: prefix || 'CW',
     p_date: date,
@@ -403,7 +416,8 @@ window.WashDeskCloud = {
   disconnect,
   getStatus: () => statusText,
   getConfig: () => readConfig(),
-  getWorkspace: () => workspace || readWorkspace()
+  getWorkspace: () => workspace || readWorkspace(),
+  isStockLedgerReady: () => stockLedgerSchemaReady
 };
 window.addEventListener('online', () => {
   retryDelay = 1500;
