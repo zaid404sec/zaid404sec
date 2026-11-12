@@ -56,7 +56,7 @@ window.PrimeAutoCareMessaging = {
       scheduled_at:scheduledAt || null
     });
   },
-  async sendInvoice({invoice,customer,pdfBlob,database}) {
+  async sendInvoice({invoice,customer,pdfBlob,database,paidAmount,balanceDue}) {
     await ensureCloudIsCurrent(database);
     const pdf=await invoiceToBase64(pdfBlob);
     return api('invoice',{
@@ -66,8 +66,8 @@ window.PrimeAutoCareMessaging = {
         number:invoice.number,
         date:invoice.date,
         total:String(invoice.grandTotal),
-        paid:String(window.PrimeAutoCareInvoicePaid?.(invoice) ?? invoice.paidAmount ?? ''),
-        balance:String(window.PrimeAutoCareInvoiceBalance?.(invoice) ?? invoice.balance ?? ''),
+        paid:String(paidAmount ?? ''),
+        balance:String(balanceDue ?? ''),
         vehicle:String(invoice.vehicleNumber||'')
       },
       customer:{id:customer?.id,name:customer?.name,phone:customer?.phone},
