@@ -506,16 +506,16 @@
     db.staff=db.staff.filter(x=>x.id!==st.id);save();render();notify('Staff removed. Their attendance entries were cleared; financial history was retained.');
   }
   function staffShiftEnd(start='08:00',hours=11){
-    const match=String(start||'').match(/^([01]\\d|2[0-3]):([0-5]\\d)$/);if(!match)return '19:00';
+    const match=String(start||'').match(/^([01]\d|2[0-3]):([0-5]\d)$/);if(!match)return '19:00';
     const total=Number(match[1])*60+Number(match[2])+Math.round(Number(hours||11)*60),minutes=((total%1440)+1440)%1440;
     return String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
   }
   function formatStaffClock(value){
-    const match=String(value||'').match(/^([01]\\d|2[0-3]):([0-5]\\d)$/);if(!match)return '—';
+    const match=String(value||'').match(/^([01]\d|2[0-3]):([0-5]\d)$/);if(!match)return '—';
     const hour=Number(match[1]),minute=match[2];return (hour%12||12)+':'+minute+' '+(hour>=12?'PM':'AM');
   }
   function staffShiftLabel(st){
-    const start=/^([01]\\d|2[0-3]):([0-5]\\d)$/.test(String(st.shiftStart||''))?st.shiftStart:'08:00';
+    const start=/^([01]\d|2[0-3]):([0-5]\d)$/.test(String(st.shiftStart||''))?st.shiftStart:'08:00';
     const hours=Math.max(1,Math.min(16,Number(st.shiftHours)||11)),startMinutes=Number(start.slice(0,2))*60+Number(start.slice(3,5));
     return formatStaffClock(start)+' → '+formatStaffClock(staffShiftEnd(start,hours))+(startMinutes+Math.round(hours*60)>=1440?' (+1 day)':'')+' · '+hours+' h';
   }
@@ -528,7 +528,7 @@
     const saved=db.settings?.staffManagerAccess;
     if(!saved?.salt||!saved?.hash){notify('Set your Manager PIN first. Use the Manager PIN button in Staff & payroll.');return false}
     const entered=window.prompt('Enter your 6-digit Manager PIN to edit staff shift timings.');if(entered===null)return false;
-    if(!/^\\d{6}$/.test(entered)){notify('Enter the 6-digit Manager PIN.');return false}
+    if(!/^\d{6}$/.test(entered)){notify('Enter the 6-digit Manager PIN.');return false}
     try{if(await staffManagerPinDigest(entered,saved.salt)!==saved.hash){notify('Incorrect Manager PIN. Shift timings were not changed.');return false}return true}
     catch(e){notify(e?.message||'Manager PIN verification failed.');return false}
   }
@@ -537,7 +537,7 @@
     if(saved?.hash&&!(await verifyStaffManagerPin()))return;
     if(!saved?.hash&&!confirm('Set your private 6-digit Manager PIN now. Only you should know it. Staff shift timing changes will require this PIN on every device.'))return;
     const pin=window.prompt('Create a new 6-digit Manager PIN.');if(pin===null)return;
-    if(!/^\\d{6}$/.test(pin)){notify('Manager PIN must contain exactly 6 digits.');return}
+    if(!/^\d{6}$/.test(pin)){notify('Manager PIN must contain exactly 6 digits.');return}
     const confirmation=window.prompt('Enter the new Manager PIN again.');if(confirmation===null)return;
     if(confirmation!==pin){notify('PIN confirmation did not match. Nothing was changed.');return}
     try{
@@ -548,7 +548,7 @@
   }
   async function editStaffShift(staffId){
     const st=db.staff.find(x=>x.id===staffId);if(!st||!(await verifyStaffManagerPin()))return;
-    const start=/^([01]\\d|2[0-3]):([0-5]\\d)$/.test(String(st.shiftStart||''))?st.shiftStart:'08:00',hours=Math.max(1,Math.min(16,Number(st.shiftHours)||11));
+    const start=/^([01]\d|2[0-3]):([0-5]\d)$/.test(String(st.shiftStart||''))?st.shiftStart:'08:00',hours=Math.max(1,Math.min(16,Number(st.shiftHours)||11));
     openModal('Edit shift timing · '+esc(st.name),`<form id="staff-shift-form"><div class="field-grid">
       <div class="field"><label>Expected arrival time *</label><input id="staff-shift-start" name="shiftStart" type="time" value="${start}" required /></div>
       <div class="field"><label>Shift duration (hours) *</label><input id="staff-shift-hours" name="shiftHours" type="number" min="1" max="16" step=".5" value="${hours}" required /></div>
@@ -559,7 +559,7 @@
     const updatePreview=()=>{const s=startInput.value||'08:00',h=Math.max(1,Math.min(16,Number(hoursInput.value)||11)),total=Number(s.slice(0,2))*60+Number(s.slice(3,5))+Math.round(h*60);preview.textContent='Scheduled leave: '+formatStaffClock(staffShiftEnd(s,h))+(total>=1440?' (next day)':'')};
     startInput.addEventListener('input',updatePreview);hoursInput.addEventListener('input',updatePreview);
     document.getElementById('staff-shift-form').addEventListener('submit',e=>{e.preventDefault();const shiftStart=String(startInput.value||''),shiftHours=Number(hoursInput.value);
-      if(!/^([01]\\d|2[0-3]):([0-5]\\d)$/.test(shiftStart)||!Number.isFinite(shiftHours)||shiftHours<1||shiftHours>16){notify('Enter a valid arrival time and shift duration between 1 and 16 hours.');return}
+      if(!/^([01]\d|2[0-3]):([0-5]\d)$/.test(shiftStart)||!Number.isFinite(shiftHours)||shiftHours<1||shiftHours>16){notify('Enter a valid arrival time and shift duration between 1 and 16 hours.');return}
       db.staff=db.staff.map(x=>x.id===staffId?{...x,shiftStart,shiftHours,updatedAt:Date.now()}:x);
       save();closeModal();render();notify('Shift timing updated for '+st.name+'.');
     });
