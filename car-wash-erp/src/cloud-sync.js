@@ -20,6 +20,8 @@ let lastPayloadString = '';
 let statusText = 'Not connected';
 let syncing = false;
 let retryDelay = 1500;
+let schemaBlocked = false;
+let stockLedgerSchemaReady = false;
 let pollingTimer = null;
 
 function readConfig() {
@@ -163,8 +165,26 @@ function applyRemote(payload) {
   if (applied?.__cloudSyncDeferred) return null;
   return applied || payload;
 }
+async function refreshStockLedgerSchemaStatus() {
+  if (!supabase || !user || !workspace) throw new Error('Connect this device with the shared pairing code first.');
+  const { data, error } = await supabase.rpc('washdesk_get_stock_ledger_version');
+  if (error || Number(data) !== 1) {
+    stockLedgerSchemaReady = false;
+    schemaBlocked = true;
+    setStatus('Cloud SQL update required · no stock or invoice writes will be sent until the updated SQL is installed.');
+    throw new Error('CLOUD_SCHEMA_UPDATE_REQUIRED');
+  }
+  stockLedgerSchemaReady = true;
+  schemaBlocked = false;
+  return true;
+}
 async function publishPayload(payload) {
   if (!supabase || !user || !workspace) return false;
+  if (!stockLedgerSchemaReady || schemaBlocked) {
+    queuedPayload = payload;
+    setStatus('Cloud SQL update required · local changes are saved; no cloud write was attempted.');
+    return false;
+  }
   if (syncing) { queuedPayload = payload; return false; }
   syncing = true;
   const body = clone(payload);
@@ -173,6 +193,13 @@ async function publishPayload(payload) {
     const { data, error } = await supabase.rpc('washdesk_merge_sync', { p_payload: body });
     if (error) throw error;
     const canonical = data && typeof data === 'object' ? data : body;
+    if (Number(canonical?.meta?.serverStockLedgerVersion) !== 1) {
+      const schemaError = new Error('CLOUD_SCHEMA_UPDATE_REQUIRED');
+      schemaError.code = 'CLOUD_SCHEMA_UPDATE_REQUIRED';
+      throw schemaError;
+    }
+    schemaBlocked = false;
+    stockLedgerSchemaReady = true;
     retryDelay = 1500;
     lastPayloadString = stableStringify(canonical);
     const local = applyRemote(canonical);
@@ -182,7 +209,27 @@ async function publishPayload(payload) {
   } catch (error) {
     queuedPayload = queuedPayload || body;
     const message = String(error?.message || error || '');
-    if (message.includes('DUPLICATE_CUSTOMER_MOBILE')) {
+    if (message.includes('CLOUD_SCHEMA_UPDATE_REQUIRED')) {
+      schemaBlocked = true;
+      stockLedgerSchemaReady = false;
+      queuedPayload = body;
+      clearTimeout(pushTimer);
+      setStatus('Cloud SQL update required · open Business settings and run the latest Cloud Sync SQL file once.');
+      window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'Cloud inventory protection is not enabled yet. Run the latest Prime Auto Care Cloud Sync SQL file once in Supabase SQL Editor, then tap Sync now.' }));
+    } else if (message.includes('APP_UPDATE_REQUIRED')) {
+      schemaBlocked = true;
+      stockLedgerSchemaReady = false;
+      queuedPayload = body;
+      clearTimeout(pushTimer);
+      setStatus('App update required · update every paired device to Prime Auto Care 2.5.2 before syncing.');
+      window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'This device is using an older Prime Auto Care build. Update every paired phone and computer to version 2.5.2 before syncing stock changes.' }));
+    } else if (message.includes('INSUFFICIENT_STOCK')) {
+      schemaBlocked = true;
+      queuedPayload = body;
+      clearTimeout(pushTimer);
+      setStatus('Stock conflict · this device has a pending change that would make shared stock negative.');
+      window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'A stock change could not be accepted because the combined shared stock would become negative. Review the pending bill or stock adjustment on the device that created it before syncing again.' }));
+    } else if (message.includes('DUPLICATE_CUSTOMER_MOBILE')) {
       setStatus('Sync blocked · duplicate customer mobile number. Resolve the customer conflict.');
       window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'A mobile number is assigned to more than one customer across devices. Resolve the duplicate customer records, then sync again.' }));
     } else if (message.includes('DUPLICATE_VEHICLE_REGISTRATION')) {
@@ -202,7 +249,7 @@ async function publishPayload(payload) {
 function queueQueuedPush(delay = 700) {
   clearTimeout(pushTimer);
   pushTimer = setTimeout(async () => {
-    if (!user || !workspace || !supabase || syncing || !queuedPayload || !navigator.onLine) return;
+    if (schemaBlocked || !user || !workspace || !supabase || syncing || !queuedPayload || !navigator.onLine) return;
     const snapshot = queuedPayload;
     queuedPayload = null;
     await publishPayload(snapshot);
@@ -210,6 +257,8 @@ function queueQueuedPush(delay = 700) {
 }
 function schedulePush(payload) {
   if (!user || !workspace || !supabase) return;
+  // Keep the local snapshot queued, but do not send it until the new SQL version is verified.
+  if (schemaBlocked || !stockLedgerSchemaReady) { queuedPayload = payload; return; }
   // Keep only the latest live DB reference while the debounce timer runs.
   // Serializing/cloning the full business database in every save handler blocks
   // the WebView main thread and makes on-screen typing feel unstable.
@@ -252,6 +301,8 @@ function listenForChanges() {
 }
 async function initialSync() {
   if (!supabase || !user || !workspace) throw new Error('Pair this device with the shared Prime Auto Care business first.');
+  stockLedgerSchemaReady = false;
+  await refreshStockLedgerSchemaStatus();
   setStatus('Loading shared Prime Auto Care data…');
   const { data, error } = await supabase.from('washdesk_sync')
     .select('payload,updated_at')
@@ -259,9 +310,16 @@ async function initialSync() {
     .maybeSingle();
   if (error) throw error;
   if (data?.payload) {
+    if (Number(data.payload?.meta?.serverStockLedgerVersion) !== 1) {
+      stockLedgerSchemaReady = false;
+      schemaBlocked = true;
+      setStatus('Cloud SQL update required · the workspace has not completed its stock-ledger handshake.');
+      throw new Error('CLOUD_SCHEMA_UPDATE_REQUIRED');
+    }
     const merged = applyRemote(data.payload);
-    if (merged && stableStringify(merged) !== stableStringify(data.payload)) await publishPayload(merged);
-    else if (merged) {
+    if (merged && stableStringify(merged) !== stableStringify(data.payload)) {
+      await publishPayload(merged);
+    } else if (merged) {
       lastPayloadString = stableStringify(data.payload);
       setStatus('Connected · live sync active on all paired devices');
     }
@@ -332,18 +390,26 @@ async function resume({ getLocal, onRemote }) {
     const message = String(error?.message || error || '');
     if (workspace && !navigator.onLine) {
       setStatus('Offline · shared workspace saved; automatic sync will resume when internet returns');
+    } else if (message.includes('CLOUD_SCHEMA_UPDATE_REQUIRED')) {
+      setStatus('Cloud SQL update required · run the latest Cloud Sync SQL file once in Supabase, then tap Sync now.');
+    } else if (message.includes('APP_UPDATE_REQUIRED')) {
+      setStatus('App update required · update every paired phone and computer to Prime Auto Care 2.5.2.');
     } else {
-      setStatus(message.includes('washdesk_sync') ? 'Signed in · run the shared database SQL setup' : 'Cloud reconnect needed · retrying when internet returns');
+      setStatus(message.includes('washdesk_sync') ? 'Signed in · run the shared database SQL setup' : 'Cloud reconnect needed · retry when internet returns');
     }
     return false;
   }
 }
 async function syncNow(payload) {
   if (!supabase || !user || !workspace) throw new Error('Connect this device with the shared device pairing code first.');
+  await refreshStockLedgerSchemaStatus();
+  schemaBlocked = false;
+  queuedPayload = null;
   return await publishPayload(payload);
 }
 async function nextInvoiceNumber({ prefix, date, minNext }) {
   if (!supabase || !user || !workspace) throw new Error('Shared cloud database is not connected.');
+  if (!stockLedgerSchemaReady) throw new Error('Run the latest Prime Auto Care Cloud Sync SQL update before reserving shared invoice numbers.');
   const { data, error } = await supabase.rpc('washdesk_next_invoice_number', {
     p_prefix: prefix || 'CW',
     p_date: date,
@@ -365,6 +431,8 @@ async function disconnect() {
   workspace = null;
   lastPayloadString = '';
   queuedPayload = null;
+  schemaBlocked = false;
+  stockLedgerSchemaReady = false;
   localStorage.removeItem(WORKSPACE_KEY);
   setStatus('This device disconnected · local records remain safe');
 }
@@ -377,7 +445,8 @@ window.WashDeskCloud = {
   disconnect,
   getStatus: () => statusText,
   getConfig: () => readConfig(),
-  getWorkspace: () => workspace || readWorkspace()
+  getWorkspace: () => workspace || readWorkspace(),
+  isStockLedgerReady: () => stockLedgerSchemaReady
 };
 window.addEventListener('online', () => {
   retryDelay = 1500;

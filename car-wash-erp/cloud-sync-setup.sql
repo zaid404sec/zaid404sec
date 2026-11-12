@@ -257,6 +257,32 @@ as $$
         < public.washdesk_record_stamp(item);
 $$;
 
+-- Explicit schema gate: the app checks this read-only version before any write RPC.
+-- This prevents a 2.5.2 client from sending stock-ledger data to an older SQL function.
+create table if not exists public.washdesk_schema_version (
+  singleton boolean primary key default true check (singleton),
+  stock_ledger_version integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+alter table public.washdesk_schema_version enable row level security;
+revoke all on public.washdesk_schema_version from anon, authenticated;
+create or replace function public.washdesk_get_stock_ledger_version()
+returns integer
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select stock_ledger_version
+  from public.washdesk_schema_version
+  where singleton = true
+  limit 1;
+$$;
+revoke all on function public.washdesk_get_stock_ledger_version() from public, anon;
+grant execute on function public.washdesk_get_stock_ledger_version() to authenticated;
+
+-- The version row is intentionally inserted only after every migration function is defined.
+
 -- Customer names may repeat. Mobile numbers and vehicle registrations may not.
 create or replace function public.washdesk_assert_unique_customer_keys(p_payload jsonb)
 returns void
@@ -332,6 +358,13 @@ declare
   v_deleted jsonb := '{}'::jsonb;
   v_records jsonb;
   v_collection text;
+  v_product jsonb;
+  v_existing_product jsonb;
+  v_products jsonb := '[]'::jsonb;
+  v_product_id text;
+  v_opening numeric;
+  v_movement_delta numeric;
+  v_stock_qty numeric;
 begin
   if v_auth_user is null then
     raise exception 'Authentication required';
@@ -351,6 +384,12 @@ begin
   end if;
   if octet_length(p_payload::text) > 8000000 then
     raise exception 'Business data exceeds the 8 MB sync limit. Export a backup and contact support.';
+  end if;
+  if coalesce(p_payload->'meta'->>'stockLedgerVersion','') <> '1' then
+    raise exception using
+      errcode = 'P0001',
+      message = 'APP_UPDATE_REQUIRED',
+      detail = 'Install Prime Auto Care 2.5.2 on this device before syncing stock changes.';
   end if;
 
   insert into public.washdesk_sync(user_id, payload)
@@ -380,8 +419,8 @@ begin
   v_merged := jsonb_set(v_merged, '{_deletedIds}', v_deleted, true);
 
   foreach v_collection in array array[
-    'customers', 'vehicles', 'services', 'invoices', 'products',
-    'purchases', 'expenses', 'staff', 'staffAdvances', 'payments'
+    'customers', 'vehicles', 'services', 'invoices', 'products', 'stockMovements',
+    'purchases', 'expenses', 'staff', 'staffAdvances', 'attendance', 'payments'
   ] loop
     execute format(
       'select public.washdesk_merge_records($1->%L, $2->%L, $3)',
@@ -414,6 +453,56 @@ begin
     v_merged,
     '{meta}',
     coalesce(v_existing->'meta', '{}'::jsonb) || coalesce(p_payload->'meta', '{}'::jsonb),
+    true
+  );
+
+  -- The canonical opening quantity is captured from the current server snapshot
+  -- on first migration. New/edited stock is never taken from a stale client qty;
+  -- only unique append-only stock movement rows change the authoritative balance.
+  for v_product in
+    select item
+      from jsonb_array_elements(coalesce(v_merged->'products', '[]'::jsonb)) as product_rows(item)
+  loop
+    v_product_id := coalesce(v_product->>'id', '');
+    select item into v_existing_product
+      from jsonb_array_elements(coalesce(v_existing->'products', '[]'::jsonb)) as existing_rows(item)
+      where item->>'id' = v_product_id
+      limit 1;
+
+    if v_existing_product is not null then
+      v_opening := public.washdesk_safe_number(
+        coalesce(v_existing_product->>'stockOpeningQty', v_existing_product->>'qty')
+      );
+    else
+      v_opening := public.washdesk_safe_number(
+        coalesce(v_product->>'stockOpeningQty', v_product->>'qty')
+      );
+    end if;
+
+    select coalesce(sum(public.washdesk_safe_number(item->>'delta')), 0)
+      into v_movement_delta
+      from jsonb_array_elements(coalesce(v_merged->'stockMovements', '[]'::jsonb)) as movement_rows(item)
+      where item->>'productId' = v_product_id;
+
+    v_stock_qty := v_opening + coalesce(v_movement_delta, 0);
+    if v_stock_qty < -0.000001 then
+      raise exception using
+        errcode = '23514',
+        message = 'INSUFFICIENT_STOCK',
+        detail = 'The combined stock movements would make product ' || v_product_id || ' negative. The cloud transaction was rejected; review the pending invoice or adjustment on its source device.';
+    end if;
+
+    v_product := jsonb_set(v_product, '{stockOpeningQty}', to_jsonb(v_opening), true);
+    v_product := jsonb_set(v_product, '{qty}', to_jsonb(greatest(0, v_stock_qty)), true);
+    v_products := v_products || jsonb_build_array(v_product);
+    v_existing_product := null;
+  end loop;
+
+  v_merged := jsonb_set(v_merged, '{products}', v_products, true);
+  v_merged := jsonb_set(
+    v_merged,
+    '{meta,serverStockLedgerVersion}',
+    '1'::jsonb,
     true
   );
 
@@ -501,4 +590,53 @@ end $$;
 
 -- The final query returns a long random pairing code. Keep it private and use it
 -- once on every device. Re-running this file returns the same code.
+-- Final migration step: seed current stock as opening balances and only then publish
+-- stock-ledger version 1. Until this statement completes, the read-only status RPC
+-- returns NULL and upgraded apps refuse to send any shared data writes.
+-- Mark existing shared payloads as migrated without replaying historical invoices.
+-- The current cloud quantity is the opening balance; only new movement rows affect it.
+update public.washdesk_sync as sync
+set payload = jsonb_set(
+  jsonb_set(
+    jsonb_set(
+      coalesce(sync.payload, '{}'::jsonb),
+      '{products}',
+      coalesce((
+        select jsonb_agg(
+          case
+            when product.item ? 'stockOpeningQty' then product.item
+            else jsonb_set(
+              product.item,
+              '{stockOpeningQty}',
+              to_jsonb(public.washdesk_safe_number(product.item->>'qty')),
+              true
+            )
+          end
+          order by product.item->>'id'
+        )
+        from jsonb_array_elements(
+          case when jsonb_typeof(sync.payload->'products') = 'array'
+            then sync.payload->'products' else '[]'::jsonb end
+        ) as product(item)
+      ), '[]'::jsonb),
+      true
+    ),
+    '{stockMovements}',
+    case when jsonb_typeof(sync.payload->'stockMovements') = 'array'
+      then sync.payload->'stockMovements' else '[]'::jsonb end,
+    true
+  ),
+  '{meta}',
+  coalesce(sync.payload->'meta', '{}'::jsonb) ||
+    jsonb_build_object('stockLedgerVersion', 1, 'serverStockLedgerVersion', 1),
+  true
+);
+
+
+insert into public.washdesk_schema_version(singleton, stock_ledger_version)
+values (true, 1)
+on conflict (singleton) do update
+  set stock_ledger_version = greatest(public.washdesk_schema_version.stock_ledger_version, excluded.stock_ledger_version),
+      updated_at = now();
+
 select public.washdesk_create_pairing_code() as "Prime Auto Care device pairing code";

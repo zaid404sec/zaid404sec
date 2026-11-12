@@ -14,11 +14,45 @@ BLACK = (7, 7, 7, 255)
 GOLD = (197, 153, 69, 255)
 
 
+def crop_logo_content() -> Image.Image:
+    """Crop near-black JPEG padding so the brand mark remains legible at launcher size."""
+    source = Image.open(LOGO_PATH).convert("RGB")
+    pixels = source.load()
+    mask = Image.new("L", source.size, 0)
+    mask_pixels = mask.load()
+    for y in range(source.height):
+        for x in range(source.width):
+            if max(pixels[x, y]) > 18:
+                mask_pixels[x, y] = 255
+    bbox = mask.getbbox()
+    if not bbox:
+        raise SystemExit("The Prime Auto Care logo has no visible non-background content.")
+    left, top, right, bottom = bbox
+    pad = max(2, round(max(right - left, bottom - top) * 0.04))
+    bbox = (
+        max(0, left - pad),
+        max(0, top - pad),
+        min(source.width, right + pad),
+        min(source.height, bottom + pad),
+    )
+    return source.crop(bbox).convert("RGBA")
+
+
+def fit_logo(source: Image.Image, size: int, max_width_ratio: float, max_height_ratio: float) -> Image.Image:
+    """Scale the cropped mark up or down to fill a safe, aspect-preserving box."""
+    target_width = max(1, round(size * max_width_ratio))
+    target_height = max(1, round(size * max_height_ratio))
+    scale = min(target_width / source.width, target_height / source.height)
+    dimensions = (
+        max(1, round(source.width * scale)),
+        max(1, round(source.height * scale)),
+    )
+    return source.resize(dimensions, Image.Resampling.LANCZOS)
+
+
 def logo_canvas(size: int) -> Image.Image:
     canvas = Image.new("RGBA", (size, size), BLACK)
-    logo = Image.open(LOGO_PATH).convert("RGBA")
-    # Preserve the full wordmark, with deliberate breathing room around it.
-    logo.thumbnail((round(size * 0.92), round(size * 0.66)), Image.Resampling.LANCZOS)
+    logo = fit_logo(crop_logo_content(), size, 0.84, 0.68)
     canvas.alpha_composite(logo, ((size - logo.width) // 2, (size - logo.height) // 2))
     draw = ImageDraw.Draw(canvas)
     line = max(1, round(size * 0.012))
@@ -35,19 +69,24 @@ def logo_canvas(size: int) -> Image.Image:
 def transparent_foreground(size: int = 432) -> Image.Image:
     source = Image.open(LOGO_PATH).convert("RGB")
     pixels = source.load()
-    # Remove only the near-black JPEG background, retaining the gold wordmark.
+    # Remove the near-black JPEG background while retaining the gold mark and glow.
     rgba = Image.new("RGBA", source.size, (0, 0, 0, 0))
     out = rgba.load()
     for y in range(source.height):
         for x in range(source.width):
             r, g, b = pixels[x, y]
             peak = max(r, g, b)
-            alpha = max(0, min(255, (peak - 9) * 5))
+            alpha = max(0, min(255, (peak - 24) * 6))
             if alpha:
                 out[x, y] = (r, g, b, alpha)
-    rgba.thumbnail((round(size * 0.82), round(size * 0.55)), Image.Resampling.LANCZOS)
+
+    bbox = rgba.getchannel("A").getbbox()
+    if not bbox:
+        raise SystemExit("The Prime Auto Care adaptive logo foreground is fully transparent.")
+    cropped = rgba.crop(bbox)
+    fitted = fit_logo(cropped, size, 0.64, 0.50)
     foreground = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    foreground.alpha_composite(rgba, ((size - rgba.width) // 2, (size - rgba.height) // 2))
+    foreground.alpha_composite(fitted, ((size - fitted.width) // 2, (size - fitted.height) // 2))
     return foreground
 
 
@@ -78,15 +117,34 @@ def make_android_resources() -> None:
         round_icon.save(target / "ic_launcher_round.png", format="PNG", optimize=True)
 
     (res / "drawable").mkdir(parents=True, exist_ok=True)
-    transparent_foreground().save(res / "drawable" / "ic_launcher_foreground.png", format="PNG", optimize=True)
     logo_canvas(512).save(res / "drawable" / "splash.png", format="PNG", optimize=True)
+
+    # Adaptive icons use a separate foreground resource on Android 8+.
+    # Capacitor's template ships a vector named ic_launcher_foreground.xml
+    # (the blue Android/Capacitor mark) in drawable-v24. Referencing drawable
+    # therefore silently selected that vector instead of our generated PNG.
+    # Put the branded transparent foreground in every mipmap density and
+    # reference that resource explicitly from the adaptive icon XML.
+    foreground_sizes = {
+        "mipmap-mdpi": 108,
+        "mipmap-hdpi": 162,
+        "mipmap-xhdpi": 216,
+        "mipmap-xxhdpi": 324,
+        "mipmap-xxxhdpi": 432,
+    }
+    for folder, size in foreground_sizes.items():
+        target = res / folder
+        target.mkdir(parents=True, exist_ok=True)
+        transparent_foreground(size).save(
+            target / "ic_launcher_foreground.png", format="PNG", optimize=True
+        )
 
     adaptive = res / "mipmap-anydpi-v26"
     adaptive.mkdir(parents=True, exist_ok=True)
     icon_xml = """<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
 </adaptive-icon>
 """
     (adaptive / "ic_launcher.xml").write_text(icon_xml, encoding="utf-8")
@@ -120,10 +178,18 @@ def make_android_resources() -> None:
             raise SystemExit("Prime Auto Care launcher icon references were not applied.")
         manifest.write_text(xml, encoding="utf-8")
 
-    foreground = res / "drawable" / "ic_launcher_foreground.png"
-    with Image.open(foreground) as icon:
-        if icon.getchannel("A").getbbox() is None:
-            raise SystemExit("Prime Auto Care launcher foreground is fully transparent.")
+    for folder in foreground_sizes:
+        foreground = res / folder / "ic_launcher_foreground.png"
+        with Image.open(foreground) as icon:
+            bbox = icon.getchannel("A").getbbox()
+            if bbox is None:
+                raise SystemExit(f"Prime Auto Care adaptive launcher foreground is fully transparent: {foreground}")
+            if bbox[2] - bbox[0] < round(icon.width * 0.55):
+                raise SystemExit(f"Prime Auto Care adaptive launcher foreground is too small to read: {foreground}")
+    for name in ("ic_launcher.xml", "ic_launcher_round.xml"):
+        adaptive_xml = (adaptive / name).read_text(encoding="utf-8")
+        if '@mipmap/ic_launcher_foreground' not in adaptive_xml:
+            raise SystemExit(f"{name} does not reference the branded mipmap foreground.")
 
 
 def main() -> None:

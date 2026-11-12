@@ -6,8 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v9') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v9.');
+if (packageJson.version !== '2.5.2') throw new Error('The package version must be 2.5.2.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v11') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v11.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -19,6 +20,17 @@ if (html.includes('location.reload(') || html.includes('window.location.reload('
   throw new Error('The app must not force-reload the active business screen.');
 }
 console.log('PASS: cloud snapshots defer outside the passive dashboard; navigation applies them safely and preserves scroll');
+const saveFunctionStart=html.indexOf('function save(){');
+const saveFunctionEnd=html.indexOf('function notify(',saveFunctionStart);
+const saveFunction=html.slice(saveFunctionStart,saveFunctionEnd);
+if (!saveFunction.includes("previousRaw=localStorage.getItem(STORE)") ||
+    !saveFunction.includes("db=reconcileStockLedger(Object.assign(blank(),JSON.parse(previousRaw)))") ||
+    !html.includes('if(!save())return;') ||
+    html.includes('save();')) {
+  throw new Error('Failed local persistence must restore the last durable database and stop success flows.');
+}
+console.log('PASS: all normal save paths stop on local storage failure and the shared save handler restores durable records');
+
 if (!html.includes('data-action="share-offer-whatsapp"') ||
     !html.includes('navigator.share({title,text:message})') ||
     !html.includes('https://wa.me/?text=') ||
@@ -71,7 +83,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v9') throw new Error('Android stability release app ID v9 was not set.');
+if (appId !== 'com.washdesk.carwash.v11') throw new Error('Android stability release app ID v11 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -87,6 +99,17 @@ const nextResult = vm.runInNewContext(nextFunction + String.fromCharCode(10) + "
 });
 if (nextResult !== 'CW-261107-006') throw new Error('Daily invoice sequence test failed: ' + nextResult);
 console.log('PASS: invoice numbering resets daily and advances past saved bills');
+const reserveStart=html.indexOf('function nextInvoiceNo('),reserveEnd=html.indexOf('  function sum(',reserveStart);
+if(reserveStart<0||reserveEnd<0)throw new Error('Shared invoice reservation function not found.');
+const reserveSource=html.slice(reserveStart,reserveEnd);
+const cloudReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-001',navigator:{onLine:true},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'}),nextInvoiceNumber:async()=>'CW-261107-021'}}});
+if(await cloudReserve!=='CW-261107-021')throw new Error('Online invoice numbering did not use the shared server counter.');
+const offlineReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-001',navigator:{onLine:false},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'})}}});
+if(await offlineReserve!=='CW-261107-OFF-DEVICE-UNIQUE-001')throw new Error('Paired offline bills must receive a unique provisional reference: '+offlineReserve);
+const failedReserve=vm.runInNewContext(reserveSource+String.fromCharCode(10)+"reserveInvoiceNo('2026-11-07')",{db:{business:{invoicePrefix:'CW'},invoices:[]},id:()=>'DEVICE-UNIQUE-002',navigator:{onLine:true},window:{WashDeskCloud:{getWorkspace:()=>({workspace_id:'shared'}),nextInvoiceNumber:async()=>{throw new Error('counter unavailable')}}}});
+let counterRejected=false;try{await failedReserve}catch{counterRejected=true}
+if(!counterRejected)throw new Error('Paired online billing must fail closed when the shared invoice counter fails.');
+console.log('PASS: paired online billing fails closed on counter errors; offline paired bills use unique provisional numbers');
 
 const calcStart = html.indexOf('function calculateEditedInvoice(');
 const calcEnd = html.indexOf('  function saveInvoiceEdits', calcStart);
@@ -322,7 +345,7 @@ if (!cloudSource.includes('if (applied?.__cloudSyncDeferred) return null;') ||
 const saveBillStart = html.indexOf('async function saveBill()');
 const saveBillEnd = html.indexOf('function applyConsumption', saveBillStart);
 const saveBillSource = html.slice(saveBillStart, saveBillEnd);
-if (!(saveBillSource.indexOf('await reserveInvoiceNo(invoiceDate)') < saveBillSource.indexOf('applyConsumption(billLines)'))) {
+if (!(saveBillSource.indexOf('await reserveInvoiceNo(invoiceDate)') < saveBillSource.indexOf('applyConsumption(billLines,invoiceId)'))) {
   throw new Error('Stock is mutated before the shared invoice number request succeeds.');
 }
 if (!html.includes("if(page==='billing')return false") ||
@@ -349,7 +372,8 @@ if (cloudSource.includes('localhost:3000') || html.includes('localhost:3000') ||
 }
 if (!html.includes('Enable Anonymous Sign-Ins') ||
     !html.includes('Connect / Pair this device') ||
-    !html.includes('same code once on each of the four phones and the Windows laptop')) {
+    !html.includes('No four-device cap is built into the app') ||
+    !html.includes('every authorised phone or computer')) {
   throw new Error('Cloud settings do not explain the shared device-pairing workflow.');
 }
 if (!cloudSource.includes('workspace = readWorkspace();') ||
@@ -421,7 +445,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v11')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v13')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
@@ -439,13 +463,87 @@ if (html.includes('Files → Downloads → WashDesk') ||
 console.log('PASS: invoice PDFs and full backups use the Prime Auto Care Downloads folder');
 
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
-for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'device_not_paired']) {
+if (!html.includes('function reconcileStockLedger(data)') ||
+    !html.includes('function recordStockMovement(productId,delta,reason,sourceId,movementId)') ||
+    !html.includes("collections=['customers','vehicles','services','invoices','products','stockMovements','purchases','expenses','staff','staffAdvances','attendance','payments']") ||
+    !html.includes("recordStockMovement(productId,-qty,'invoice',invoiceId") ||
+    !html.includes("recordStockMovement(productId,qty,'invoice-cancellation',i.id") ||
+    !html.includes("recordStockMovement(p.id,q,'purchase',purchaseId") ||
+    !html.includes("recordStockMovement(p.id,delta,'manual-adjustment',movementId")) {
+  throw new Error('Stock movements must be recorded for every stock-changing workflow and merged by unique ID.');
+}
+if (!(sql.indexOf("insert into public.washdesk_schema_version") > sql.indexOf("create or replace function public.washdesk_merge_sync")) ||
+    !(sql.indexOf("insert into public.washdesk_schema_version") > sql.indexOf("create or replace function public.washdesk_next_invoice_number")) ||
+    !(sql.indexOf("insert into public.washdesk_schema_version") > sql.indexOf("alter publication supabase_realtime"))) {
+  throw new Error('Cloud stock-ledger readiness must only be published after all updated SQL functions are defined.');
+}
+if (!sql.includes("'products', 'stockMovements'") ||
+    !sql.includes("coalesce(p_payload->'meta'->>'stockLedgerVersion','') <> '1'") ||
+    !sql.includes("message = 'INSUFFICIENT_STOCK'") ||
+    !sql.includes("'{meta,serverStockLedgerVersion}'") ||
+    !sql.includes("v_stock_qty := v_opening + coalesce(v_movement_delta, 0)") ||
+    !sql.includes("create table if not exists public.washdesk_schema_version") ||
+    !sql.includes("create or replace function public.washdesk_get_stock_ledger_version()") ||
+    !sql.includes("jsonb_build_object('stockLedgerVersion', 1, 'serverStockLedgerVersion', 1)") ||
+    !sql.includes("'{stockOpeningQty}'")) {
+  throw new Error('Cloud SQL must gate old clients, reconcile the stock ledger and reject negative shared stock.');
+}
+if (!cloudSource.includes('Number(canonical?.meta?.serverStockLedgerVersion) !== 1') ||
+    !cloudSource.includes("message.includes('APP_UPDATE_REQUIRED')") ||
+    !cloudSource.includes("message.includes('INSUFFICIENT_STOCK')") ||
+    !cloudSource.includes('if (!stockLedgerSchemaReady) throw new Error') ||
+    !cloudSource.includes("supabase.rpc('washdesk_get_stock_ledger_version')") ||
+    !cloudSource.includes("async function refreshStockLedgerSchemaStatus()") ||
+    !cloudSource.includes("if (!stockLedgerSchemaReady || schemaBlocked)")) {
+  throw new Error('Cloud sync must require server-side stock-ledger confirmation and surface blocked inventory sync.');
+}
+const stockHelperStart=html.indexOf('function reconcileStockLedger(data){');
+const stockHelperEnd=html.indexOf('let db=load()',stockHelperStart);
+if(stockHelperStart<0||stockHelperEnd<0)throw new Error('Stock ledger helpers are not available for testing.');
+const stockHelperSource=html.slice(stockHelperStart,stockHelperEnd);
+const stockLedgerResult=vm.runInNewContext(stockHelperSource+String.fromCharCode(10)+`const first=recordStockMovement('soap',-3,'invoice','bill-1','movement-1');const duplicate=recordStockMovement('soap',-3,'invoice','bill-1','movement-1');const second=recordStockMovement('soap',-2,'invoice','bill-2','movement-2');const purchased=recordStockMovement('soap',4,'purchase','purchase-1','movement-3');const returned=recordStockMovement('soap',3,'invoice-cancellation','bill-1','movement-4');reconcileStockLedger(db);({first,duplicate,second,purchased,returned,qty:db.products[0].qty,movements:db.stockMovements.length})`,{
+  db:{products:[{id:'soap',qty:10,stockOpeningQty:10}],stockMovements:[]},
+  id:()=>'movement-random'
+});
+if(!stockLedgerResult.first||stockLedgerResult.duplicate||!stockLedgerResult.second||!stockLedgerResult.purchased||!stockLedgerResult.returned||stockLedgerResult.qty!==12||stockLedgerResult.movements!==4) {
+  throw new Error('Stock ledger failed duplicate-retry, multi-device delta, purchase or cancellation reconciliation: '+JSON.stringify(stockLedgerResult));
+}
+console.log('PASS: unique stock movement IDs prevent retry double-counting and separate device movements reconcile with purchases/cancellations');
+console.log('PASS: stock movements are recorded for invoice, cancellation, edit, purchase and adjustment workflows');
+console.log('PASS: server merge reconciles unique movements under the workspace lock and rejects negative stock');
+console.log('PASS: shared invoice numbering is disabled until updated server SQL confirms the ledger schema');
+const initialSyncStart=cloudSource.indexOf('async function initialSync()');
+const initialSyncEnd=cloudSource.indexOf('function startSafetyRefresh()',initialSyncStart);
+const initialSyncSource=cloudSource.slice(initialSyncStart,initialSyncEnd);
+if (!(initialSyncSource.indexOf('await refreshStockLedgerSchemaStatus()') < initialSyncSource.indexOf('supabase.from(\'washdesk_sync\')')) ||
+    !initialSyncSource.includes("throw new Error('CLOUD_SCHEMA_UPDATE_REQUIRED')")) {
+  throw new Error('The app must check the read-only SQL version before loading or writing the shared workspace.');
+}
+const rollbackWorkflows=[
+  ['async function saveBill()', 'function applyConsumption', 'if(!save()){restoreDatabase(dbBefore)'],
+  ['function cancelInvoice(', 'function invoiceEditLineRows', 'if(!save()){restoreDatabase(dbBefore)'],
+  ['function saveInvoiceEdits(', 'function invoiceTaxLines', 'if(!save()){restoreDatabase(dbBefore)'],
+  ['function addPurchaseForm(', 'function saveStaffAttendance', 'if(!save()){restoreDatabase(dbBefore)'],
+  ['function stockAdjustForm(', 'function addVehicleForm', 'if(!save()){restoreDatabase(dbBefore)']
+];
+for (const [startToken,endToken,guard] of rollbackWorkflows) {
+  const start=html.indexOf(startToken),end=html.indexOf(endToken,start);
+  if(start<0||end<0||!html.slice(start,end).includes(guard)) {
+    throw new Error('Failed local storage writes must rollback the corresponding invoice or inventory operation: '+startToken);
+  }
+}
+console.log('PASS: failed local storage writes rollback invoices, cancellations, edits, purchases and stock adjustments');
+
+
+for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'attendance', 'stockmovements', 'washdesk_schema_version', 'washdesk_get_stock_ledger_version', 'stock_ledger_version', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'device_not_paired']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
 }
 if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
 const phone0091Rule = String.raw`when digits ~ '^0091[0-9]{10}$' then right(digits, 10)`;
 if (!sql.includes(phone0091Rule)) throw new Error('Cloud SQL does not normalise 0091-prefixed mobile numbers.');
-console.log('PASS: cloud schema contains RLS, atomic row locking, and shared invoice counter');
+if (!sql.includes("'staffAdvances', 'attendance', 'payments'")) throw new Error('Server-side workspace merge is missing attendance records.');
+if (!sql.includes('on conflict (user_id, invoice_date) do update') || !sql.includes('public.washdesk_invoice_counters.next_value + 1') || !sql.includes('returning next_value into v_seq')) throw new Error('Daily invoice numbers must use an atomic shared PostgreSQL counter.');
+console.log('PASS: cloud schema merges attendance and reserves invoice numbers atomically');
 if (!sql.includes("grant execute on function public.washdesk_join_workspace(text) to authenticated;") ||
     !sql.includes("grant execute on function public.washdesk_merge_sync(jsonb) to authenticated;") ||
     !sql.includes("to authenticated") ||
