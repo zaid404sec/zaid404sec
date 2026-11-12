@@ -107,7 +107,7 @@ def make_android_resources() -> None:
         xml = re.sub(r'android:icon="[^"]+"', 'android:icon="@mipmap/ic_launcher"', xml)
         xml = re.sub(r'android:roundIcon="[^"]+"', 'android:roundIcon="@mipmap/ic_launcher_round"', xml)
         # Explicitly add both attributes if the Capacitor manifest template omits them.
-        app_tag = re.search(r'<application\\b[^>]*>', xml)
+        app_tag = re.search(r'<application\b[^>]*>', xml)
         if not app_tag:
             raise SystemExit("AndroidManifest.xml has no application element.")
         opening = app_tag.group(0)
