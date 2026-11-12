@@ -21,7 +21,7 @@ export async function scheduleOpeningReminder({ enabled, time, businessName, ope
   await LocalNotifications.cancel({ notifications: [notification] });
   if (!enabled) return { supported: true, enabled: false };
 
-  const match = String(time || '07:45').match(/^(\\d{2}):(\\d{2})$/);
+  const match = String(time || '07:45').match(/^(\d{2}):(\d{2})$/);
   if (!match) throw new Error('Choose a valid daily reminder time.');
   const hour = Number(match[1]);
   const minute = Number(match[2]);
