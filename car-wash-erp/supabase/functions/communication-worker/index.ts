@@ -122,7 +122,7 @@ async function sendSms(job: any, config: any) {
   const callbackSecret = env('EXOTEL_WEBHOOK_TOKEN');
   if (callbackSecret) form.set('StatusCallback', `${env('SUPABASE_URL')}/functions/v1/communication-webhook?provider=exotel&token=${encodeURIComponent(callbackSecret)}&job_id=${job.id}`);
   const auth = btoa(`${apiKey}:${apiToken}`);
-  const response = await fetch(`https://${region}/v1/Accounts/${sid}/Sms/send.json`, {
+  const response = await fetch(`https://${region}/v1/Accounts/${sid}/Sms/send`, {
     method:'POST', headers:{ Authorization:`Basic ${auth}`, 'Content-Type':'application/x-www-form-urlencoded' }, body:form
   });
   const resultText = await response.text();
@@ -165,7 +165,7 @@ async function sendVoice(job: any, config: any) {
     form.set('StatusCallbackContentType','application/json');
   }
   const auth = btoa(`${apiKey}:${apiToken}`);
-  const response = await fetch(`https://${region}/v1/Accounts/${sid}/Calls/connect.json`, {
+  const response = await fetch(`https://${region}/v1/Accounts/${sid}/Calls/connect`, {
     method:'POST', headers:{ Authorization:`Basic ${auth}`, 'Content-Type':'application/x-www-form-urlencoded' }, body:form
   });
   const text = await response.text();
