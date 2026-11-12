@@ -151,7 +151,7 @@ async function sendVoice(job: any, config: any) {
   form.set('Url', flowUrl);
   if (job.purpose === 'invoice' || job.purpose === 'service') form.set('CallType','trans');
   form.set('TimeLimit', '60');
-  form.set('CustomField', `PAC:${job.id}:${String(job.payload.message || 'Prime Auto Care announcement').slice(0,95)}`);
+  form.set('CustomField', `PAC:${job.id}:${String(job.payload.message || 'Prime Auto Care announcement').slice(0,80)}`);
   const callbackSecret = env('EXOTEL_WEBHOOK_TOKEN');
   if (callbackSecret) {
     form.set('StatusCallback', `${env('SUPABASE_URL')}/functions/v1/communication-webhook?provider=exotel&token=${encodeURIComponent(callbackSecret)}&job_id=${job.id}`);
@@ -221,8 +221,16 @@ async function enqueueOpening(service: any) {
     }
     if (rows.length) {
       const { data, error:insertError } = await service.from('pac_communication_jobs').upsert(rows,{onConflict:'workspace_id,idempotency_key',ignoreDuplicates:true}).select('id');
-      if (!insertError) total += data?.length || 0;
+      if (insertError) throw insertError;
+      total += data?.length || 0;
     }
+    // Mark the local business date as enqueued only after all channel jobs
+    // have either been durably inserted or the day had no opted-in recipients.
+    const day = new Intl.DateTimeFormat('en-CA',{timeZone:config.server_opening_timezone || 'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+    const {error:markError}=await service.from('pac_communication_settings')
+      .update({server_opening_last_enqueued:day,updated_at:new Date().toISOString()})
+      .eq('workspace_id',config.workspace_id);
+    if(markError)throw markError;
   }
   return total;
 }
