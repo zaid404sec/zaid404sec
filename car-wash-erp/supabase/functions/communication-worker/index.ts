@@ -149,7 +149,7 @@ async function sendVoice(job: any, config: any) {
   form.set('From', job.recipient_e164);
   form.set('CallerId', callerId);
   form.set('Url', flowUrl);
-  form.set('CallType', job.purpose === 'invoice' ? 'trans' : 'promo');
+  if (job.purpose === 'invoice' || job.purpose === 'service') form.set('CallType','trans');
   form.set('TimeLimit', '60');
   form.set('CustomField', `PAC:${job.id}:${String(job.payload.message || 'Prime Auto Care announcement').slice(0,95)}`);
   const callbackSecret = env('EXOTEL_WEBHOOK_TOKEN');
@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
         });
         results.push({id:job.id,status:'accepted'});
       } catch (error) {
-        const retryable = Boolean((error as any)?.retryable);
+        const retryable = Boolean((error as any)?.retryable) || error instanceof TypeError;
         const attempts = Number(job.attempts || 1);
         const terminal = !retryable || attempts >= Number(job.max_attempts || 5);
         const retryAt = new Date(Date.now() + Math.min(60,Math.pow(2,attempts))*60_000).toISOString();
