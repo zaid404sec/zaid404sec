@@ -72,7 +72,7 @@ function providerReadiness(config: any) {
     whatsapp: { ready: waMissing.length === 0, missing: waMissing },
     sms: { ready: smsMissing.length === 0, missing: smsMissing },
     voice: { ready: voiceMissing.length === 0, missing: voiceMissing },
-    automationWorker: { ready: !!env('PAC_WORKER_SECRET'), missing: env('PAC_WORKER_SECRET') ? [] : ['PAC_WORKER_SECRET'] }
+    automationWorker: { ready: !!env('PAC_WORKER_SECRET') && env('PAC_CRON_SETUP_COMPLETE') === 'true', missing: [!env('PAC_WORKER_SECRET') && 'PAC_WORKER_SECRET', env('PAC_CRON_SETUP_COMPLETE') !== 'true' && 'Install the one-minute Supabase Vault/pg_cron schedule and set PAC_CRON_SETUP_COMPLETE=true'].filter(Boolean) }
   };
 }
 async function loadWorkspace(service: any, userId: string) {
@@ -190,6 +190,7 @@ Deno.serve(async (req) => {
       if(mergedConfig.server_opening_enabled){
         const channels=mergedConfig.server_opening_channels||[];
         const missing=Array.from(new Set(channels.flatMap((channel:string)=>readinessAfterSave[channel]?.missing||[])));
+        if(!readinessAfterSave.automationWorker.ready)missing.push(...readinessAfterSave.automationWorker.missing);
         if(channels.includes('whatsapp')&&!mergedConfig.whatsapp_opening_template)missing.push('Approved WhatsApp opening template');
         if(channels.includes('sms')&&(!mergedConfig.dlt_promo_template_id||!mergedConfig.dlt_promo_template_text))missing.push('Approved DLT promotional SMS template');
         if(channels.includes('voice')&&(!mergedConfig.dlt_voice_template_id||!mergedConfig.dlt_voice_template_text))missing.push('Registered DLT voice script/template');
@@ -215,6 +216,7 @@ Deno.serve(async (req) => {
       }
       const ready = readiness[channel];
       if (!ready.ready) return json({ error: `${channel.toUpperCase()} provider is not ready.`, missing: ready.missing }, 409);
+      if (!readiness.automationWorker.ready) return json({ error:'The server-side delivery worker is not fully scheduled yet.', missing:readiness.automationWorker.missing },409);
       const ids = Array.isArray(body.customer_ids) ? [...new Set(body.customer_ids.map(String))].slice(0, 1000) : [];
       if (!ids.length) throw new Error('Select at least one customer.');
       const customers = Array.isArray(payload.customers) ? payload.customers : [];
@@ -281,6 +283,7 @@ Deno.serve(async (req) => {
       const invoice = body.invoice || {};
       const customer = (Array.isArray(payload.customers) ? payload.customers : []).find((c: any) => String(c.id) === String(invoice.customerId));
       if (!customer?.phone) throw new Error('Invoice customer or saved mobile number could not be found in the shared customer database.');
+      if (!readiness.automationWorker.ready) return json({ error:'The server-side delivery worker is not fully scheduled yet.', missing:readiness.automationWorker.missing },409);
       const channels: Channel[] = [];
       if (customer.waServiceOptIn === true) channels.push('whatsapp');
       if (customer.smsServiceOptIn === true) channels.push('sms');
