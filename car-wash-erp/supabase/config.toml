@@ -1,0 +1,13 @@
+project_id = "prime-auto-care"
+
+[functions.whatsapp-connect]
+verify_jwt = true
+
+[functions.whatsapp-api]
+verify_jwt = true
+
+[functions.whatsapp-dispatch]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
