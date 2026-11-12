@@ -78,15 +78,34 @@ def make_android_resources() -> None:
         round_icon.save(target / "ic_launcher_round.png", format="PNG", optimize=True)
 
     (res / "drawable").mkdir(parents=True, exist_ok=True)
-    transparent_foreground().save(res / "drawable" / "ic_launcher_foreground.png", format="PNG", optimize=True)
     logo_canvas(512).save(res / "drawable" / "splash.png", format="PNG", optimize=True)
+
+    # Adaptive icons use a separate foreground resource on Android 8+.
+    # Capacitor's template ships a vector named ic_launcher_foreground.xml
+    # (the blue Android/Capacitor mark) in drawable-v24. Referencing drawable
+    # therefore silently selected that vector instead of our generated PNG.
+    # Put the branded transparent foreground in every mipmap density and
+    # reference that resource explicitly from the adaptive icon XML.
+    foreground_sizes = {
+        "mipmap-mdpi": 108,
+        "mipmap-hdpi": 162,
+        "mipmap-xhdpi": 216,
+        "mipmap-xxhdpi": 324,
+        "mipmap-xxxhdpi": 432,
+    }
+    for folder, size in foreground_sizes.items():
+        target = res / folder
+        target.mkdir(parents=True, exist_ok=True)
+        transparent_foreground(size).save(
+            target / "ic_launcher_foreground.png", format="PNG", optimize=True
+        )
 
     adaptive = res / "mipmap-anydpi-v26"
     adaptive.mkdir(parents=True, exist_ok=True)
     icon_xml = """<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
 </adaptive-icon>
 """
     (adaptive / "ic_launcher.xml").write_text(icon_xml, encoding="utf-8")
@@ -120,10 +139,15 @@ def make_android_resources() -> None:
             raise SystemExit("Prime Auto Care launcher icon references were not applied.")
         manifest.write_text(xml, encoding="utf-8")
 
-    foreground = res / "drawable" / "ic_launcher_foreground.png"
-    with Image.open(foreground) as icon:
-        if icon.getchannel("A").getbbox() is None:
-            raise SystemExit("Prime Auto Care launcher foreground is fully transparent.")
+    for folder in foreground_sizes:
+        foreground = res / folder / "ic_launcher_foreground.png"
+        with Image.open(foreground) as icon:
+            if icon.getchannel("A").getbbox() is None:
+                raise SystemExit(f"Prime Auto Care adaptive launcher foreground is fully transparent: {foreground}")
+    for name in ("ic_launcher.xml", "ic_launcher_round.xml"):
+        adaptive_xml = (adaptive / name).read_text(encoding="utf-8")
+        if '@mipmap/ic_launcher_foreground' not in adaptive_xml:
+            raise SystemExit(f"{name} does not reference the branded mipmap foreground.")
 
 
 def main() -> None:
