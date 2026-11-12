@@ -63,6 +63,9 @@ function providerReadiness(config: any) {
     !(config?.exotel_account_sid || env('EXOTEL_ACCOUNT_SID')) && 'Exotel Account SID',
     !cli && 'Exotel caller ID / ExoPhone',
     !config?.exotel_voice_flow_url && 'Approved Exotel voice flow URL',
+    !config?.dlt_entity_id && 'TRAI Principal Entity / DLT Entity ID for commercial voice',
+    !config?.dlt_voice_template_id && 'Registered voice content template ID',
+    !config?.dlt_voice_template_text && 'Exact registered voice script',
     !/^1(?:40|60)\d{2,}$/.test(cli) && 'TRAI-compliant 140/160 caller ID'
   ].filter(Boolean);
   return {
@@ -92,7 +95,7 @@ function allowedConfig(input: any) {
     'whatsapp_marketing_template','whatsapp_marketing_image_template','whatsapp_invoice_template','whatsapp_opening_template','whatsapp_language',
     'exotel_account_sid','exotel_region','exotel_caller_id','exotel_voice_flow_url',
     'dlt_entity_id','dlt_sender_id','dlt_promo_template_id','dlt_promo_template_text',
-    'dlt_service_template_id','dlt_service_template_text',
+    'dlt_service_template_id','dlt_service_template_text','dlt_voice_template_id','dlt_voice_template_text',
     'server_opening_enabled','server_opening_time','server_opening_timezone',
     'server_opening_channels','server_opening_message'
   ];
@@ -185,8 +188,12 @@ Deno.serve(async (req) => {
       const mergedConfig={...settings,...fields};
       const readinessAfterSave=providerReadiness(mergedConfig);
       if(mergedConfig.server_opening_enabled){
-        const missing=Array.from(new Set((mergedConfig.server_opening_channels||[]).flatMap((channel:string)=>readinessAfterSave[channel]?.missing||[])));
-        if(missing.length)return json({error:'Complete the provider configuration before enabling the unattended opening schedule.',missing},409);
+        const channels=mergedConfig.server_opening_channels||[];
+        const missing=Array.from(new Set(channels.flatMap((channel:string)=>readinessAfterSave[channel]?.missing||[])));
+        if(channels.includes('whatsapp')&&!mergedConfig.whatsapp_opening_template)missing.push('Approved WhatsApp opening template');
+        if(channels.includes('sms')&&(!mergedConfig.dlt_promo_template_id||!mergedConfig.dlt_promo_template_text))missing.push('Approved DLT promotional SMS template');
+        if(channels.includes('voice')&&(!mergedConfig.dlt_voice_template_id||!mergedConfig.dlt_voice_template_text))missing.push('Registered DLT voice script/template');
+        if(missing.length)return json({error:'Complete the provider configuration before enabling the unattended opening schedule.',missing:[...new Set(missing)]},409);
       }
       const { data: saved, error } = await service.from('pac_communication_settings')
         .upsert({ workspace_id: workspace.id, ...fields, updated_by: authData.user.id, updated_at: new Date().toISOString() }, { onConflict: 'workspace_id' })
@@ -201,6 +208,7 @@ Deno.serve(async (req) => {
       if (!['whatsapp','sms','voice'].includes(channel)) throw new Error('Choose WhatsApp, SMS or voice.');
       const message = String(body.message || '').trim();
       if (!message || message.length > 900) throw new Error('Enter a message of 1–900 characters.');
+      if(channel==='voice'&&message.length>55)throw new Error('Voice campaign messages must be 55 characters or fewer for the configured Exotel flow.');
       const scheduledAt = body.scheduled_at ? new Date(body.scheduled_at) : new Date();
       if (Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() < Date.now() - 60_000 || scheduledAt.getTime() > Date.now() + 30*24*60*60*1000) {
         throw new Error('Campaign schedule must be now or within the next 30 days.');
@@ -245,6 +253,9 @@ Deno.serve(async (req) => {
         if (channel === 'voice' && !/^1(?:40|60)\d{2,}$/.test(String(settings.exotel_caller_id || '').replace(/\D/g,''))) {
           throw new Error('Automated commercial voice calls require an approved 140/160 series caller ID in India.');
         }
+        if (channel === 'voice' && (!settings.dlt_voice_template_id || !settings.dlt_voice_template_text || !settings.dlt_entity_id)) {
+          throw new Error('Register your voice script/template and Principal Entity on DLT before queuing commercial voice calls.');
+        }
         addJob(rows, { workspaceId: workspace.id, customer, channel, purpose: 'marketing', payload: payloadJob, campaignId, key: `campaign:${campaignId}:${customer.id}:${channel}`, scheduledAt: scheduledAt.toISOString() });
       }
       const inserted = await insertJobs(service, rows);
@@ -275,6 +286,7 @@ Deno.serve(async (req) => {
       const vehicle = String(invoice.vehicle || '');
       for (const channel of channels) {
         if (!readiness[channel].ready) continue;
+        if(channel==='sms'&&(!settings.dlt_service_template_id||!settings.dlt_service_template_text))continue;
         const payloadJob: any = channel === 'whatsapp' ? {
           template_name: settings.whatsapp_invoice_template,
           language: settings.whatsapp_language || 'en',
