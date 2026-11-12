@@ -257,6 +257,36 @@ as $$
         < public.washdesk_record_stamp(item);
 $$;
 
+-- Explicit schema gate: the app checks this read-only version before any write RPC.
+-- This prevents a 2.5.2 client from sending stock-ledger data to an older SQL function.
+create table if not exists public.washdesk_schema_version (
+  singleton boolean primary key default true check (singleton),
+  stock_ledger_version integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+alter table public.washdesk_schema_version enable row level security;
+revoke all on public.washdesk_schema_version from anon, authenticated;
+insert into public.washdesk_schema_version(singleton, stock_ledger_version)
+values (true, 1)
+on conflict (singleton) do update
+  set stock_ledger_version = greatest(public.washdesk_schema_version.stock_ledger_version, excluded.stock_ledger_version),
+      updated_at = now();
+
+create or replace function public.washdesk_get_stock_ledger_version()
+returns integer
+language sql
+stable
+security definer
+set search_path = ''
+as $
+  select stock_ledger_version
+  from public.washdesk_schema_version
+  where singleton = true
+  limit 1;
+$;
+revoke all on function public.washdesk_get_stock_ledger_version() from public, anon;
+grant execute on function public.washdesk_get_stock_ledger_version() to authenticated;
+
 -- Customer names may repeat. Mobile numbers and vehicle registrations may not.
 create or replace function public.washdesk_assert_unique_customer_keys(p_payload jsonb)
 returns void
