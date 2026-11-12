@@ -165,8 +165,26 @@ function applyRemote(payload) {
   if (applied?.__cloudSyncDeferred) return null;
   return applied || payload;
 }
+async function refreshStockLedgerSchemaStatus() {
+  if (!supabase || !user || !workspace) throw new Error('Connect this device with the shared pairing code first.');
+  const { data, error } = await supabase.rpc('washdesk_get_stock_ledger_version');
+  if (error || Number(data) !== 1) {
+    stockLedgerSchemaReady = false;
+    schemaBlocked = true;
+    setStatus('Cloud SQL update required · no stock or invoice writes will be sent until the updated SQL is installed.');
+    throw new Error('CLOUD_SCHEMA_UPDATE_REQUIRED');
+  }
+  stockLedgerSchemaReady = true;
+  schemaBlocked = false;
+  return true;
+}
 async function publishPayload(payload) {
   if (!supabase || !user || !workspace) return false;
+  if (!stockLedgerSchemaReady || schemaBlocked) {
+    queuedPayload = payload;
+    setStatus('Cloud SQL update required · local changes are saved; no cloud write was attempted.');
+    return false;
+  }
   if (syncing) { queuedPayload = payload; return false; }
   syncing = true;
   const body = clone(payload);
@@ -239,6 +257,8 @@ function queueQueuedPush(delay = 700) {
 }
 function schedulePush(payload) {
   if (!user || !workspace || !supabase) return;
+  // Keep the local snapshot queued, but do not send it until the new SQL version is verified.
+  if (schemaBlocked || !stockLedgerSchemaReady) { queuedPayload = payload; return; }
   // Keep only the latest live DB reference while the debounce timer runs.
   // Serializing/cloning the full business database in every save handler blocks
   // the WebView main thread and makes on-screen typing feel unstable.
@@ -282,6 +302,7 @@ function listenForChanges() {
 async function initialSync() {
   if (!supabase || !user || !workspace) throw new Error('Pair this device with the shared Prime Auto Care business first.');
   stockLedgerSchemaReady = false;
+  await refreshStockLedgerSchemaStatus();
   setStatus('Loading shared Prime Auto Care data…');
   const { data, error } = await supabase.from('washdesk_sync')
     .select('payload,updated_at')
@@ -289,9 +310,14 @@ async function initialSync() {
     .maybeSingle();
   if (error) throw error;
   if (data?.payload) {
-    stockLedgerSchemaReady = Number(data.payload?.meta?.serverStockLedgerVersion) === 1;
+    if (Number(data.payload?.meta?.serverStockLedgerVersion) !== 1) {
+      stockLedgerSchemaReady = false;
+      schemaBlocked = true;
+      setStatus('Cloud SQL update required · the workspace has not completed its stock-ledger handshake.');
+      throw new Error('CLOUD_SCHEMA_UPDATE_REQUIRED');
+    }
     const merged = applyRemote(data.payload);
-    if (merged && (!stockLedgerSchemaReady || stableStringify(merged) !== stableStringify(data.payload))) {
+    if (merged && stableStringify(merged) !== stableStringify(data.payload)) {
       await publishPayload(merged);
     } else if (merged) {
       lastPayloadString = stableStringify(data.payload);
@@ -299,10 +325,6 @@ async function initialSync() {
     }
   } else if (localProvider) {
     await publishPayload(localProvider());
-  }
-  if (!stockLedgerSchemaReady) {
-    setStatus('Cloud SQL update required · run the latest Cloud Sync SQL file before using shared inventory.');
-    throw new Error('CLOUD_SCHEMA_UPDATE_REQUIRED');
   }
   listenForChanges();
   startSafetyRefresh();
@@ -380,6 +402,7 @@ async function resume({ getLocal, onRemote }) {
 }
 async function syncNow(payload) {
   if (!supabase || !user || !workspace) throw new Error('Connect this device with the shared device pairing code first.');
+  await refreshStockLedgerSchemaStatus();
   schemaBlocked = false;
   queuedPayload = null;
   return await publishPayload(payload);
