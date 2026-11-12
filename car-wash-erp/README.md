@@ -132,3 +132,95 @@ The following are planned, not implemented or enabled in 2.5.2: official WhatsAp
 - **Voice preview:** the announcement can be spoken on the current device using its speech engine. This is a local preview, not an automated phone call or voice message to customers.
 - **WhatsApp Cloud API, automatic bulk delivery, delivery receipts, SMS gateway delivery and automated voice calls** remain pending provider onboarding and server credentials. The WhatsApp Business app registration by itself does not enable Cloud API sending.
 - **Install:** Android application ID is `com.washdesk.carwash.v12`, keeping the prior v11 app installed separately. The Prime Auto Care launcher logo and Windows branding assets remain part of the build.
+
+
+## Version 2.6.0 — queued WhatsApp, SMS and voice automation
+
+### What the app adds
+
+- **WhatsApp Cloud API:** recipient selection, consent checks, campaign scheduling, optional image media (requires an approved image-header template), customer-specific invoice PDF attachment, and delivery-status tracking through Meta webhooks.
+- **SMS gateway:** queued and scheduled individual messages through Exotel's India SMS API using the exact registered DLT entity, sender header and template.
+- **Automated voice calls:** queued outbound calls through Exotel using an approved 140/160 series caller ID, registered DLT voice script and an Exotel Flow URL. The Flow must read the call `CustomField` (Passthru) and speak the script. The current integration limits the rendered script to 120 characters.
+- **Daily opening announcement:** a server-side schedule can enqueue WhatsApp, SMS and/or voice messages at the configured Asia/Kolkata time even when all phones are closed. It sends only to customers with consent for the selected channel.
+- **Invoice automation:** after local invoice save, the app queues a PDF and customer-specific message for WhatsApp and/or an approved SMS invoice message, provided the customer has enabled the corresponding service-notification permission. If the provider is not configured, the app keeps the saved invoice and falls back to manual PDF sharing.
+- **Queue and history:** jobs are queued centrally with per-recipient idempotency keys, retry limits, provider IDs and status events. The worker processes up to 25 jobs per minute and webhooks update accepted/sent/delivered/read/failed state.
+- **Opt-out:** incoming WhatsApp and SMS STOP/UNSUBSCRIBE messages turn off that channel's marketing and service permissions in the shared customer record. An Exotel voice flow can also pass a digit-9 opt-out event to the callback.
+- **Secrets:** Meta and Exotel access tokens, Supabase service credentials and worker secrets are read only by server-side Supabase Edge Functions. They are not included in the app bundle or Android APK.
+
+### Critical distinction: WhatsApp Business app vs Cloud API
+
+Having installed and registered the WhatsApp Business mobile app does **not** automatically activate the official WhatsApp Cloud API. Unattended sending requires the phone number to be onboarded in a Meta WhatsApp Business Account and a Cloud API Phone Number ID, WABA, access token, App Secret, webhook verification token and approved message templates. The API sender must be active and able to send from that number. Do not paste a Meta access token or OTP into the app, a GitHub issue or this chat.
+
+### Provider onboarding required before unattended delivery
+
+**1. Meta WhatsApp Cloud API**
+
+- In Meta Business Portfolio / WhatsApp Manager, onboard the Prime Auto Care number for the Cloud API and verify that it is an API phone number (not only an app-only registration).
+- Create a Meta app and a system-user access token with WhatsApp messaging permissions; keep the token server-side.
+- Obtain the WABA ID and Phone Number ID.
+- Create and receive approval for these templates (template names are configurable in the app):
+  - Marketing text: `prime_auto_care_offer`, body variables `{{1}}` customer name and `{{2}}` approved campaign text.
+  - Marketing image header: a separate image-header template name entered as the **Approved marketing image template**.
+  - Invoice utility template: `prime_auto_care_invoice`, with a document header and seven body variables (customer, invoice number, date, total, paid, balance, vehicle).
+  - Opening announcement template: `prime_auto_care_opening`, with five body variables (customer, business, opening time, closing time, location).
+- In Meta Webhooks, set the callback URL to `https://YOUR_PROJECT_REF.supabase.co/functions/v1/communication-webhook?provider=whatsapp`, use the same `META_WEBHOOK_VERIFY_TOKEN` as the verification token, and subscribe to the `messages` field so delivery statuses and inbound STOP replies reach the app.
+
+**2. Exotel SMS and voice**
+
+- Open an Exotel account for India and obtain its API Key, API Token and Account SID.
+- Register Prime Auto Care as a Principal Entity on the DLT platform. Obtain the Entity/PE ID, approved sender header and separate approved promotional and service/invoice content-template IDs. Enter the exact approved template text; the app substitutes only the named variables.
+- For voice, arrange the DLT-registered voice script/template and an Exotel Flow/voice app that reads the call's `CustomField` (Passthru) and plays the registered script. The current call payload is limited to 120 characters.
+- Commercial voice calls must use a caller ID/CLI actually allocated and approved to the business in the applicable 140/160 series; the app's format check is not proof that Exotel has allocated or approved it.
+- Configure Exotel delivery-status callbacks to the webhook URL generated by the queue. Configure the Exotel inbound SMS/opt-out callback to `https://YOUR_PROJECT_REF.supabase.co/functions/v1/communication-webhook?provider=exotel&token=YOUR_EXOTEL_WEBHOOK_TOKEN`; the handler expects inbound `From` and `Body` fields for STOP processing.
+- Obtain the customer's explicit channel-specific permission before marketing SMS or calls. Do not tick a consent box unless the customer really agreed.
+
+**3. Add server secrets in Supabase**
+
+Deploy the Supabase functions first (next section), then open **Supabase Dashboard → Project Settings → Edge Functions → Secrets** and add these values:
+
+| Secret name | Value/source |
+|---|---|
+| `META_ACCESS_TOKEN` | Meta system-user / Cloud API access token |
+| `META_APP_SECRET` | Meta app secret used to verify webhook signatures |
+| `META_WEBHOOK_VERIFY_TOKEN` | A random verification phrase you create; also enter it in Meta Webhooks |
+| `META_GRAPH_API_VERSION` | Current Graph API version enabled for your Meta app, e.g. `vXX.0` |
+| `EXOTEL_API_KEY` | Exotel dashboard |
+| `EXOTEL_API_TOKEN` | Exotel dashboard |
+| `EXOTEL_WEBHOOK_TOKEN` | A long random secret used to authenticate Exotel callbacks |
+| `PAC_WORKER_SECRET` | A long random secret; use the exact same value in Supabase Vault for the cron job |
+| `PAC_CRON_SETUP_COMPLETE` | Set to `true` only after the one-minute Vault/pg_cron schedule is installed and verified |
+
+Supabase supplies `SUPABASE_URL` and its service credentials to Edge Functions. The function also accepts the newer Supabase secret-key environment format if your project uses it. Do not put any of these values in `index.html`, `package.json`, the APK or the Windows EXE.
+
+**4. Deploy the database migration and Edge Functions**
+
+The repository includes `supabase/migrations/20261112000100_communications_automation.sql`, `supabase/functions/communication-api`, `communication-worker` and `communication-webhook`.
+
+In GitHub, add these repository Actions secrets (not app environment variables):
+- `SUPABASE_ACCESS_TOKEN` — a personal access token for the Supabase CLI.
+- `SUPABASE_PROJECT_REF` — your existing project reference (the project URL is already configured in the app).
+- `SUPABASE_DB_PASSWORD` — the project's database password.
+
+Then open **GitHub → Actions → Deploy Prime Auto Care communications backend → Run workflow**. The workflow links to your existing Supabase project, runs `supabase db push`, and deploys the three Edge Functions. Check the workflow result before configuring the cron.
+
+**5. Enable the one-minute server queue**
+
+- After deployment, add the Supabase Vault entries `pac_project_url` and `pac_worker_secret`. The latter must be exactly the same random value as `PAC_WORKER_SECRET` in Edge Function Secrets.
+- Run `communications-cron-setup.sql` once in the existing Supabase SQL Editor. It schedules `communication-worker` every minute through Supabase `pg_cron` and `pg_net`.
+- Verify the row exists in `cron.job` and the function logs show successful worker invocations.
+- Only then set `PAC_CRON_SETUP_COMPLETE=true` in Edge Function Secrets and redeploy/update the functions if needed. Until this is set, the app intentionally refuses to queue unattended sends.
+- In the app, open **Offers & Messaging → Provider and automation setup**, save the non-secret Meta/Exotel/DLT IDs and templates, then use the status panel. Missing provider prerequisites are shown there.
+
+### First live test
+
+1. Add a test customer whose phone you control.
+2. Capture and save that customer's explicit WhatsApp, SMS and/or voice consent.
+3. Test a single WhatsApp template message first, then an invoice PDF, one DLT SMS and one voice call.
+4. Check provider job IDs, delivery callback events and opt-out behavior before selecting more customers.
+5. Confirm the daily opening schedule only after the test channels show ready.
+
+### Delivery guarantees and remaining provider work
+
+The queue is **at-least-once**, not a bank-style exactly-once transport: if a provider accepts a request but the connection drops before the worker receives the provider ID, a retry can cause a duplicate. Per-recipient idempotency prevents duplicate queue rows when users click twice, but it cannot make an external provider API transaction atomic with Supabase. Check the job history and test with one recipient before large campaigns.
+
+Meta template approval, number/API onboarding, Exotel account activation, DLT registration, actual sender/caller-ID allocation, Exotel Flow authoring and Supabase secrets/cron deployment are external account steps. The APK contains the integration and setup controls, but unattended delivery is **not live until every required provider and server step above has been completed successfully**. Manual WhatsApp share, local daily reminder and on-device voice preview remain available independently.
