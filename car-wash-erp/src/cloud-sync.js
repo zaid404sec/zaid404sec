@@ -207,7 +207,6 @@ async function publishPayload(payload) {
       window.dispatchEvent(new CustomEvent('washdesk-cloud-conflict', { detail: 'This device is using an older Prime Auto Care build. Update every paired phone and computer to version 2.5.2 before syncing stock changes.' }));
     } else if (message.includes('INSUFFICIENT_STOCK')) {
       schemaBlocked = true;
-      stockLedgerSchemaReady = false;
       queuedPayload = body;
       clearTimeout(pushTimer);
       setStatus('Stock conflict · this device has a pending change that would make shared stock negative.');
