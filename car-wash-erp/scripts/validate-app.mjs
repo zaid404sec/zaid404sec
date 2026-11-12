@@ -42,7 +42,9 @@ if (!html.includes('data-action="share-offer-whatsapp"') ||
   throw new Error('Offers must support selected opted-in contacts and one manual WhatsApp Business share, with no automated send loop.');
 }
 console.log('PASS: bulk offers select opted-in customers, support a promo image and use one manual WhatsApp Business share action');
-if (!html.includes("if(custId&&cust?.phone&&window.WashDeskFileSharer?.share){notify('Invoice saved. Preparing the customer-specific PDF and WhatsApp message…');void shareInvoice(inv.id)}")) {
+if (!html.includes('if(custId&&cust?.phone&&window.WashDeskFileSharer?.share)') ||
+    !html.includes("notify('Invoice saved. Preparing the customer-specific PDF and WhatsApp message…')") ||
+    !html.includes('void shareInvoice(inv.id)')) {
   throw new Error('A saved invoice with a customer mobile number must automatically open the customer-specific PDF/message share sheet.');
 }
 const invoiceShareStart=html.indexOf('async function shareInvoice(invId)');
