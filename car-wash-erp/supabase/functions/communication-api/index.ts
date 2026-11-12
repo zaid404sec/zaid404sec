@@ -38,6 +38,8 @@ function secretServiceKey() {
 function providerReadiness(config: any) {
   const waMissing = [
     !env('META_ACCESS_TOKEN') && 'META_ACCESS_TOKEN',
+    !env('META_APP_SECRET') && 'META_APP_SECRET',
+    !env('META_WEBHOOK_VERIFY_TOKEN') && 'META_WEBHOOK_VERIFY_TOKEN',
     !env('META_GRAPH_API_VERSION') && 'META_GRAPH_API_VERSION',
     !(config?.whatsapp_phone_number_id || env('META_PHONE_NUMBER_ID')) && 'WhatsApp Phone Number ID',
     !config?.whatsapp_marketing_template && 'WhatsApp marketing template',
@@ -87,7 +89,7 @@ async function loadWorkspace(service: any, userId: string) {
 function allowedConfig(input: any) {
   const keys = [
     'whatsapp_business_number','whatsapp_phone_number_id','whatsapp_waba_id',
-    'whatsapp_marketing_template','whatsapp_invoice_template','whatsapp_opening_template','whatsapp_language',
+    'whatsapp_marketing_template','whatsapp_marketing_image_template','whatsapp_invoice_template','whatsapp_opening_template','whatsapp_language',
     'exotel_account_sid','exotel_region','exotel_caller_id','exotel_voice_flow_url',
     'dlt_entity_id','dlt_sender_id','dlt_promo_template_id','dlt_promo_template_text',
     'dlt_service_template_id','dlt_service_template_text',
@@ -180,6 +182,12 @@ Deno.serve(async (req) => {
     if (action === 'save-config') {
       if (member.role !== 'owner') return json({ error: 'Only the Prime Auto Care workspace owner can configure messaging providers.' }, 403);
       const fields = allowedConfig(body.config || {});
+      const mergedConfig={...settings,...fields};
+      const readinessAfterSave=providerReadiness(mergedConfig);
+      if(mergedConfig.server_opening_enabled){
+        const missing=Array.from(new Set((mergedConfig.server_opening_channels||[]).flatMap((channel:string)=>readinessAfterSave[channel]?.missing||[])));
+        if(missing.length)return json({error:'Complete the provider configuration before enabling the unattended opening schedule.',missing},409);
+      }
       const { data: saved, error } = await service.from('pac_communication_settings')
         .upsert({ workspace_id: workspace.id, ...fields, updated_by: authData.user.id, updated_at: new Date().toISOString() }, { onConflict: 'workspace_id' })
         .select('*').single();
@@ -213,6 +221,7 @@ Deno.serve(async (req) => {
       const campaignId = crypto.randomUUID();
       let mediaPath: string | null = null;
       if (body.attachment?.base64) {
+        if (!settings.whatsapp_marketing_image_template) return json({ error:'Add an approved WhatsApp image-header template name before attaching a campaign image.' },409);
         const mime = String(body.attachment.mime || '');
         const ext = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
         mediaPath = await storeMedia(service, workspace.id, String(body.attachment.base64), mime, ext);
@@ -220,7 +229,7 @@ Deno.serve(async (req) => {
       const rows: any[] = [];
       for (const customer of eligible) {
         const payloadJob: any = {
-          template_name: channel === 'whatsapp' ? settings.whatsapp_marketing_template : undefined,
+          template_name: channel === 'whatsapp' ? (mediaPath ? settings.whatsapp_marketing_image_template : settings.whatsapp_marketing_template) : undefined,
           language: settings.whatsapp_language || 'en',
           message,
           dlt_template_id: settings.dlt_promo_template_id,
