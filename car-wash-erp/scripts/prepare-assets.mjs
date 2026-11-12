@@ -13,6 +13,7 @@ const excelJsTarget = path.join(root, 'exceljs.bundle.min.js');
 const nativeBundleTarget = path.join(root, 'invoice-native.bundle.js');
 const reportBundleTarget = path.join(root, 'report-export.bundle.js');
 const cloudBundleTarget = path.join(root, 'cloud-sync.bundle.js');
+const notificationsBundleTarget = path.join(root, 'notifications-native.bundle.js');
 
 await copyFile(pdfMakeSource, pdfMakeTarget);
 const pdfMakeFonts = await readFile(pdfMakeFontsSource, 'utf8');
@@ -41,4 +42,5 @@ await build({
 
 await build({ entryPoints: [path.join(root, 'src', 'report-export.js')], outfile: reportBundleTarget, bundle: true, platform: 'browser', format: 'iife', target: ['es2020'], minify: true, legalComments: 'none' });
 await build({ entryPoints: [path.join(root, 'src', 'cloud-sync.js')], outfile: cloudBundleTarget, bundle: true, platform: 'browser', format: 'iife', target: ['es2020'], minify: true, legalComments: 'none' });
-console.log('Prepared native PDFMake invoices, native file sharing, secure Excel export and cloud sync bundles.');
+await build({ entryPoints: [path.join(root, 'src', 'local-notifications.js')], outfile: notificationsBundleTarget, bundle: true, platform: 'browser', format: 'iife', target: ['es2020'], minify: true, legalComments: 'none' });
+console.log('Prepared native PDFMake invoices, native file sharing, local notifications, secure Excel export and cloud sync bundles.');
