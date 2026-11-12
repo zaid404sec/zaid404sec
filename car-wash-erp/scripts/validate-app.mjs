@@ -465,13 +465,20 @@ if (!sql.includes("'products', 'stockMovements'") ||
     !sql.includes("coalesce(p_payload->'meta'->>'stockLedgerVersion','') <> '1'") ||
     !sql.includes("message = 'INSUFFICIENT_STOCK'") ||
     !sql.includes("'{meta,serverStockLedgerVersion}'") ||
-    !sql.includes("v_stock_qty := v_opening + coalesce(v_movement_delta, 0)")) {
+    !sql.includes("v_stock_qty := v_opening + coalesce(v_movement_delta, 0)") ||
+    !sql.includes("create table if not exists public.washdesk_schema_version") ||
+    !sql.includes("create or replace function public.washdesk_get_stock_ledger_version()") ||
+    !sql.includes("jsonb_build_object('stockLedgerVersion', 1, 'serverStockLedgerVersion', 1)") ||
+    !sql.includes("'{stockOpeningQty}'")) {
   throw new Error('Cloud SQL must gate old clients, reconcile the stock ledger and reject negative shared stock.');
 }
 if (!cloudSource.includes('Number(canonical?.meta?.serverStockLedgerVersion) !== 1') ||
     !cloudSource.includes("message.includes('APP_UPDATE_REQUIRED')") ||
     !cloudSource.includes("message.includes('INSUFFICIENT_STOCK')") ||
-    !cloudSource.includes('if (!stockLedgerSchemaReady) throw new Error')) {
+    !cloudSource.includes('if (!stockLedgerSchemaReady) throw new Error') ||
+    !cloudSource.includes("supabase.rpc('washdesk_get_stock_ledger_version')") ||
+    !cloudSource.includes("async function refreshStockLedgerSchemaStatus()") ||
+    !cloudSource.includes("if (!stockLedgerSchemaReady || schemaBlocked)")) {
   throw new Error('Cloud sync must require server-side stock-ledger confirmation and surface blocked inventory sync.');
 }
 const stockHelperStart=html.indexOf('function reconcileStockLedger(data){');
@@ -489,8 +496,30 @@ console.log('PASS: unique stock movement IDs prevent retry double-counting and s
 console.log('PASS: stock movements are recorded for invoice, cancellation, edit, purchase and adjustment workflows');
 console.log('PASS: server merge reconciles unique movements under the workspace lock and rejects negative stock');
 console.log('PASS: shared invoice numbering is disabled until updated server SQL confirms the ledger schema');
+const initialSyncStart=cloudSource.indexOf('async function initialSync()');
+const initialSyncEnd=cloudSource.indexOf('function startSafetyRefresh()',initialSyncStart);
+const initialSyncSource=cloudSource.slice(initialSyncStart,initialSyncEnd);
+if (!(initialSyncSource.indexOf('await refreshStockLedgerSchemaStatus()') < initialSyncSource.indexOf('supabase.from(\'washdesk_sync\')')) ||
+    !initialSyncSource.includes("throw new Error('CLOUD_SCHEMA_UPDATE_REQUIRED')")) {
+  throw new Error('The app must check the read-only SQL version before loading or writing the shared workspace.');
+}
+const rollbackWorkflows=[
+  ['async function saveBill()', 'function applyConsumption', 'if(!save()){restoreDatabase(dbBefore)'],
+  ['function cancelInvoice(', 'function invoiceEditLineRows', 'if(!save()){restoreDatabase(dbBefore)'],
+  ['function saveInvoiceEdits(', 'function invoiceTaxLines', 'if(!save()){restoreDatabase(dbBefore)'],
+  ['function addPurchaseForm(', 'function saveStaffAttendance', 'if(!save()){restoreDatabase(dbBefore)'],
+  ['function stockAdjustForm(', 'function addVehicleForm', 'if(!save()){restoreDatabase(dbBefore)']
+];
+for (const [startToken,endToken,guard] of rollbackWorkflows) {
+  const start=html.indexOf(startToken),end=html.indexOf(endToken,start);
+  if(start<0||end<0||!html.slice(start,end).includes(guard)) {
+    throw new Error('Failed local storage writes must rollback the corresponding invoice or inventory operation: '+startToken);
+  }
+}
+console.log('PASS: failed local storage writes rollback invoices, cancellations, edits, purchases and stock adjustments');
 
-for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'attendance', 'stockmovements', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'device_not_paired']) {
+
+for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'attendance', 'stockmovements', 'washdesk_schema_version', 'washdesk_get_stock_ledger_version', 'stock_ledger_version', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'device_not_paired']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
 }
 if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
