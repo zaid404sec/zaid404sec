@@ -155,8 +155,9 @@ async function sendVoice(job: any, config: any) {
   form.set('Url', flowUrl);
   if (job.purpose === 'invoice' || job.purpose === 'service') form.set('CallType','trans');
   form.set('TimeLimit', '60');
-  const voiceText = String(job.payload.message || voiceTemplateText).slice(0,55);
-  form.set('CustomField', `PAC:${job.id}:${voiceTemplateId}:${voiceText}`);
+  const voiceText = String(job.payload.voice_text || job.payload.message || voiceTemplateText);
+  if(voiceText.length>120)throw new Error('The rendered voice script exceeds Exotel’s 128-character CustomField limit.');
+  form.set('CustomField', voiceText);
   const callbackSecret = env('EXOTEL_WEBHOOK_TOKEN');
   if (callbackSecret) {
     form.set('StatusCallback', `${env('SUPABASE_URL')}/functions/v1/communication-webhook?provider=exotel&token=${encodeURIComponent(callbackSecret)}&job_id=${job.id}`);
