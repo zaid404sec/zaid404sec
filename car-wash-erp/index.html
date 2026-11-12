@@ -229,14 +229,14 @@
   function notify(s){const t=document.getElementById('toast');t.textContent=s;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800)}
   function setPage(p){if(page!==p)applyPendingRemoteData();page=p;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));document.getElementById('sidebar').classList.remove('open');document.getElementById('top-title').textContent=({dashboard:'Dashboard',billing:'New bill',invoices:'Invoices',customers:'Customers & vehicles',services:'Services & packages',inventory:'Inventory',purchases:'Purchases',expenses:'Expenses',staff:'Staff',reports:'Reports',offers:'Offers & WhatsApp',settings:'Business settings'})[p]||'Prime Auto Care';document.getElementById('top-subtitle').textContent=({dashboard:'Your business at a glance',billing:'Create a customer bill in a few steps',invoices:'Search, review and share every saved invoice',customers:'Customer contacts, vehicles and visit history',services:'Set service rates for private, taxi and commercial vehicles',inventory:'Track chemicals and consumables',purchases:'Record supplier purchases and stock received',expenses:'Daily, monthly and all-time business expenses',staff:'Staff profiles, monthly salaries and payments',reports:'Sales registers and Excel reports',offers:'Prepare WhatsApp offers for customers who agreed to receive them',settings:'Business profile, backups and connected cloud sync'})[p]||'';render(false);window.scrollTo(0,0)}
   function fy(d=today()){const x=new Date(d+'T00:00:00');let y=x.getFullYear();if(x.getMonth()+1<4)y--;return `${String(y).slice(-2)}-${String(y+1).slice(-2)}`}
-  function nextInvoiceNo(date=today()){const prefix=(db.business.invoicePrefix||'CW').replace(/[^A-Za-z0-9-]/g,'').slice(0,4).toUpperCase()||'CW';const key=String(date).slice(2).replace(/-/g,'');const n=db.invoices.filter(x=>x.date===date).reduce((m,x)=>{const z=String(x.number||'').match(/-(\\d{3,})$/);return Math.max(m,z?Number(z[1]):0)},0)+1;return `${prefix}-${key}-${String(n).padStart(3,'0')}`}
-  function offlineInvoiceNo(date=today()){const base=nextInvoiceNo(date).replace(/-\\d+$/,'');return base+'-OFF-'+id().toUpperCase()}
+  function nextInvoiceNo(date=today()){const prefix=(db.business.invoicePrefix||'CW').replace(/[^A-Za-z0-9-]/g,'').slice(0,4).toUpperCase()||'CW';const key=String(date).slice(2).replace(/-/g,'');const n=db.invoices.filter(x=>x.date===date).reduce((m,x)=>{const z=String(x.number||'').match(/-(\d{3,})$/);return Math.max(m,z?Number(z[1]):0)},0)+1;return `${prefix}-${key}-${String(n).padStart(3,'0')}`}
+  function offlineInvoiceNo(date=today()){const base=nextInvoiceNo(date).replace(/-\d+$/,'');return base+'-OFF-'+id().toUpperCase()}
   async function reserveInvoiceNo(date=today()){
     const shared=window.WashDeskCloud?.getWorkspace?.();
     if(shared?.workspace_id&&!navigator.onLine)return offlineInvoiceNo(date);
     if(shared?.workspace_id){
       if(!window.WashDeskCloud?.nextInvoiceNumber)throw new Error('Shared invoice numbering is unavailable. Reconnect cloud sync before saving this bill.');
-      return await window.WashDeskCloud.nextInvoiceNumber({prefix:db.business.invoicePrefix||'CW',date,minNext:Number(nextInvoiceNo(date).match(/-(\\d+)$/)?.[1]||1)});
+      return await window.WashDeskCloud.nextInvoiceNumber({prefix:db.business.invoicePrefix||'CW',date,minNext:Number(nextInvoiceNo(date).match(/-(\d+)$/)?.[1]||1)});
     }
     return nextInvoiceNo(date);
   }
