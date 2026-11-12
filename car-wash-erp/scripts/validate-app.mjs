@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.5.1') throw new Error('The package version must be 2.5.1.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v10') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v10.');
+if (packageJson.version !== '2.5.2') throw new Error('The package version must be 2.5.2.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v11') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v11.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -27,6 +27,31 @@ if (!html.includes('data-action="share-offer-whatsapp"') ||
   throw new Error('Offers must use one manual WhatsApp share action, not a per-customer auto-campaign loop.');
 }
 console.log('PASS: offers use the Android share menu / existing WhatsApp app; official API automation remains separate and pending');
+if (!html.includes('function reconcileStockLedger(data)') ||
+    !html.includes('function recordStockMovement(productId,delta,reason,sourceId,movementId)') ||
+    !html.includes("collections=['customers','vehicles','services','invoices','products','stockMovements','purchases','expenses','staff','staffAdvances','attendance','payments']") ||
+    !html.includes("recordStockMovement(productId,-qty,'invoice',invoiceId") ||
+    !html.includes("recordStockMovement(productId,qty,'invoice-cancellation',i.id") ||
+    !html.includes("recordStockMovement(p.id,q,'purchase',purchaseId") ||
+    !html.includes("recordStockMovement(p.id,delta,'manual-adjustment',movementId")) {
+  throw new Error('Stock movements must be recorded for every stock-changing workflow and merged by unique ID.');
+}
+if (!sql.includes("'products', 'stockMovements'") ||
+    !sql.includes("coalesce(p_payload->'meta'->>'stockLedgerVersion','') <> '1'") ||
+    !sql.includes("message = 'INSUFFICIENT_STOCK'") ||
+    !sql.includes("'{meta,serverStockLedgerVersion}'") ||
+    !sql.includes("v_stock_qty := v_opening + coalesce(v_movement_delta, 0)")) {
+  throw new Error('Cloud SQL must gate old clients, reconcile the stock ledger and reject negative shared stock.');
+}
+if (!cloudSource.includes('Number(canonical?.meta?.serverStockLedgerVersion) !== 1') ||
+    !cloudSource.includes("message.includes('APP_UPDATE_REQUIRED')") ||
+    !cloudSource.includes("message.includes('INSUFFICIENT_STOCK')") ||
+    !cloudSource.includes('if (!stockLedgerSchemaReady) throw new Error')) {
+  throw new Error('Cloud sync must require server-side stock-ledger confirmation and surface blocked inventory sync.');
+}
+console.log('PASS: stock movements are recorded for invoice, cancellation, edit, purchase and adjustment workflows');
+console.log('PASS: server merge reconciles unique movements under the workspace lock and rejects negative stock');
+console.log('PASS: shared invoice numbering is disabled until updated server SQL confirms the ledger schema');
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -72,7 +97,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v10') throw new Error('Android stability release app ID v10 was not set.');
+if (appId !== 'com.washdesk.carwash.v11') throw new Error('Android stability release app ID v11 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -452,7 +477,7 @@ if (html.includes('Files → Downloads → WashDesk') ||
 console.log('PASS: invoice PDFs and full backups use the Prime Auto Care Downloads folder');
 
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
-for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'attendance', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'device_not_paired']) {
+for (const token of ['washdesk_merge_sync', 'security definer', 'for update', 'enable row level security', 'washdesk_next_invoice_number', 'washdesk_assert_unique_customer_keys', 'attendance', 'stockMovements', 'duplicate_customer_mobile', 'duplicate_vehicle_registration', 'staffadvances', 'washdesk_workspaces', 'washdesk_workspace_members', 'washdesk_join_workspace', 'washdesk_get_workspace', 'washdesk_create_pairing_code', 'washdesk_can_read_sync', 'device pairing code', 'device_not_paired']) {
   if (!sql.toLowerCase().includes(token)) throw new Error('Cloud SQL security/consistency hook missing: ' + token);
 }
 if (!sql.includes("p_value ~ '^-?[0-9]+([.][0-9]+)?$' then")) throw new Error('Cloud SQL numeric validation regex is invalid.');
