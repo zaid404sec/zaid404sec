@@ -407,6 +407,24 @@ async function syncNow(payload) {
   queuedPayload = null;
   return await publishPayload(payload);
 }
+async function whatsappConnect(payload) {
+  if (!supabase || !user || !workspace) throw new Error('Pair this device with the shared Prime Auto Care database first.');
+  const { data, error } = await supabase.functions.invoke('whatsapp-connect', { body: payload });
+  if (error) {
+    const message = error?.context?.body?.error || error.message || 'WhatsApp could not connect.';
+    throw new Error(message);
+  }
+  return data;
+}
+async function whatsappApi(payload) {
+  if (!supabase || !user || !workspace) throw new Error('Pair this device with the shared Prime Auto Care database first.');
+  const { data, error } = await supabase.functions.invoke('whatsapp-api', { body: payload });
+  if (error) {
+    const message = error?.context?.body?.error || error.message || 'WhatsApp automation request failed.';
+    throw new Error(message);
+  }
+  return data;
+}
 async function nextInvoiceNumber({ prefix, date, minNext }) {
   if (!supabase || !user || !workspace) throw new Error('Shared cloud database is not connected.');
   if (!stockLedgerSchemaReady) throw new Error('Run the latest Prime Auto Care Cloud Sync SQL update before reserving shared invoice numbers.');
@@ -442,6 +460,8 @@ window.WashDeskCloud = {
   schedulePush,
   syncNow,
   nextInvoiceNumber,
+  whatsappConnect,
+  whatsappApi,
   disconnect,
   getStatus: () => statusText,
   getConfig: () => readConfig(),
