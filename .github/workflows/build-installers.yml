@@ -100,7 +100,7 @@ jobs:
       - name: Prepare web assets
         run: |
           mkdir www
-          cp index.html manifest.webmanifest icon.svg prime-auto-care-icon-192.png prime-auto-care-icon-512.png prime-auto-care-logo.jpg prime-auto-care-car-photo.jpg pdfmake.bundle.min.js pdfmake-vfs.js invoice-native.bundle.js exceljs.bundle.min.js report-export.bundle.js cloud-sync.bundle.js notifications-native.bundle.js communications.bundle.js native-links.bundle.js cloud-sync-setup.sql www/
+          cp index.html manifest.webmanifest icon.svg prime-auto-care-icon-192.png prime-auto-care-icon-512.png prime-auto-care-logo.jpg prime-auto-care-car-photo.jpg pdfmake.bundle.min.js pdfmake-vfs.js invoice-native.bundle.js exceljs.bundle.min.js report-export.bundle.js cloud-sync.bundle.js notifications-native.bundle.js communications.bundle.js cloud-sync-setup.sql www/
       - name: Add Android platform
         run: npx cap add android
       - name: Sync web app
