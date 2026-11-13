@@ -629,16 +629,19 @@ if (!html.includes('<script src="./communications.bundle.js"></script>') ||
     !html.includes('dlt_voice_template_id')) {
   throw new Error('The communications client must be loaded and precached for offline-safe app startup.');
 }
-if (!html.includes('data-action="queue-whatsapp-cloud"') ||
-    !html.includes('data-action="queue-sms-gateway"') ||
-    !html.includes('data-action="queue-voice-calls"') ||
-    !html.includes('function queueMarketingCampaign(channel)') ||
-    !html.includes('function saveCommunicationSettings(e)') ||
+if (html.includes('data-action="queue-whatsapp-cloud"') ||
+    html.includes('data-action="queue-sms-gateway"') ||
+    html.includes('data-action="queue-voice-calls"') ||
+    html.includes('PrimeAutoCareMessaging?.sendInvoice') ||
+    !html.includes('data-action="copy-broadcast-message"') ||
+    !html.includes('data-action="export-broadcast-contacts"') ||
     !html.includes('data-consent-field=') ||
-    !html.includes("void shareInvoice(inv.id)") ||
-    !html.includes('PrimeAutoCareMessaging?.sendInvoice')) {
-  throw new Error('The app must provide consent-aware WhatsApp/SMS/voice campaigns and automatic invoice queue handoff.');
+    !html.includes('function openInvoiceCustomerChat') ||
+    !html.includes('data-open-whatsapp-invoice')) {
+  throw new Error('Free mode must use WhatsApp Broadcast Lists, keep paid API queues disabled and open invoice chats directly by saved customer number.');
 }
+console.log('PASS: free mode disables paid queue controls and keeps opted-in WhatsApp broadcast tools');
+console.log('PASS: invoice PDF is saved and customer chat opens directly with a prepared message');
 const communicationsClient = await readFile(new URL('../src/communications.js', import.meta.url), 'utf8');
 if (!communicationsClient.includes("functions/v1/communication-api") ||
     !communicationsClient.includes('getApiContext') ||
