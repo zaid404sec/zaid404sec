@@ -224,3 +224,14 @@ Then open **GitHub → Actions → Deploy Prime Auto Care communications backend
 The queue is **at-least-once**, not a bank-style exactly-once transport: if a provider accepts a request but the connection drops before the worker receives the provider ID, a retry can cause a duplicate. Per-recipient idempotency prevents duplicate queue rows when users click twice, but it cannot make an external provider API transaction atomic with Supabase. Check the job history and test with one recipient before large campaigns.
 
 Meta template approval, number/API onboarding, Exotel account activation, DLT registration, actual sender/caller-ID allocation, Exotel Flow authoring and Supabase secrets/cron deployment are external account steps. The APK contains the integration and setup controls, but unattended delivery is **not live until every required provider and server step above has been completed successfully**. Manual WhatsApp share, local daily reminder and on-device voice preview remain available independently.
+
+ 
+## Version 2.6.1 — free WhatsApp workflow
+
+- Free marketing delivery uses WhatsApp Business's built-in Broadcast Lists. The app selects only customers with explicit WhatsApp marketing consent, exports their contacts as a VCF file, and copies the campaign text. Import the VCF into Android Contacts and create a reusable Broadcast List in WhatsApp Business. WhatsApp sends one-to-many messages when the operator opens the saved list and presses Send.
+- Broadcast recipients must save the Prime Auto Care WhatsApp Business number in their own phone contacts. Each list is limited to 256 contacts; use multiple lists for a larger audience. WhatsApp may impose monthly broadcast limits in some markets.
+- **No automatic sends in free mode:** the app does not queue paid WhatsApp Cloud API, SMS gateway or voice campaigns. Those controls are hidden/disabled in the free Offers workflow. This avoids surprise charges.
+- Daily opening reminder defaults to 7:00 AM and is stored locally on each phone. Android notification permission is required; tapping the reminder opens the prepared announcement. It does not send by itself.
+- After an invoice is safely saved, the PDF is saved to Downloads / Prime Auto Care and the app opens the customer's direct WhatsApp chat using the saved mobile number and a prefilled message. The operator attaches the saved PDF and presses Send manually. The invoice is not sent automatically.
+- Android uses app ID `com.washdesk.carwash.v14` so the new build can install beside v13. Previous app data is retained in the older installation until the new build is connected and checked.
+- Paid WhatsApp Cloud API, SMS gateway, scheduled campaigns and outbound voice remain available only as future integrations after explicit cost approval and provider configuration.
