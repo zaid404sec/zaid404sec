@@ -661,7 +661,7 @@
     <div class="notice" style="margin-top:14px">Important: this is an operational management report, not a double-entry Tally ledger, audited Profit & Loss, Balance Sheet, GST return or tax filing report.</div>`
   }
   function toggleWhatsAppConsent(cid){const c=db.customers.find(x=>x.id===cid);if(!c)return;c.waOptIn=!c.waOptIn;c.updatedAt=Date.now();if(!save())return;render();notify(c.waOptIn?'WhatsApp offer permission enabled.':'WhatsApp offer permission removed.')}
-  function offerPhone(phone){let p=String(phone||'').replace(/\D/g,'');if(p.length===10)p='91'+p;return p}
+  function offerPhone(phone){let p=String(phone||'').replace(/\D/g,'');if(p.length===10)p='91'+p;else if(p.length===11&&p.startsWith('0'))p='91'+p.slice(1);return p}
   function offers(){
     const eligible=db.customers.filter(c=>c.waOptIn===true&&offerPhone(c.phone).length>=11);
     const withPhone=db.customers.filter(c=>offerPhone(c.phone).length>=11);
