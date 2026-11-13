@@ -42,29 +42,26 @@ if (!html.includes('data-action="share-offer-whatsapp"') ||
   throw new Error('Offers must support selected opted-in contacts and one manual WhatsApp Business share, with no automated send loop.');
 }
 console.log('PASS: bulk offers select opted-in customers, support a promo image and use one manual WhatsApp Business share action');
-if (!html.includes('if(custId&&cust?.phone&&window.WashDeskFileSharer?.share)') ||
-    !html.includes("notify('Invoice saved. Preparing the customer-specific PDF and WhatsApp message…')") ||
-    !html.includes('void shareInvoice(inv.id)')) {
-  throw new Error('A saved invoice with a customer mobile number must automatically open the customer-specific PDF/message share sheet.');
-}
-const invoiceShareStart=html.indexOf('async function shareInvoice(invId)');
-const invoiceShareEnd=html.indexOf('function printInvoice',invoiceShareStart);
-const invoiceShareSource=html.slice(invoiceShareStart,invoiceShareEnd);
-for (const token of ['invoiceCustomerName(i)', 'customer?.phone', 'makePdfBlob(i)', 'contentType:\'application/pdf\'', 'text:message', 'chooserTitle:']) {
-  if (!invoiceShareSource.includes(token)) throw new Error('Customer-specific invoice share is missing: '+token);
+if (html.includes('window.PrimeAutoCareMessaging?.sendInvoice') ||
+    !html.includes('await saveInvoicePdf(inv.id);openInvoiceCustomerChat(inv.id)') ||
+    !html.includes('function openInvoiceCustomerChat(invId)') ||
+    !html.includes('data-open-whatsapp-invoice') ||
+    !html.includes('https://wa.me/'+phone+'?text=')) {
+  throw new Error('Free invoice workflow must save the PDF and open the saved customer number directly without automatic API delivery.');
 }
 if (!html.includes("Opening announcement prepared in the offer message box.") ||
-    !html.includes('data-action="share-opening-sms"') ||
     !html.includes('data-action="preview-opening-voice"') ||
     !html.includes('function openingAnnouncementMessage()') ||
     !html.includes('function previewOpeningAnnouncement()') ||
     !html.includes('openingReminderEnabled') ||
     !html.includes('openingReminderTime') ||
-    !html.includes('scheduleOpeningReminder')) {
-  throw new Error('Daily opening announcement, SMS share and local voice preview workflow is incomplete.');
+    !html.includes('scheduleOpeningReminder') ||
+    !html.includes("const DEVICE_REMINDER_KEY='prime-auto-care-device-opening-reminder-v1'") ||
+    !html.includes("time:deviceReminder.time||'07:00'")) {
+  throw new Error('Daily opening announcement and phone-local 7:00 AM notification workflow is incomplete.');
 }
-console.log('PASS: saved customer invoices open the personalised message + PDF share sheet without sending automatically');
-console.log('PASS: daily opening reminder, opening-hours message, manual SMS share and local voice preview are present');
+console.log('PASS: invoice saves a PDF then opens the direct customer WhatsApp chat for manual attachment/send');
+console.log('PASS: daily opening reminder is local to the phone and defaults to 7:00 AM');
 if (!html.includes("const DEVICE_REMINDER_KEY='prime-auto-care-device-opening-reminder-v1'") ||
     !html.includes("time:'07:00'") ||
     !html.includes("time:deviceReminder.time||'07:00'") ||
