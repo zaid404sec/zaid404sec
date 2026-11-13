@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.6.0') throw new Error('The package version must be 2.6.0.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v13') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v13.');
+if (packageJson.version !== '2.6.1') throw new Error('The package version must be 2.6.1.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v14') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v14.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -42,29 +42,49 @@ if (!html.includes('data-action="share-offer-whatsapp"') ||
   throw new Error('Offers must support selected opted-in contacts and one manual WhatsApp Business share, with no automated send loop.');
 }
 console.log('PASS: bulk offers select opted-in customers, support a promo image and use one manual WhatsApp Business share action');
-if (!html.includes('if(custId&&cust?.phone&&window.WashDeskFileSharer?.share)') ||
-    !html.includes("notify('Invoice saved. Preparing the customer-specific PDF and WhatsApp message…')") ||
-    !html.includes('void shareInvoice(inv.id)')) {
-  throw new Error('A saved invoice with a customer mobile number must automatically open the customer-specific PDF/message share sheet.');
-}
-const invoiceShareStart=html.indexOf('async function shareInvoice(invId)');
-const invoiceShareEnd=html.indexOf('function printInvoice',invoiceShareStart);
-const invoiceShareSource=html.slice(invoiceShareStart,invoiceShareEnd);
-for (const token of ['invoiceCustomerName(i)', 'customer?.phone', 'makePdfBlob(i)', 'contentType:\'application/pdf\'', 'text:message', 'chooserTitle:']) {
-  if (!invoiceShareSource.includes(token)) throw new Error('Customer-specific invoice share is missing: '+token);
+if (html.includes('window.PrimeAutoCareMessaging?.sendInvoice') ||
+    !html.includes('await saveInvoicePdf(inv.id);openInvoiceCustomerChat(inv.id)') ||
+    !html.includes('function openInvoiceCustomerChat(invId)') ||
+    !html.includes('data-open-whatsapp-invoice') ||
+    !html.includes("const url='https://wa.me/'+phone+'?text='+encodeURIComponent(invoiceWhatsAppMessage(i))")) {
+  throw new Error('Free invoice workflow must save the PDF and open the saved customer number directly without automatic API delivery.');
 }
 if (!html.includes("Opening announcement prepared in the offer message box.") ||
-    !html.includes('data-action="share-opening-sms"') ||
     !html.includes('data-action="preview-opening-voice"') ||
     !html.includes('function openingAnnouncementMessage()') ||
     !html.includes('function previewOpeningAnnouncement()') ||
     !html.includes('openingReminderEnabled') ||
     !html.includes('openingReminderTime') ||
-    !html.includes('scheduleOpeningReminder')) {
-  throw new Error('Daily opening announcement, SMS share and local voice preview workflow is incomplete.');
+    !html.includes('scheduleOpeningReminder') ||
+    !html.includes("const DEVICE_REMINDER_KEY='prime-auto-care-device-opening-reminder-v1'") ||
+    !html.includes("time:deviceReminder.time||'07:00'")) {
+  throw new Error('Daily opening announcement and phone-local 7:00 AM notification workflow is incomplete.');
 }
-console.log('PASS: saved customer invoices open the personalised message + PDF share sheet without sending automatically');
-console.log('PASS: daily opening reminder, opening-hours message, manual SMS share and local voice preview are present');
+console.log('PASS: invoice saves a PDF then opens the direct customer WhatsApp chat for manual attachment/send');
+console.log('PASS: daily opening reminder is local to the phone and defaults to 7:00 AM');
+if (!html.includes("const DEVICE_REMINDER_KEY='prime-auto-care-device-opening-reminder-v1'") ||
+    !html.includes("time:'07:00'") ||
+    !html.includes("time:deviceReminder.time||'07:00'") ||
+    !html.includes("scheduleReminder") && !html.includes("updateOpeningReminder(true)")) {
+  throw new Error('The daily 7:00 AM reminder must be enabled and stored locally on this device.');
+}
+if (!html.includes('data-action="copy-broadcast-message"') ||
+    !html.includes('data-action="export-broadcast-contacts"') ||
+    !html.includes('function exportBroadcastContacts()') ||
+    !html.includes("c.waOptIn===true&&offerPhone(c.phone).length>=11") ||
+    !html.includes('wa.me/')) {
+  throw new Error('Free WhatsApp Broadcast setup must export opted-in contacts, copy campaign text and open direct customer chats.');
+}
+if (!html.includes('No API subscription') ||
+    !html.includes('Business Broadcast') ||
+    html.includes('data-action="queue-whatsapp-cloud"') ||
+    html.includes('data-action="queue-sms-gateway"') ||
+    html.includes('data-action="queue-voice-calls"')) {
+  throw new Error('Free mode must not expose paid API queue actions and must explain the native Broadcast List method.');
+}
+console.log('PASS: free WhatsApp Broadcast Lists use explicitly opted-in contacts and a reusable VCF export');
+console.log('PASS: daily 7:00 AM notification is local to this device');
+console.log('PASS: invoice PDF is saved, then the customer WhatsApp number opens directly for manual attachment/send');
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -110,7 +130,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v13') throw new Error('Android stability release app ID v13 was not set.');
+if (appId !== 'com.washdesk.carwash.v14') throw new Error('Android stability release app ID v14 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -472,7 +492,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v16')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v17')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
@@ -606,16 +626,19 @@ if (!html.includes('<script src="./communications.bundle.js"></script>') ||
     !html.includes('dlt_voice_template_id')) {
   throw new Error('The communications client must be loaded and precached for offline-safe app startup.');
 }
-if (!html.includes('data-action="queue-whatsapp-cloud"') ||
-    !html.includes('data-action="queue-sms-gateway"') ||
-    !html.includes('data-action="queue-voice-calls"') ||
-    !html.includes('function queueMarketingCampaign(channel)') ||
-    !html.includes('function saveCommunicationSettings(e)') ||
+if (html.includes('data-action="queue-whatsapp-cloud"') ||
+    html.includes('data-action="queue-sms-gateway"') ||
+    html.includes('data-action="queue-voice-calls"') ||
+    html.includes('PrimeAutoCareMessaging?.sendInvoice') ||
+    !html.includes('data-action="copy-broadcast-message"') ||
+    !html.includes('data-action="export-broadcast-contacts"') ||
     !html.includes('data-consent-field=') ||
-    !html.includes("void shareInvoice(inv.id)") ||
-    !html.includes('PrimeAutoCareMessaging?.sendInvoice')) {
-  throw new Error('The app must provide consent-aware WhatsApp/SMS/voice campaigns and automatic invoice queue handoff.');
+    !html.includes('function openInvoiceCustomerChat') ||
+    !html.includes('data-open-whatsapp-invoice')) {
+  throw new Error('Free mode must use WhatsApp Broadcast Lists, keep paid API queues disabled and open invoice chats directly by saved customer number.');
 }
+console.log('PASS: free mode disables paid queue controls and keeps opted-in WhatsApp broadcast tools');
+console.log('PASS: invoice PDF is saved and customer chat opens directly with a prepared message');
 const communicationsClient = await readFile(new URL('../src/communications.js', import.meta.url), 'utf8');
 if (!communicationsClient.includes("functions/v1/communication-api") ||
     !communicationsClient.includes('getApiContext') ||
