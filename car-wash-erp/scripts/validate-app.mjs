@@ -613,12 +613,14 @@ console.log('PASS: Windows installer includes PDFMake, fonts, images, Excel and 
 if (!packageJson.dependencies['@capacitor/local-notifications']) {
   throw new Error('The scheduled opening reminder notification dependency is missing.');
 }
-for (const asset of ['communications.bundle.js']) {
+for (const asset of ['communications.bundle.js','native-links.bundle.js']) {
   const file = new URL('../' + asset, import.meta.url);
   if (!existsSync(file) || statSync(file).size < 500) throw new Error('Missing communications runtime bundle: '+asset);
 }
 if (!html.includes('<script src="./communications.bundle.js"></script>') ||
     !sw.includes("'./communications.bundle.js'") ||
+    !html.includes('<script src="./native-links.bundle.js"></script>') ||
+    !sw.includes("'./native-links.bundle.js'") ||
     !html.includes('whatsapp_marketing_image_template') ||
     !html.includes('dlt_voice_template_id')) {
   throw new Error('The communications client must be loaded and precached for offline-safe app startup.');
@@ -627,15 +629,18 @@ if (html.includes('data-action="queue-whatsapp-cloud"') ||
     html.includes('data-action="queue-sms-gateway"') ||
     html.includes('data-action="queue-voice-calls"') ||
     html.includes('PrimeAutoCareMessaging?.sendInvoice') ||
-    !html.includes('data-action="copy-broadcast-message"') ||
-    !html.includes('data-action="export-broadcast-contacts"') ||
+    !html.includes('data-action="share-offer-whatsapp"') ||
+    !html.includes('Share to WhatsApp Group') ||
+    !html.includes('function inviteCustomerToWhatsAppGroup(customerId)') ||
+    !html.includes('data-customer-sms=') ||
+    !html.includes('data-invoice-sms=') ||
     !html.includes('data-consent-field=') ||
     !html.includes('function openInvoiceCustomerChat') ||
     !html.includes('data-open-whatsapp-invoice')) {
-  throw new Error('Free mode must use WhatsApp Broadcast Lists, keep paid API queues disabled and open invoice chats directly by saved customer number.');
+  throw new Error('Free mode must share to the existing WhatsApp group, keep paid queues disabled, and provide consent-controlled manual SMS/invoice chat actions.');
 }
-console.log('PASS: free mode disables paid queue controls and keeps opted-in WhatsApp broadcast tools');
-console.log('PASS: invoice PDF is saved and customer chat opens directly with a prepared message');
+console.log('PASS: free mode disables paid API queues and shares group offers by user-selected WhatsApp target');
+console.log('PASS: invoice PDF is saved and customer WhatsApp / SIM SMS actions use the saved number');
 const communicationsClient = await readFile(new URL('../src/communications.js', import.meta.url), 'utf8');
 if (!communicationsClient.includes("functions/v1/communication-api") ||
     !communicationsClient.includes('getApiContext') ||
