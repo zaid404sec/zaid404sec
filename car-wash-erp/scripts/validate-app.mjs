@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.6.1') throw new Error('The package version must be 2.6.1.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v14') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v14.');
+if (packageJson.version !== '2.6.2') throw new Error('The package version must be 2.6.2.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v15') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v15.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -32,16 +32,22 @@ if (!saveFunction.includes("previousRaw=localStorage.getItem(STORE)") ||
 console.log('PASS: all normal save paths stop on local storage failure and the shared save handler restores durable records');
 
 if (!html.includes('data-action="share-offer-whatsapp"') ||
-    !html.includes('data-offer-customer=') ||
-    !html.includes('offer-select-all') ||
-    !html.includes('offer-clear-selection') ||
-    !html.includes('navigator.share(filePayload)') ||
-    !html.includes('Choose WhatsApp Business') ||
-    !html.includes('select those recipients and press Send') ||
-    html.includes('start-offer-campaign') || html.includes('open-offer-whatsapp')) {
-  throw new Error('Offers must support selected opted-in contacts and one manual WhatsApp Business share, with no automated send loop.');
+    !html.includes('Share to WhatsApp Group') ||
+    !html.includes('function shareOfferViaWhatsApp()') ||
+    !html.includes('navigator.share({title,text:message})') ||
+    !html.includes('existing Prime Auto Care group') ||
+    !html.includes('up to 1,024 members') ||
+    html.includes('function exportBroadcastContacts()') ||
+    html.includes('data-action="export-broadcast-contacts"')) {
+  throw new Error('Offers must share one campaign through the WhatsApp share menu to the existing group, without Broadcast List contact restrictions.');
 }
-console.log('PASS: bulk offers select opted-in customers, support a promo image and use one manual WhatsApp Business share action');
+if (!html.includes('whatsappGroupInviteLink') ||
+    !html.includes('function inviteCustomerToWhatsAppGroup(customerId)') ||
+    !html.includes('data-invite-group=') ||
+    !html.includes('customer chooses Join') ||
+    !html.includes('groupLink')) {
+  throw new Error('Group invite link settings and manual customer invitations are incomplete.');
+}
 if (html.includes('window.PrimeAutoCareMessaging?.sendInvoice') ||
     !html.includes('await saveInvoicePdf(inv.id);openInvoiceCustomerChat(inv.id)') ||
     !html.includes('function openInvoiceCustomerChat(invId)') ||
@@ -53,38 +59,29 @@ if (!html.includes("Opening announcement prepared in the offer message box.") ||
     !html.includes('data-action="preview-opening-voice"') ||
     !html.includes('function openingAnnouncementMessage()') ||
     !html.includes('function previewOpeningAnnouncement()') ||
-    !html.includes('openingReminderEnabled') ||
-    !html.includes('openingReminderTime') ||
-    !html.includes('scheduleOpeningReminder') ||
     !html.includes("const DEVICE_REMINDER_KEY='prime-auto-care-device-opening-reminder-v1'") ||
     !html.includes("time:deviceReminder.time||'07:00'")) {
   throw new Error('Daily opening announcement and phone-local 7:00 AM notification workflow is incomplete.');
 }
+console.log('PASS: offers share to the existing WhatsApp group through the Android share menu');
+console.log('PASS: group invite link is stored and new customers can be invited manually without silent auto-add');
 console.log('PASS: invoice saves a PDF then opens the direct customer WhatsApp chat for manual attachment/send');
 console.log('PASS: daily opening reminder is local to the phone and defaults to 7:00 AM');
-if (!html.includes("const DEVICE_REMINDER_KEY='prime-auto-care-device-opening-reminder-v1'") ||
-    !html.includes("time:'07:00'") ||
-    !html.includes("time:deviceReminder.time||'07:00'") ||
-    !html.includes("scheduleReminder") && !html.includes("updateOpeningReminder(true)")) {
-  throw new Error('The daily 7:00 AM reminder must be enabled and stored locally on this device.');
+if (!html.includes('data-customer-sms=') ||
+    !html.includes('data-invoice-sms=') ||
+    !html.includes('function openCustomerSmsComposer(customerId)') ||
+    !html.includes('function openInvoiceSmsComposer(invoiceId)') ||
+    !html.includes('c.smsServiceOptIn') ||
+    !html.includes('data-invite-group=')) {
+  throw new Error('Customer thank-you SMS and invoice SMS composer actions must require service-message consent.');
 }
-if (!html.includes('data-action="copy-broadcast-message"') ||
-    !html.includes('data-action="export-broadcast-contacts"') ||
-    !html.includes('function exportBroadcastContacts()') ||
-    !html.includes("c.waOptIn===true&&offerPhone(c.phone).length>=11") ||
-    !html.includes('wa.me/')) {
-  throw new Error('Free WhatsApp Broadcast setup must export opted-in contacts, copy campaign text and open direct customer chats.');
+const nativeLinks = await readFile(new URL('../src/native-links.js', import.meta.url), 'utf8');
+if (!nativeLinks.includes("from '@capacitor/app-launcher'") ||
+    !nativeLinks.includes('smsto:') ||
+    !nativeLinks.includes('AppLauncher.openUrl')) {
+  throw new Error('The Android SIM SMS composer bridge is missing.');
 }
-if (!html.includes('No API subscription') ||
-    !html.includes('Business Broadcast') ||
-    html.includes('data-action="queue-whatsapp-cloud"') ||
-    html.includes('data-action="queue-sms-gateway"') ||
-    html.includes('data-action="queue-voice-calls"')) {
-  throw new Error('Free mode must not expose paid API queue actions and must explain the native Broadcast List method.');
-}
-console.log('PASS: free WhatsApp Broadcast Lists use explicitly opted-in contacts and a reusable VCF export');
-console.log('PASS: daily 7:00 AM notification is local to this device');
-console.log('PASS: invoice PDF is saved, then the customer WhatsApp number opens directly for manual attachment/send');
+console.log('PASS: customer thank-you and invoice SMS open the phone SIM composer; user confirms Send');
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -106,7 +103,7 @@ if (inlineStart < 0 || inlineEnd < 0) throw new Error('No inline application scr
 const inlineSource = html.slice(inlineStart + '<script>'.length, inlineEnd);
 await transform(inlineSource, { loader: 'js', target: 'es2020', logLevel: 'silent' });
 console.log('PASS: inline application JavaScript syntax');
-for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','communications.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','communications.bundle.js','native-links.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
   const path = new URL('../' + asset, import.meta.url);
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
   console.log('PASS: bundled asset ' + asset);
@@ -130,7 +127,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v14') throw new Error('Android stability release app ID v14 was not set.');
+if (appId !== 'com.washdesk.carwash.v15') throw new Error('Android stability release app ID v15 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -492,7 +489,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v17')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v18')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
@@ -616,12 +613,14 @@ console.log('PASS: Windows installer includes PDFMake, fonts, images, Excel and 
 if (!packageJson.dependencies['@capacitor/local-notifications']) {
   throw new Error('The scheduled opening reminder notification dependency is missing.');
 }
-for (const asset of ['communications.bundle.js']) {
+for (const asset of ['communications.bundle.js','native-links.bundle.js']) {
   const file = new URL('../' + asset, import.meta.url);
   if (!existsSync(file) || statSync(file).size < 500) throw new Error('Missing communications runtime bundle: '+asset);
 }
 if (!html.includes('<script src="./communications.bundle.js"></script>') ||
     !sw.includes("'./communications.bundle.js'") ||
+    !html.includes('<script src="./native-links.bundle.js"></script>') ||
+    !sw.includes("'./native-links.bundle.js'") ||
     !html.includes('whatsapp_marketing_image_template') ||
     !html.includes('dlt_voice_template_id')) {
   throw new Error('The communications client must be loaded and precached for offline-safe app startup.');
@@ -630,15 +629,18 @@ if (html.includes('data-action="queue-whatsapp-cloud"') ||
     html.includes('data-action="queue-sms-gateway"') ||
     html.includes('data-action="queue-voice-calls"') ||
     html.includes('PrimeAutoCareMessaging?.sendInvoice') ||
-    !html.includes('data-action="copy-broadcast-message"') ||
-    !html.includes('data-action="export-broadcast-contacts"') ||
+    !html.includes('data-action="share-offer-whatsapp"') ||
+    !html.includes('Share to WhatsApp Group') ||
+    !html.includes('function inviteCustomerToWhatsAppGroup(customerId)') ||
+    !html.includes('data-customer-sms=') ||
+    !html.includes('data-invoice-sms=') ||
     !html.includes('data-consent-field=') ||
     !html.includes('function openInvoiceCustomerChat') ||
     !html.includes('data-open-whatsapp-invoice')) {
-  throw new Error('Free mode must use WhatsApp Broadcast Lists, keep paid API queues disabled and open invoice chats directly by saved customer number.');
+  throw new Error('Free mode must share to the existing WhatsApp group, keep paid queues disabled, and provide consent-controlled manual SMS/invoice chat actions.');
 }
-console.log('PASS: free mode disables paid queue controls and keeps opted-in WhatsApp broadcast tools');
-console.log('PASS: invoice PDF is saved and customer chat opens directly with a prepared message');
+console.log('PASS: free mode disables paid API queues and shares group offers by user-selected WhatsApp target');
+console.log('PASS: invoice PDF is saved and customer WhatsApp / SIM SMS actions use the saved number');
 const communicationsClient = await readFile(new URL('../src/communications.js', import.meta.url), 'utf8');
 if (!communicationsClient.includes("functions/v1/communication-api") ||
     !communicationsClient.includes('getApiContext') ||

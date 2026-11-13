@@ -235,3 +235,14 @@ Meta template approval, number/API onboarding, Exotel account activation, DLT re
 - After an invoice is safely saved, the PDF is saved to Downloads / Prime Auto Care and the app opens the customer's direct WhatsApp chat using the saved mobile number and a prefilled message. The operator attaches the saved PDF and presses Send manually. The invoice is not sent automatically.
 - Android uses app ID `com.washdesk.carwash.v14` so the new build can install beside v13. Previous app data is retained in the older installation until the new build is connected and checked.
 - Paid WhatsApp Cloud API, SMS gateway, scheduled campaigns and outbound voice remain available only as future integrations after explicit cost approval and provider configuration.
+
+ 
+## Version 2.6.2 — existing WhatsApp group and SIM SMS
+
+- Replace the Broadcast List workflow with a group-post workflow. Compose the offer, optionally attach an image, and share it through Android's share menu. The operator chooses the existing Prime Auto Care WhatsApp group and presses Send. The app cannot preselect a group or send without that final action.
+- WhatsApp groups support up to 1,024 members. Existing group members receive group posts without having to save the business number. This is not subject to the 256-contact Broadcast List cap.
+- Business Settings stores the existing group invite link. The Customer profile offers **Invite to Prime Auto Care Group** when the saved group link exists and WhatsApp consent is recorded. It opens a one-to-one chat with a prefilled invitation; the customer must join or a group admin must add them manually. The app does not silently add people to a group.
+- The invite link is sensitive: anyone who obtains it may be able to request to join, and it can be forwarded. Reset it in WhatsApp if it is shared unintentionally.
+- Customer profiles provide a service thank-you SMS action and invoice details provide an invoice SMS action. Both require the customer's service-SMS consent and open the Android SIM SMS composer using the saved phone number and a prefilled message. The operator reviews and presses Send. The app does not hold SMS permissions or silently dispatch messages.
+- SIM SMS has no gateway subscription, but the mobile operator may charge according to the SIM plan / SMS pack. This is not a universally free SMS service. For bulk/business A2P campaigns, check applicable TRAI DLT registration, sender header, content-template and consent requirements before sending.
+- Android package ID is `com.washdesk.carwash.v15` (version 2.6.2), so this release installs separately from v14 until the new app is checked and paired. Offline cache is v18.

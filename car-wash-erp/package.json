@@ -1,6 +1,6 @@
 {
   "name": "prime-auto-care-manager",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "private": true,
   "description": "Prime Auto Care Business Manager",
   "main": "electron/main.cjs",
