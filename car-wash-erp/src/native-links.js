@@ -1,25 +1,21 @@
+import { Capacitor } from '@capacitor/core';
 import { AppLauncher } from '@capacitor/app-launcher';
 
-function validateTarget(url) {
-  const value = String(url || '').trim();
-  if (!/^(sms|smsto|https):/i.test(value)) {
-    throw new Error('Only SMS and HTTPS links are supported.');
-  }
-  return value;
+function normalizeIndianMobile(value) {
+  let digits=String(value||'').replace(/\D/g,'');
+  if(digits.length===10)digits='91'+digits;
+  else if(digits.length===11&&digits.startsWith('0'))digits='91'+digits.slice(1);
+  return digits;
 }
 
-async function openUrl(url) {
-  const target = validateTarget(url);
-  try {
-    const result = await AppLauncher.openUrl({ url: target });
-    return { opened: true, result };
-  } catch (error) {
-    if (typeof window !== 'undefined' && !/^sms:|^smsto:/i.test(target)) {
-      window.open(target, '_blank', 'noopener,noreferrer');
-      return { opened: true, fallback: true };
-    }
-    throw error;
-  }
+async function openSms(phone, body) {
+  const digits=normalizeIndianMobile(phone);
+  if(digits.length<11)throw new Error('Enter a valid customer mobile number.');
+  const message=String(body||'').trim();
+  if(!message)throw new Error('The SMS message is empty.');
+  if(!Capacitor.isNativePlatform())throw new Error('The SIM-based SMS composer is available in the Android app only.');
+  const url='smsto:+'+digits+'?body='+encodeURIComponent(message);
+  return AppLauncher.openUrl({url});
 }
 
-window.PrimeAutoCareLinks = { openUrl };
+window.PrimeAutoCareLinks = { openSms };
