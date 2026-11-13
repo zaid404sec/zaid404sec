@@ -44,7 +44,7 @@ if (!html.includes('data-action="share-offer-whatsapp"') ||
 if (!html.includes('whatsappGroupInviteLink') ||
     !html.includes('function inviteCustomerToWhatsAppGroup(customerId)') ||
     !html.includes('data-invite-group=') ||
-    !html.includes('The customer chooses Join') ||
+    !html.includes('customer chooses Join') ||
     !html.includes('groupLink')) {
   throw new Error('Group invite link settings and manual customer invitations are incomplete.');
 }
