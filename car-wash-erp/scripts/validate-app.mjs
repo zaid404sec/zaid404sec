@@ -46,7 +46,7 @@ if (html.includes('window.PrimeAutoCareMessaging?.sendInvoice') ||
     !html.includes('await saveInvoicePdf(inv.id);openInvoiceCustomerChat(inv.id)') ||
     !html.includes('function openInvoiceCustomerChat(invId)') ||
     !html.includes('data-open-whatsapp-invoice') ||
-    !html.includes('https://wa.me/'+phone+'?text=')) {
+    !html.includes("const url='https://wa.me/'+phone+'?text='+encodeURIComponent(invoiceWhatsAppMessage(i))")) {
   throw new Error('Free invoice workflow must save the PDF and open the saved customer number directly without automatic API delivery.');
 }
 if (!html.includes("Opening announcement prepared in the offer message box.") ||
