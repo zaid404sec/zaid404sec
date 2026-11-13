@@ -18,4 +18,14 @@ async function openSms(phone, body) {
   return AppLauncher.openUrl({url});
 }
 
-window.PrimeAutoCareLinks = { openSms };
+async function openWhatsApp(phone, body) {
+  const digits=normalizeIndianMobile(phone);
+  if(digits.length<11)throw new Error('Enter a valid customer mobile number.');
+  const message=String(body||'').trim();
+  if(!message)throw new Error('The WhatsApp message is empty.');
+  const url='https://wa.me/'+digits+'?text='+encodeURIComponent(message);
+  if(Capacitor.isNativePlatform())return AppLauncher.openUrl({url});
+  window.location.href=url;
+}
+
+window.PrimeAutoCareLinks = { openSms, openWhatsApp };
