@@ -492,7 +492,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v16')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v17')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
