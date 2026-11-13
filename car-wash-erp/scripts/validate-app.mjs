@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.6.0') throw new Error('The package version must be 2.6.0.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v13') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v13.');
+if (packageJson.version !== '2.6.1') throw new Error('The package version must be 2.6.1.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v14') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v14.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -65,6 +65,29 @@ if (!html.includes("Opening announcement prepared in the offer message box.") ||
 }
 console.log('PASS: saved customer invoices open the personalised message + PDF share sheet without sending automatically');
 console.log('PASS: daily opening reminder, opening-hours message, manual SMS share and local voice preview are present');
+if (!html.includes("const DEVICE_REMINDER_KEY='prime-auto-care-device-opening-reminder-v1'") ||
+    !html.includes("time:'07:00'") ||
+    !html.includes("time:deviceReminder.time||'07:00'") ||
+    !html.includes("scheduleReminder") && !html.includes("updateOpeningReminder(true)")) {
+  throw new Error('The daily 7:00 AM reminder must be enabled and stored locally on this device.');
+}
+if (!html.includes('data-action="copy-broadcast-message"') ||
+    !html.includes('data-action="export-broadcast-contacts"') ||
+    !html.includes('function exportBroadcastContacts()') ||
+    !html.includes("c.waOptIn===true&&offerPhone(c.phone).length>=11") ||
+    !html.includes('wa.me/')) {
+  throw new Error('Free WhatsApp Broadcast setup must export opted-in contacts, copy campaign text and open direct customer chats.');
+}
+if (!html.includes('No API subscription') ||
+    !html.includes('Business Broadcast') ||
+    html.includes('data-action="queue-whatsapp-cloud"') ||
+    html.includes('data-action="queue-sms-gateway"') ||
+    html.includes('data-action="queue-voice-calls"')) {
+  throw new Error('Free mode must not expose paid API queue actions and must explain the native Broadcast List method.');
+}
+console.log('PASS: free WhatsApp Broadcast Lists use explicitly opted-in contacts and a reusable VCF export');
+console.log('PASS: daily 7:00 AM notification is local to this device');
+console.log('PASS: invoice PDF is saved, then the customer WhatsApp number opens directly for manual attachment/send');
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -110,7 +133,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v13') throw new Error('Android stability release app ID v13 was not set.');
+if (appId !== 'com.washdesk.carwash.v14') throw new Error('Android stability release app ID v14 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
