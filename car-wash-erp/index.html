@@ -674,137 +674,47 @@
   function toggleWhatsAppConsent(cid){const c=db.customers.find(x=>x.id===cid);if(!c)return;c.waOptIn=!c.waOptIn;c.updatedAt=Date.now();if(!save())return;render();notify(c.waOptIn?'WhatsApp offer permission enabled.':'WhatsApp offer permission removed.')}
   function offerPhone(phone){let p=String(phone||'').replace(/\\D/g,'');if(p.length===10)p='91'+p;else if(p.length===11&&p.startsWith('0'))p='91'+p.slice(1);return p}
   function offers(){
-    const eligible=db.customers.filter(c=>c.waOptIn===true&&offerPhone(c.phone).length>=11);
-    const withPhone=db.customers.filter(c=>offerPhone(c.phone).length>=11);
-    const eligibleIds=new Set(eligible.map(c=>c.id));
-    if(offerSelectedCustomerIds===null)offerSelectedCustomerIds=[...eligibleIds];
-    else offerSelectedCustomerIds=offerSelectedCustomerIds.filter(id=>eligibleIds.has(id));
-    const selected=eligible.filter(c=>offerSelectedCustomerIds.includes(c.id));
-    return `${pageHead('Offers & WhatsApp','Free WhatsApp Business Broadcast Lists. No API subscription or automatic messaging charges.','<button class="btn" data-nav="customers">Manage customers</button>')}
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-head"><h3>Daily opening announcement</h3><span>Free phone reminder · 7:00 AM</span></div>
-      <p class="help">A notification on this phone reminds you at 7:00 AM. Tap it to prepare today's announcement, then copy it into your saved WhatsApp Business Broadcast List and send manually.</p>
-      <div class="actions">
-        <button class="btn primary" data-action="prepare-opening-announcement">Prepare opening message</button>
-        <button class="btn" data-action="preview-opening-voice">Play voice preview</button>
-      </div>
-    </div>
-    <div class="grid two">
-      <div class="card">
-        <div class="card-head"><h3>Prepare a campaign</h3><span>Consent-checked delivery queue</span></div>
-        <div class="field"><label>Campaign message</label><textarea id="offer-message" rows="5" placeholder="Write the approved campaign message…">${esc(offerDraft)}</textarea></div>
-        <div class="field" style="margin-top:12px"><label>Promotional image (WhatsApp only, optional)</label><input id="offer-image" type="file" accept="image/jpeg,image/png,image/webp" /></div>
-        
-        <div class="success-note" style="margin-top:12px">Selected WhatsApp customers: <b>${selected.length}</b>. Only customers who have explicitly opted in are included.</div>
-        <div class="actions" style="margin-top:12px;flex-wrap:wrap">
-          <button class="btn primary" data-action="copy-broadcast-message">Copy campaign message</button>
-          <button class="btn" data-action="export-broadcast-contacts" ${selected.length?'':'disabled'}>Export selected contacts (.VCF)</button>
-          <button class="btn" data-action="share-offer-whatsapp" ${selected.length?'':'disabled'}>Share message</button>
-        </div>
-        <p class="help">Free method: create a WhatsApp Business Broadcast List once. Import the selected contacts below, create the list in WhatsApp Business, then reuse it. Each campaign needs one manual Send tap; WhatsApp does not allow this app to silently send messages for free.</p>
-      </div>
-      <div class="card">
-        <div class="card-head"><h3>One-time free Broadcast List setup</h3><span>No API subscription</span></div>
-        <ol style="padding-left:20px;line-height:1.7">
-          <li>Tap <b>Export selected contacts (.VCF)</b> and import the file into your Android Contacts app.</li>
-          <li>Ask customers to save <b>7777970261</b> in their phone contacts. Broadcast Lists only reach customers who have saved your business number.</li>
-          <li>Open WhatsApp Business → Chats → ⋮ → <b>Business Broadcast</b> → New list, then select the imported opted-in customers.</li>
-          <li>For each offer, open that saved list, paste the copied message, attach the image if needed and press Send once.</li>
-        </ol>
-        <p class="help">Each list supports up to 256 contacts. Create additional lists for larger customer groups. WhatsApp may apply monthly broadcast limits in some countries. Recipients receive individual chats, not a shared group.</p>
-      </div>
-    </div>
-    <div class="card" style="margin-top:16px">
-      <div class="card-head"><h3>Choose campaign recipients</h3><div class="actions"><button class="btn small" data-action="offer-select-all">Select all opted-in</button><button class="btn small" data-action="offer-clear-selection">Clear selection</button></div></div>
-      <div class="table-wrap">${eligible.length?`<table><thead><tr><th>Select</th><th>Customer</th><th>Mobile</th><th>WhatsApp</th><th>SMS</th><th>Voice</th></tr></thead><tbody>${eligible.map(c=>`<tr><td><input type="checkbox" data-offer-customer="${esc(c.id)}" ${offerSelectedCustomerIds.includes(c.id)?'checked':''} aria-label="Select ${esc(c.name)}" /></td><td><b>${esc(c.name)}</b></td><td>${esc(c.phone)}</td><td>${c.waOptIn?'<span class="badge green">Opted in</span>':'—'}</td><td>${c.smsOptIn?'<span class="badge green">Opted in</span>':'—'}</td><td>${c.voiceOptIn?'<span class="badge green">Opted in</span>':'—'}</td></tr>`).join('')}</tbody></table>`:empty('No eligible customers','Add a valid mobile number and capture channel-specific consent before campaigns.')}</div>
-    </div>
-    <div class="card" style="margin-top:16px">
-      <div class="card-head"><h3>Customer communication permissions</h3><span>Update existing customer records</span></div>
-      <div class="table-wrap">${withPhone.length?`<table><thead><tr><th>Customer</th><th>WhatsApp offers</th><th>WhatsApp invoice</th><th>SMS marketing</th><th>SMS invoice</th><th>Voice calls</th></tr></thead><tbody>${withPhone.map(c=>`<tr><td><b>${esc(c.name)}</b><br/><span class="muted">${esc(c.phone)}</span></td>${[['waOptIn','WA marketing'],['waServiceOptIn','WA invoice'],['smsOptIn','SMS marketing'],['smsServiceOptIn','SMS invoice'],['voiceOptIn','Voice']].map(([field,label])=>`<td><input type="checkbox" data-consent-customer="${esc(c.id)}" data-consent-field="${field}" ${c[field]?'checked':''} aria-label="${label} permission for ${esc(c.name)}" /></td>`).join('')}</tr>`).join('')}</tbody></table>`:empty('No customer mobile numbers','Add customers to manage their consent.')}</div>
-      <p class="help" style="margin-top:10px">Only tick a permission after the customer has explicitly agreed to that type of communication. Changes are saved to the shared customer record and timestamped.</p>
-    </div>
-    <div class="card" style="margin-top:16px">
-      <div class="card-head"><h3>Paid API automation paused</h3><span>Free mode</span></div>
-      <p class="help">WhatsApp Cloud API campaigns, automatic SMS gateway delivery and automated voice campaigns are switched off in this free setup. They remain available for a later phase if you approve provider fees and per-message charges. No paid campaign is queued from this screen.</p>
-      <form id="communication-settings-form" style="display:none">
-        <div class="field-grid">
-          <div class="field full"><b>WhatsApp Cloud API (Meta)</b><p class="help">Requires a Meta WhatsApp Business Account, Cloud API phone-number ID, access token and approved templates. The WhatsApp Business app registration alone does not supply these.</p></div>
-          <div class="field"><label>Business WhatsApp number</label><input name="whatsapp_business_number" value="${esc(cfg.whatsapp_business_number||db.business.phone||'')}" placeholder="+91…" /></div>
-          <div class="field"><label>Phone Number ID</label><input name="whatsapp_phone_number_id" value="${esc(cfg.whatsapp_phone_number_id||'')}" /></div>
-          <div class="field"><label>WhatsApp Business Account ID</label><input name="whatsapp_waba_id" value="${esc(cfg.whatsapp_waba_id||'')}" /></div>
-          <div class="field"><label>Approved marketing template</label><input name="whatsapp_marketing_template" value="${esc(cfg.whatsapp_marketing_template||'prime_auto_care_offer')}" /></div>
-          <div class="field"><label>Approved marketing image-header template</label><input name="whatsapp_marketing_image_template" value="${esc(cfg.whatsapp_marketing_image_template||'')}" placeholder="Template approved with an image header" /></div>
-          <div class="field"><label>Approved invoice (PDF header) template</label><input name="whatsapp_invoice_template" value="${esc(cfg.whatsapp_invoice_template||'prime_auto_care_invoice')}" /></div>
-          <div class="field"><label>Approved opening template</label><input name="whatsapp_opening_template" value="${esc(cfg.whatsapp_opening_template||'prime_auto_care_opening')}" /></div>
-          <div class="field"><label>Template language code</label><input name="whatsapp_language" value="${esc(cfg.whatsapp_language||'en')}" /></div>
-          <div class="field full"><b>SMS gateway + voice calls (Exotel)</b><p class="help">Requires Exotel account/API credentials, approved ExoPhone/caller ID, DLT Entity ID, sender header and approved message templates. Commercial voice calls require an allocated compliant 140/160 series CLI in India.</p></div>
-          <div class="field"><label>Exotel Account SID</label><input name="exotel_account_sid" value="${esc(cfg.exotel_account_sid||'')}" /></div>
-          <div class="field"><label>Exotel region</label><select name="exotel_region"><option value="in" ${cfg.exotel_region==='sg'?'':'selected'}>India / Mumbai</option><option value="sg" ${cfg.exotel_region==='sg'?'selected':''}>Singapore</option></select></div>
-          <div class="field"><label>Approved Exotel caller ID</label><input name="exotel_caller_id" value="${esc(cfg.exotel_caller_id||'')}" placeholder="140 / 160 series CLI" /></div>
-          <div class="field full"><label>Exotel voice flow URL (approved recorded / dynamic announcement flow)</label><input name="exotel_voice_flow_url" type="url" value="${esc(cfg.exotel_voice_flow_url||'')}" placeholder="https://my.exotel.com/…" /></div>
-          <div class="field"><label>DLT Entity / PE ID</label><input name="dlt_entity_id" value="${esc(cfg.dlt_entity_id||'')}" /></div>
-          <div class="field"><label>Approved DLT Sender Header</label><input name="dlt_sender_id" value="${esc(cfg.dlt_sender_id||'')}" /></div>
-          <div class="field"><label>Promotional DLT Template ID</label><input name="dlt_promo_template_id" value="${esc(cfg.dlt_promo_template_id||'')}" /></div>
-          <div class="field"><label>Service / invoice DLT Template ID</label><input name="dlt_service_template_id" value="${esc(cfg.dlt_service_template_id||'')}" /></div>
-          <div class="field"><label>Registered DLT voice template ID</label><input name="dlt_voice_template_id" value="${esc(cfg.dlt_voice_template_id||'')}" /></div>
-          <div class="field full"><label>Exact registered voice script (up to 120 characters; Exotel Flow reads CustomField)</label><textarea name="dlt_voice_template_text" rows="2">${esc(cfg.dlt_voice_template_text||'')}</textarea></div>
-          <div class="field full"><label>Exact approved promotional SMS text (use {name} and {message} only where approved as DLT variables)</label><textarea name="dlt_promo_template_text" rows="2">${esc(cfg.dlt_promo_template_text||'')}</textarea></div>
-          <div class="field full"><label>Exact approved invoice SMS text (approved variables: {name}, {invoice_number}, {date}, {total}, {paid}, {balance}, {vehicle})</label><textarea name="dlt_service_template_text" rows="2">${esc(cfg.dlt_service_template_text||'')}</textarea></div>
-          <div class="field full"><b>Daily unattended opening campaign</b><p class="help">Runs from the Supabase server even when all phones are closed. Each channel sends only to customers who opted in for that channel.</p></div>
-          <div class="field full"><label><input type="checkbox" name="server_opening_enabled" ${cfg.server_opening_enabled?'checked':''}/> Enable scheduled server opening campaign</label></div>
-          <div class="field"><label>Send announcement at</label><input type="time" name="server_opening_time" value="${esc(String(cfg.server_opening_time||'07:45').slice(0,5))}"/></div>
-          <div class="field"><label>Timezone</label><input value="Asia/Kolkata" disabled/></div>
-          <div class="field full"><label>Channels</label><div class="actions"><label><input type="checkbox" name="server_opening_channels" value="whatsapp" ${(cfg.server_opening_channels||['whatsapp']).includes('whatsapp')?'checked':''}/> WhatsApp</label><label><input type="checkbox" name="server_opening_channels" value="sms" ${(cfg.server_opening_channels||[]).includes('sms')?'checked':''}/> SMS</label><label><input type="checkbox" name="server_opening_channels" value="voice" ${(cfg.server_opening_channels||[]).includes('voice')?'checked':''}/> Voice call</label></div></div>
-          <div class="field full"><label>Opening announcement text</label><textarea name="server_opening_message" rows="3">${esc(cfg.server_opening_message||'Good morning! {business} is open today from {opening} to {closing}. Visit us for a fresh, spotless finish for your vehicle. Location: {location}. Contact: {phone}.')}</textarea></div>
-        </div>
-        <div class="form-actions"><button class="btn primary" type="submit">Save provider settings</button></div>
-      </form>
-      <p class="help">API key/token fields are intentionally not present here. Add provider credentials in Supabase Edge Function Secrets. Never paste permanent Meta or Exotel tokens into the app or a WhatsApp chat.</p>
-    </div>`
+    const b=db.business||{};
+    const groupReady=!!String(b.whatsappGroupInviteLink||'').trim();
+    return pageHead('Offers & WhatsApp Group','Share one offer to your existing Prime Auto Care group. No Broadcast List contact cap or saved-number requirement.','<button class="btn" data-nav="settings">Group settings</button>')+
+    '<div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Daily opening announcement</h3><span>Free phone reminder · 7:00 AM</span></div><p class="help">A 7:00 AM notification prepares the morning message. Tap Share to WhatsApp Group and select your existing group from the Android share menu.</p><div class="actions"><button class="btn primary" data-action="prepare-opening-announcement">Prepare opening message</button><button class="btn" data-action="preview-opening-voice">Play voice preview</button></div></div>'+
+    '<div class="grid two"><div class="card"><div class="card-head"><h3>Prepare a group offer</h3><span>One group post</span></div><div class="field"><label>Offer message</label><textarea id="offer-message" rows="5" placeholder="Example: Today only — 50% off on selected car wash services…">'+esc(offerDraft)+'</textarea></div><div class="field" style="margin-top:12px"><label>Promotional image (optional)</label><input id="offer-image" type="file" accept="image/jpeg,image/png,image/webp" /></div><div class="actions" style="margin-top:12px;flex-wrap:wrap"><button class="btn primary" data-action="share-offer-whatsapp">Share to WhatsApp Group</button><button class="btn" data-action="copy-broadcast-message">Copy offer text</button></div><p class="help">Android opens the share menu. Choose WhatsApp Business, then choose the existing Prime Auto Care group and press Send. The app cannot select the group or send without your final tap.</p></div>'+
+    '<div class="card"><div class="card-head"><h3>Your existing group</h3><span>'+(groupReady?'Invite link saved':'Invite link not set')+'</span></div><p class="help">WhatsApp groups support up to 1,024 members. Existing group members receive the post without saving your business number. New customers must be invited or join through the group invite link; the app cannot add people to a WhatsApp group silently.</p><div class="success-note">Group invite link: <b>'+(groupReady?'Saved in Business Settings':'Add it in Business Settings')+'</b></div><div class="actions" style="margin-top:12px"><button class="btn" data-action="copy-group-invite-link" '+(groupReady?'':'disabled')+'>Copy group invite link</button><button class="btn" data-nav="settings">Set / update group link</button></div></div></div>'+
+    '<div class="card" style="margin-top:16px"><div class="card-head"><h3>New customer group invitation</h3><span>Manual approval</span></div><p class="help">After saving a new customer, open Customers → View → Invite to Prime Auto Care Group. WhatsApp opens the customer chat with your group link ready. Press Send; the customer chooses Join, or you can add them manually as a group admin.</p></div>'+
+    '<div class="card" style="margin-top:16px"><div class="card-head"><h3>Paid automation paused</h3><span>Free mode</span></div><p class="help">Cloud API bulk sending, automatic SMS gateway and automated voice calls remain switched off. SMS from your phone SIM is available as a manual composer action; your mobile operator may charge for each SMS.</p></div>';
   }
   async function copyBroadcastMessage(){
     const message=String(document.getElementById('offer-message')?.value||'').trim()||openingAnnouncementMessage();
     try{
       if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(message);
       else{const area=document.createElement('textarea');area.value=message;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();const ok=document.execCommand('copy');area.remove();if(!ok)throw new Error('Clipboard access is unavailable.')}
-      notify('Message copied. Open your saved WhatsApp Business Broadcast List, paste it and press Send.');
-    }catch(error){console.error('Copy broadcast message:',error);notify('Could not copy the message. Select the text and copy it manually.')}
+      notify('Message copied. Open your Prime Auto Care WhatsApp group, paste it and press Send.');
+    }catch(error){console.error('Copy group offer:',error);notify('Could not copy the message. Select the text and copy it manually.')}
   }
-  function vcardEscape(value){return String(value||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;')}
-  async function exportBroadcastContacts(){
-    const contacts=db.customers.filter(c=>c.waOptIn===true&&offerSelectedCustomerIds?.includes(c.id)&&offerPhone(c.phone).length>=11);
-    if(!contacts.length){notify('Select customers who opted in to WhatsApp offers first.');return}
-    const cards=contacts.map(c=>['BEGIN:VCARD','VERSION:3.0','FN:'+vcardEscape(c.name||'Prime Auto Care Customer'),'TEL;TYPE=CELL:+'+offerPhone(c.phone),'END:VCARD'].join('\r\n')).join('\r\n');
-    const file=new File([cards+'\r\n'],'Prime-Auto-Care-WhatsApp-Broadcast-Contacts.vcf',{type:'text/vcard'});
-    try{
-      if(navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Prime Auto Care broadcast contacts',text:'Import these opted-in contacts into Android Contacts, then create a WhatsApp Business Broadcast List.'});notify('Contacts exported. Import the VCF into Android Contacts, then create your Broadcast List.');return}
-      const blob=new Blob([cards+'\r\n'],{type:'text/vcard;charset=utf-8'});downloadInvoiceBlob(blob,'Prime-Auto-Care-WhatsApp-Broadcast-Contacts.vcf');notify('Contacts file downloaded. Import it into Android Contacts, then create your Broadcast List.')
-    }catch(error){if(error?.name==='AbortError')return;console.error('Export WhatsApp contacts:',error);notify('Could not export contacts. Please try again.')}
+  async function copyGroupInviteLink(){
+    const link=String(db.business?.whatsappGroupInviteLink||'').trim();
+    if(!link){notify('Add your Prime Auto Care WhatsApp group invite link in Business Settings first.');return}
+    try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(link);else throw new Error('Clipboard is unavailable.');notify('Group invite link copied.')}
+    catch(error){console.error('Copy group invite:',error);notify('Could not copy the group invite link.')}
   }
   async function shareOfferViaWhatsApp(){
     offerDraft=String(document.getElementById('offer-message')?.value||'').trim();
     if(!offerDraft){notify('Write the offer message first.');return}
-    const eligible=db.customers.filter(c=>c.waOptIn&&offerPhone(c.phone).length>=11);
-    const selected=eligible.filter(c=>Array.isArray(offerSelectedCustomerIds)&&offerSelectedCustomerIds.includes(c.id));
-    if(!selected.length){notify('Select at least one opted-in customer.');return}
-    const message=`${offerDraft}\n\n— ${db.business.name||'Prime Auto Care'}`;
-    const title=`${db.business.name||'Prime Auto Care'} offer`;
-    const imageInput=document.getElementById('offer-image');
-    const imageFile=imageInput?.files?.[0]||null;
+    const message=offerDraft+'\\n\\n— '+(db.business.name||'Prime Auto Care');
+    const title=(db.business.name||'Prime Auto Care')+' group offer';
+    const imageFile=document.getElementById('offer-image')?.files?.[0]||null;
     if(imageFile&&(!imageFile.type.startsWith('image/')||imageFile.size>12*1024*1024)){notify('Choose an image smaller than 12 MB.');return}
     try{
-      if(!navigator.share)throw new Error('This device does not support the Android share menu. Open Prime Auto Care on your Android phone to share offers.');
+      if(!navigator.share)throw new Error('The Android share menu is not available on this device.');
       if(imageFile){
-        const filePayload={files:[imageFile],title,text:message};
-        if(navigator.canShare?.({files:[imageFile]})){await navigator.share(filePayload);notify(`Offer and image prepared for ${selected.length} selected customers. Choose WhatsApp Business, select those recipients and press Send.`);return}
-        notify('This device cannot attach an image through its share menu. Remove the image and share the text, or use a supported Android device.');return;
-      }
-      await navigator.share({title,text:message});
-      notify(`Offer prepared for ${selected.length} selected customers. Choose WhatsApp Business, select those recipients and press Send.`);
-    }catch(err){
-      if(err?.name==='AbortError'||err?.message==='USER_CANCELLED')return;
-      console.error('WhatsApp Business offer sharing failed:',err);
-      notify(err?.message||'Could not open the WhatsApp share menu. Please retry.');
+        if(!navigator.canShare?.({files:[imageFile]})){notify('This device cannot attach this image from the share menu. Remove the image and share the text.');return}
+        await navigator.share({files:[imageFile],title,text:message});
+      }else await navigator.share({title,text:message});
+      notify('Offer prepared. Choose WhatsApp Business, select your existing Prime Auto Care group and press Send.');
+    }catch(error){
+      if(error?.name==='AbortError'||error?.message==='USER_CANCELLED')return;
+      console.error('WhatsApp group offer share failed:',error);
+      notify(error?.message||'Could not open the WhatsApp share menu. Please retry.');
     }
   }
   async function refreshMessagingStatus(){
