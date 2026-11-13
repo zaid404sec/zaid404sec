@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, shell } = require('electron');
 const path = require('node:path');
 
 // Keep the existing WashDesk data folder so the Prime Auto Care Windows
@@ -21,6 +21,18 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
+    }
+  });
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      void shell.openExternal(url).catch(error => console.error('Open external link:', error));
+    }
+    return { action: 'deny' };
+  });
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== mainWindow.webContents.getURL() && (url.startsWith('https://') || url.startsWith('http://'))) {
+      event.preventDefault();
+      void shell.openExternal(url).catch(error => console.error('Open external link:', error));
     }
   });
   mainWindow.loadFile(path.join(__dirname, '..', 'index.html'));

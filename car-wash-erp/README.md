@@ -13,6 +13,13 @@ A mobile-friendly, installable starter app tailored to a car washing centre.
 - JSON backup/restore and invoice CSV export.
 - Service-worker caching for the app shell and install-to-home-screen support.
 
+## Version 2.6.3 repair release and migration
+
+- **Android:** Version 2.6.3 uses application ID `com.washdesk.carwash.v16` and installs beside v15, preserving the previous app and its local data. Keep v15 until v16 has been paired with the same Prime Auto Care cloud workspace and all records have been checked. If cloud sync is not configured, export a JSON backup from v15 and restore it in v16.
+- **Staff advances:** The advance register now has Edit and Delete actions. Edits update the linked cash-ledger entry too. Advances already adjusted against salary can be edited only without changing the staff member or reducing the amount below the adjusted total; they cannot be deleted until the salary adjustment is reversed.
+- **WhatsApp group link:** Business Settings saves the URL from its input, the Offers screen displays the saved URL with a copy action, and customer invitations open WhatsApp through Android's external app launcher instead of navigating the app WebView. Windows opens external links in the system browser.
+- **Windows:** Install the 2.6.3 EXE over the existing Prime Auto Care installation. The Electron user-data folder remains the same.
+
 ## Version 2.1.2 stability release and migration
 
 - **Android:** The 2.1.2 stability APK uses application ID `com.washdesk.carwash.v5` so it can install beside the existing v4 app without risking its local data or requiring the old debug-signing key. Keep the existing app installed. Export a backup from it first. Install the new APK, open Shared Cloud Database, and pair with the same private workspace pairing code. If the old app shows **Connected · all devices synced**, the new app will pull the central cloud records; do not import the same backup again unless cloud data is missing. Use the new app for new bills after confirming the records are present.

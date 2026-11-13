@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.6.2') throw new Error('The package version must be 2.6.2.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v15') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v15.');
+if (packageJson.version !== '2.6.3') throw new Error('The package version must be 2.6.3.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v16') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v16.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -127,7 +127,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v15') throw new Error('Android stability release app ID v15 was not set.');
+if (appId !== 'com.washdesk.carwash.v16') throw new Error('Android stability release app ID v15 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -489,7 +489,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v18')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v19')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
@@ -710,6 +710,29 @@ for (const token of ['SUPABASE_ACCESS_TOKEN','SUPABASE_PROJECT_REF','SUPABASE_DB
 console.log('PASS: communications Edge Functions parse as TypeScript and the client bundle contains no provider API tokens');
 console.log('PASS: server queue enforces device authentication, channel consent, deduplication, retries and delivery callbacks');
 console.log('PASS: WhatsApp, DLT SMS, registered voice script, and Vault-backed scheduled worker setup are present');
+
+const businessSaveStart=html.indexOf('function saveBusiness(e)');
+const businessSaveEnd=html.indexOf('function saveTax(e)',businessSaveStart);
+const businessSaveSource=html.slice(businessSaveStart,businessSaveEnd);
+if (!businessSaveSource.includes("f.get('whatsappGroupInviteLink')") ||
+    !businessSaveSource.includes('db.business.whatsappGroupInviteLink=groupLink') ||
+    !html.includes('esc(b.whatsappGroupInviteLink)') ||
+    !html.includes('window.PrimeAutoCareLinks?.openWhatsApp')) {
+  throw new Error('WhatsApp group invite URL must save, display and launch through the native external app handler.');
+}
+for (const token of ['function staffAdvanceRecoveredAmount', 'function deleteStaffAdvance(advanceId)',
+  'data-edit-staff-advance=', 'data-delete-staff-advance=',
+  "addStaffAdvanceForm(preselectedStaffId='',advanceToEdit=null)",
+  'staffAdvanceRecoveredAmount(current)', 'advanceId===current.id']) {
+  if (!html.includes(token)) throw new Error('Staff advance edit/delete workflow is incomplete: '+token);
+}
+if (!nativeLinks.includes('async function openWhatsApp') ||
+    !nativeLinks.includes('https://wa.me/') ||
+    !nativeLinks.includes('AppLauncher.openUrl')) {
+  throw new Error('WhatsApp invitations must launch externally through the native URL launcher.');
+}
+console.log('PASS: staff advances support Edit/Delete with linked cash-ledger synchronization and salary-adjustment safeguards');
+console.log('PASS: WhatsApp group link is persisted, displayed and opened externally without WebView navigation');
 
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
