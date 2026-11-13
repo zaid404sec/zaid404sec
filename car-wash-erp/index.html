@@ -249,6 +249,17 @@
     product.qty=(Number(product.qty)||0)+amount;
     return true;
   }
+  const DEVICE_REMINDER_KEY='prime-auto-care-device-opening-reminder-v1';
+  function loadDeviceReminder(){
+    try{
+      const value=JSON.parse(localStorage.getItem(DEVICE_REMINDER_KEY)||'null');
+      return value&&typeof value==='object'
+        ? {enabled:value.enabled!==false,time:/^(\\d{2}):(\\d{2})$/.test(value.time||'')?value.time:'07:00'}
+        : {enabled:true,time:'07:00'};
+    }catch{return {enabled:true,time:'07:00'}}
+  }
+  let deviceReminder=loadDeviceReminder();
+  function saveDeviceReminder(){localStorage.setItem(DEVICE_REMINDER_KEY,JSON.stringify(deviceReminder))}
   let db=load(); let page='dashboard'; let billLines=[]; let billSaving=false; let editingLines=[]; let editingInvoiceId=null; let offerDraft=''; let offerSelectedCustomerIds=null; let toastTimer=null;
   function load(){try{const x=JSON.parse(localStorage.getItem(STORE));return reconcileStockLedger(x&&x.business?Object.assign(blank(),x):blank())}catch(e){return reconcileStockLedger(blank())}}
   function snapshotDatabase(){return JSON.stringify(db)}
@@ -661,7 +672,7 @@
     <div class="notice" style="margin-top:14px">Important: this is an operational management report, not a double-entry Tally ledger, audited Profit & Loss, Balance Sheet, GST return or tax filing report.</div>`
   }
   function toggleWhatsAppConsent(cid){const c=db.customers.find(x=>x.id===cid);if(!c)return;c.waOptIn=!c.waOptIn;c.updatedAt=Date.now();if(!save())return;render();notify(c.waOptIn?'WhatsApp offer permission enabled.':'WhatsApp offer permission removed.')}
-  function offerPhone(phone){let p=String(phone||'').replace(/\D/g,'');if(p.length===10)p='91'+p;else if(p.length===11&&p.startsWith('0'))p='91'+p.slice(1);return p}
+  function offerPhone(phone){let p=String(phone||'').replace(/\\D/g,'');if(p.length===10)p='91'+p;else if(p.length===11&&p.startsWith('0'))p='91'+p.slice(1);return p}
   function offers(){
     const eligible=db.customers.filter(c=>c.waOptIn===true&&offerPhone(c.phone).length>=11);
     const withPhone=db.customers.filter(c=>offerPhone(c.phone).length>=11);
