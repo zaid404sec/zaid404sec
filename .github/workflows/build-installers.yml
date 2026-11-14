@@ -65,6 +65,37 @@ jobs:
         run: |
           npx electron-builder --win portable --x64 --publish never
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Split the Windows EXE into two download-safe parts
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem release -Filter '*.exe' | Sort-Object Length -Descending | Select-Object -First 1
+          if (-not $installer) { throw 'Windows installer EXE was not produced.' }
+          $bytes = [System.IO.File]::ReadAllBytes($installer.FullName)
+          $chunkSize = 48MB
+          $part1Dir = Join-Path release 'installer-part-1'
+          $part2Dir = Join-Path release 'installer-part-2'
+          New-Item -ItemType Directory -Force -Path $part1Dir, $part2Dir | Out-Null
+          $firstLength = [Math]::Min($chunkSize, $bytes.Length)
+          $first = New-Object byte[] $firstLength
+          [Array]::Copy($bytes, 0, $first, 0, $firstLength)
+          [System.IO.File]::WriteAllBytes((Join-Path $part1Dir 'part.bin'), $first)
+          $secondLength = $bytes.Length - $firstLength
+          $second = New-Object byte[] $secondLength
+          if ($secondLength -gt 0) { [Array]::Copy($bytes, $firstLength, $second, 0, $secondLength) }
+          [System.IO.File]::WriteAllBytes((Join-Path $part2Dir 'part.bin'), $second)
+          $metadata = [string]$installer.Name + [Environment]::NewLine + [string]$bytes.Length + [Environment]::NewLine + [string]$firstLength
+          [System.IO.File]::WriteAllText((Join-Path release 'installer-parts.txt'), $metadata)
+          Write-Host ('Split ' + $installer.Name + ' (' + $bytes.Length + ' bytes) into ' + $firstLength + ' and ' + $secondLength + ' byte parts.')
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Prime-Auto-Care-Windows-EXE-Part-1
+          path: car-wash-erp/release/installer-part-1/part.bin
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Prime-Auto-Care-Windows-EXE-Part-2
+          path: car-wash-erp/release/installer-part-2/part.bin
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: WashDesk-Windows-Installer
