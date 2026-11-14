@@ -706,11 +706,37 @@
     const imageFile=document.getElementById('offer-image')?.files?.[0]||null;
     if(imageFile&&(!imageFile.type.startsWith('image/')||imageFile.size>12*1024*1024)){notify('Choose an image smaller than 12 MB.');return}
     try{
-      if(!navigator.share)throw new Error('The Android share menu is not available on this device.');
-      if(imageFile){
-        if(!navigator.canShare?.({files:[imageFile]})){notify('This device cannot attach this image from the share menu. Remove the image and share the text.');return}
-        await navigator.share({files:[imageFile],title,text:message});
-      }else await navigator.share({title,text:message});
+      // Android WebView does not reliably expose navigator.share(). Use the
+      // already-installed native FileSharer plugin for promotional images.
+      if(imageFile&&window.WashDeskFileSharer?.share){
+        notify('Preparing your promotional image for Android sharing…');
+        const imageData=await blobAsDataUrl(imageFile);
+        await window.WashDeskFileSharer.share({
+          filename:(imageFile.name||'prime-auto-care-offer.jpg').replace(/[^a-zA-Z0-9._-]/g,'_'),
+          contentType:imageFile.type||'image/jpeg',
+          base64Data:imageData,
+          title,
+          text:message,
+          android:{chooserTitle:title}
+        });
+      }else if(!imageFile&&window.PrimeAutoCareLinks?.shareText){
+        await window.PrimeAutoCareLinks.shareText(title,message,title);
+      }else if(navigator.share){
+        if(imageFile){
+          if(!navigator.canShare?.({files:[imageFile]})){
+            await navigator.clipboard?.writeText(message);
+            downloadBlob(imageFile,imageFile.name||'prime-auto-care-offer.jpg');
+            notify('Offer text copied and image downloaded. Attach both in WhatsApp.');
+            return;
+          }
+          await navigator.share({files:[imageFile],title,text:message});
+        }else await navigator.share({title,text:message});
+      }else{
+        if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(message);
+        if(imageFile)downloadBlob(imageFile,imageFile.name||'prime-auto-care-offer.jpg');
+        notify(imageFile?'Offer text copied and image downloaded. Attach both in WhatsApp.':'Offer text copied. Paste it into your WhatsApp group and press Send.');
+        return;
+      }
       notify('Offer prepared. Choose WhatsApp Business, select your existing Prime Auto Care group and press Send.');
     }catch(error){
       if(error?.name==='AbortError'||error?.message==='USER_CANCELLED')return;

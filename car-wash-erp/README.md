@@ -13,6 +13,12 @@ A mobile-friendly, installable starter app tailored to a car washing centre.
 - JSON backup/restore and invoice CSV export.
 - Service-worker caching for the app shell and install-to-home-screen support.
 
+## Version 2.6.4 Android share-sheet repair and migration
+
+- **WhatsApp group offers:** The Android screen now uses the native share sheet instead of relying on `navigator.share()` inside the WebView. Text-only offers use the Capacitor Share plugin. Offers with a promotional image use the existing native FileSharer plugin and include the offer message as the caption. Browser and Windows fallbacks remain available.
+- **Android install:** Version 2.6.4 uses package ID `com.washdesk.carwash.v17` so it installs beside v16 without replacing the existing app or deleting its local data. Before switching, export a full JSON backup from v16 and confirm cloud sync has completed. Pair v17 with the same cloud workspace or restore the backup, then verify customer, invoice, staff and inventory records before removing v16.
+- **Windows:** The 2.6.4 EXE retains the existing WashDesk user-data folder and can be installed over the previous Windows version.
+
 ## Version 2.6.3 repair release and migration
 
 - **Android:** Version 2.6.3 uses application ID `com.washdesk.carwash.v16` and installs beside v15, preserving the previous app and its local data. Keep v15 until v16 has been paired with the same Prime Auto Care cloud workspace and all records have been checked. If cloud sync is not configured, export a JSON backup from v15 and restore it in v16.

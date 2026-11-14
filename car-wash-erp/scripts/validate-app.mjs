@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.6.3') throw new Error('The package version must be 2.6.3.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v16') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v16.');
+if (packageJson.version !== '2.6.4') throw new Error('The package version must be 2.6.4.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v17') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v17.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -82,6 +82,24 @@ if (!nativeLinks.includes("from '@capacitor/app-launcher'") ||
   throw new Error('The Android SIM SMS composer bridge is missing.');
 }
 console.log('PASS: customer thank-you and invoice SMS open the phone SIM composer; user confirms Send');
+if (packageJson.dependencies['@capacitor/share'] !== '^8.0.3' ||
+    !nativeLinks.includes("from '@capacitor/share'") ||
+    !nativeLinks.includes('Share.share(') ||
+    !nativeLinks.includes('shareText')) {
+  throw new Error('Android native text sharing plugin must be installed and exposed to the app.');
+}
+const offerShareStart=html.indexOf('async function shareOfferViaWhatsApp(){');
+const offerShareEnd=html.indexOf('async function refreshMessagingStatus()',offerShareStart);
+const offerShareSource=html.slice(offerShareStart,offerShareEnd);
+if (!offerShareSource.includes('window.WashDeskFileSharer?.share') ||
+    !offerShareSource.includes('window.PrimeAutoCareLinks?.shareText') ||
+    !offerShareSource.includes('await blobAsDataUrl(imageFile)') ||
+    offerShareSource.includes('The Android share menu is not available on this device.')) {
+  throw new Error('Group offer sharing must use native Android share bridges for text and promotional images.');
+}
+console.log('PASS: Android offers use native share sheet for text and attached promotional images; browser fallback remains available');
+
+
 const mustContain = [
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -127,7 +145,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v16') throw new Error('Android stability release app ID v15 was not set.');
+if (appId !== 'com.washdesk.carwash.v17') throw new Error('Android stability release app ID v15 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -489,7 +507,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v19')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v20')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
