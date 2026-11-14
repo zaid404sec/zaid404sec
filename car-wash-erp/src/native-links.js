@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { AppLauncher } from '@capacitor/app-launcher';
+import { Share } from '@capacitor/share';
 
 function normalizeIndianMobile(value) {
   let digits=String(value||'').replace(/\D/g,'');
@@ -28,4 +29,15 @@ async function openWhatsApp(phone, body) {
   window.location.href=url;
 }
 
-window.PrimeAutoCareLinks = { openSms, openWhatsApp };
+async function shareText(title, body, dialogTitle) {
+  const message=String(body||'').trim();
+  if(!message)throw new Error('The offer message is empty.');
+  if(!Capacitor.isNativePlatform())throw new Error('Native text sharing is available in the Android app only.');
+  return Share.share({
+    title:String(title||'Prime Auto Care'),
+    text:message,
+    dialogTitle:String(dialogTitle||title||'Share')
+  });
+}
+
+window.PrimeAutoCareLinks = { openSms, openWhatsApp, shareText };
