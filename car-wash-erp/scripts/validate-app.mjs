@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.6.4') throw new Error('The package version must be 2.6.4.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v17') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v17.');
+if (packageJson.version !== '2.7.0') throw new Error('The package version must be 2.7.0.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v18') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v18.');
 }
 console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
 if (!html.includes("if(page!=='dashboard')return true;") ||
@@ -100,7 +100,30 @@ if (!offerShareSource.includes('window.WashDeskFileSharer?.share') ||
 console.log('PASS: Android offers use native share sheet for text and attached promotional images; browser fallback remains available');
 
 
+const dateHelpersStart=html.indexOf('const today=');
+const dateHelpersEnd=html.indexOf('const id=',dateHelpersStart);
+if(dateHelpersStart<0||dateHelpersEnd<0)throw new Error('Invoice date helper block was not found.');
+const dateHelpers=html.slice(dateHelpersStart,dateHelpersEnd);
+const parsedInvoiceDates=vm.runInNewContext(dateHelpers+String.fromCharCode(10)+
+  "({iso:invoiceDateKey('2026-11-15'),dayFirst:invoiceDateKey('15/11/2026'),dashDayFirst:invoiceDateKey('15-11-2026'),month:monthKey('15/11/2026')})",{});
+if(parsedInvoiceDates.iso!=='2026-11-15'||parsedInvoiceDates.dayFirst!=='2026-11-15'||parsedInvoiceDates.dashDayFirst!=='2026-11-15'||parsedInvoiceDates.month!=='2026-11'){
+  throw new Error('Legacy invoice date normalisation failed: '+JSON.stringify(parsedInvoiceDates));
+}
+console.log('PASS: invoice list month/date filters normalise ISO and day-first legacy dates');
+
 const mustContain = [
+  'const invoiceDateKey=',
+  'id="invoice-day"',
+  'function invoicePaymentModeLabel',
+  'Mark as Complimentary (No charge)',
+  'function invoiceRevenueAmount',
+  'function staffAccruedDays',
+  'function staffTodayAdvancesHtml',
+  'tomorrowOpeningMessage',
+  'data-action="share-tomorrow-message"',
+  'Today’s vehicle count',
+  'Today’s collections',
+  'Online received (UPI / Card / Bank)',
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
   'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle', 'function canRenderRemoteUpdate', 'remoteRenderPending', 'if(canRenderRemoteUpdate())render()',
@@ -145,7 +168,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v17') throw new Error('Android stability release app ID v15 was not set.');
+if (appId !== 'com.washdesk.carwash.v18') throw new Error('Android stability release app ID v18 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -226,18 +249,20 @@ const novemberPayroll = vm.runInNewContext(
       attendance: [
         { staffId:'staff-1', date:'2026-11-02', status:'Absent', updatedAt:1 },
         { staffId:'staff-1', date:'2026-11-04', status:'Absent', updatedAt:1 },
-        { staffId:'staff-1', date:'2026-11-05', status:'Present', updatedAt:1 }
+        { staffId:'staff-1', date:'2026-11-05', status:'Present', updatedAt:1 },
+        { staffId:'staff-1', date:'2026-11-22', status:'Absent', updatedAt:1 }
       ],
       expenses: []
     },
+    today: () => '2026-11-15',
     monthKey: date => date ? String(date).slice(0,7) : '2026-11',
     sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
   }
 );
-if (novemberPayroll.calendarDays !== 30 || novemberPayroll.absentDays !== 2 ||
+if (novemberPayroll.calendarDays !== 30 || novemberPayroll.accruedDays !== 15 || novemberPayroll.absentDays !== 2 ||
     Math.abs(novemberPayroll.absenceDeduction-933.33) > 0.01 ||
-    Math.abs(novemberPayroll.earnedSalary-13066.67) > 0.01 ||
-    Math.abs(novemberPayroll.netPayable-10066.67) > 0.01) {
+    Math.abs(novemberPayroll.earnedSalary-6066.67) > 0.01 ||
+    Math.abs(novemberPayroll.netPayable-3066.67) > 0.01) {
   throw new Error('30-day payroll calculation failed: ' + JSON.stringify(novemberPayroll));
 }
 console.log('PASS: 30-day payroll deducts absence days and outstanding advances from monthly salary');
@@ -245,6 +270,7 @@ const februaryPayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2027-02')",
   {
     db: { staffAdvances:[], attendance:[{staffId:'staff-1',date:'2027-02-10',status:'Absent'}], expenses:[] },
+    today: () => '2027-02-28',
     monthKey: date => date ? String(date).slice(0,7) : '2027-02',
     sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
   }
@@ -490,14 +516,37 @@ const invoiceMarkup = vm.runInNewContext(
     invoiceTaxLines:()=>[{taxable:100,rate:0,tax:0,cgst:0,sgst:0,igst:0}],
     invoiceCustomerName:()=> 'PDF Test Customer',
     paid:()=>25,
-    invoiceDue:()=>75,
+    invoiceDue:i=>i?.complimentary?0:75,
+    invoicePaymentModeLabel:i=>i?.complimentary?'Complimentary':'Cash',
     fy:()=> '26-27'
   }
 );
-for (const field of ['GRAND TOTAL','₹100.00','Paid','₹25.00','Balance due','₹75.00','Service performed by:']) {
+for (const field of ['GRAND TOTAL','₹100.00','Cash','₹25.00','Balance due','₹75.00','Service performed by:']) {
   if (!invoiceMarkup.includes(field)) throw new Error('Invoice PDF is missing required field: ' + field);
 }
 console.log('PASS: invoice PDF HTML includes Grand Total, Paid, Balance Due and assigned staff');
+
+const complimentaryMarkup = vm.runInNewContext(
+  invoiceHtmlSource + String.fromCharCode(10) + 'invoiceHTML({...sampleInvoice,complimentary:true})',
+  {
+    sampleInvoice,
+    db:{business:sampleInvoice.businessSnapshot,staff:[],customers:[],payments:[]},
+    sum:(rows,fn)=>rows.reduce((total,row)=>total+Number(fn?fn(row):row||0),0),
+    esc:value=>String(value??''),
+    INR:value=>'₹'+Number(value||0).toFixed(2),
+    invoiceTaxLines:()=>[{taxable:100,rate:0,tax:0,cgst:0,sgst:0,igst:0}],
+    invoiceCustomerName:()=> 'PDF Test Customer',
+    paid:i=>i?.complimentary?0:25,
+    invoiceDue:i=>i?.complimentary?0:75,
+    invoicePaymentModeLabel:i=>i?.complimentary?'Complimentary':'Cash',
+    fy:()=> '26-27'
+  }
+);
+for (const field of ['COMPLIMENTARY · NO CHARGE','Complimentary service approved. No payment is due.','Complimentary']) {
+  if (!complimentaryMarkup.includes(field)) throw new Error('Complimentary invoice PDF is missing: '+field);
+}
+console.log('PASS: complimentary invoice PDF shows no payment due and correct status');
+
 
 const reportSource = await readFile(new URL('../src/report-export.js', import.meta.url), 'utf8');
 for (const token of ["addSheet(workbook, 'Staff Advances'", "'Staff Advances Issued'", "'Advance Adjustment'", "advances })"]) {
@@ -507,7 +556,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v20')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v21')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
