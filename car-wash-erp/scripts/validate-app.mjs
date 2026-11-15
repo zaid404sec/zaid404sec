@@ -112,7 +112,7 @@ if(parsedInvoiceDates.iso!=='2026-11-15'||parsedInvoiceDates.dayFirst!=='2026-11
 console.log('PASS: invoice list month/date filters normalise ISO and day-first legacy dates');
 
 const mustContain = [
-  'function invoiceDateKey',
+  'const invoiceDateKey=',
   'id="invoice-day"',
   'function invoicePaymentModeLabel',
   'Mark as Complimentary (No charge)',
