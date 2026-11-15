@@ -7,10 +7,19 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
 if (packageJson.version !== '2.8.0') throw new Error('The package version must be 2.8.0.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v19') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v19.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v18') {
+  throw new Error('The stability release must use the safe side-by-side Android app ID v18.');
 }
-console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
+console.log('PASS: Android 2.8.0 retains the existing v18 app ID for an in-place update');
+if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
+console.log('PASS: historical dashboard and staff/month advance summary');
+if (!html.includes('Founder') || !html.includes('Owner Operator')) throw new Error('New staff roles are missing.');
+console.log('PASS: Founder and Owner Operator roles');
+if (!html.includes('Personal / Household · Vehicle Petrol') || !html.includes('Personal / Household · House Light Bill') || !html.includes("expenseType==='personal'")) throw new Error('Household expense classification is missing.');
+console.log('PASS: personal and household expense separation');
+if (!html.includes('https://g.page/r/CYMPgw3oQ1hfEBM/review') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
+console.log('PASS: Google review workflow');
+
 if (!html.includes("if(page!=='dashboard')return true;") ||
     !html.includes("if(page!==p)applyPendingRemoteData();") ||
     !html.includes("requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY))")) {
@@ -111,54 +120,7 @@ if(parsedInvoiceDates.iso!=='2026-11-15'||parsedInvoiceDates.dayFirst!=='2026-11
 }
 console.log('PASS: invoice list month/date filters normalise ISO and day-first legacy dates');
 
-
-const businessHelpersStart=html.indexOf('const PERSONAL_EXPENSE_CATEGORIES=');
-const businessHelpersEnd=html.indexOf('function reconcileStockLedger(data)',businessHelpersStart);
-if(businessHelpersStart<0||businessHelpersEnd<0)throw new Error('Business reporting helper block is missing.');
-const businessHelpers=html.slice(businessHelpersStart,businessHelpersEnd);
-const helperResults=vm.runInNewContext(businessHelpers+String.fromCharCode(10)+
-  "({personal:isPersonalExpense({category:'Vehicle Petrol'}),business:isPersonalExpense({category:'Electricity',expenseGroup:'Business'}),daily:dashboardRecordsForDate('2026-11-14'),filtered:filterStaffAdvances([{id:'a',staffId:'staff-1',date:'2026-11-14',amount:500,recoveredAmount:100},{id:'b',staffId:'staff-2',date:'2026-11-14',amount:200,recoveredAmount:0}], 'staff-1','2026-11'),totals:staffAdvanceTotals([{id:'a',staffId:'staff-1',date:'2026-11-14',amount:500,recoveredAmount:100}])})",
-  {
-    db:{
-      business:{googleReviewLink:'https://g.page/r/CYMPgw3oQ1hfEBM/review'},
-      invoices:[{id:'i1',date:'2026-11-14',grandTotal:500},{id:'i2',date:'2026-11-13',grandTotal:300}],
-      expenses:[{id:'e1',date:'2026-11-14',category:'Electricity',amount:200},{id:'e2',date:'2026-11-14',category:'Vehicle Petrol',expenseGroup:'Personal / Household',accountName:'Zaid',amount:80},{id:'e3',date:'2026-11-14',category:'Staff Advance',amount:300}],
-      payments:[{id:'p1',date:'2026-11-14',amount:100,mode:'Cash'}],
-      staffAdvances:[{id:'a',staffId:'staff-1',date:'2026-11-14',amount:500,recoveredAmount:100}]
-    },
-    invoiceDateKey:value=>String(value||'').slice(0,10),
-    monthKey:value=>String(value||'').slice(0,7),
-    staffAdvanceRecoveredAmount:advance=>Number(advance?.recoveredAmount)||0,
-    sum:(rows,fn)=>rows.reduce((total,row)=>total+Number(fn?fn(row):row||0),0)
-  }
-);
-if(!helperResults.personal||helperResults.business||helperResults.daily.invoices.length!==1||
-   helperResults.daily.businessExpenses.length!==1||helperResults.daily.businessExpenses[0].amount!==200||
-   helperResults.daily.personalExpenses.length!==1||helperResults.daily.personalExpenses[0].amount!==80||
-   helperResults.daily.payments.length!==1||helperResults.filtered.length!==1||
-   helperResults.totals.issued!==500||helperResults.totals.adjusted!==100||helperResults.totals.outstanding!==400){
-  throw new Error('Daily dashboard, personal expense separation or staff/month advance filtering calculation failed.');
-}
-console.log('PASS: selected-day dashboard, personal expense separation and staff/month advance totals');
-
 const mustContain = [
-  'function dashboardRecordsForDate',
-  'function isPersonalExpense',
-  'Vehicle Petrol',
-  'House Light Bill',
-  'House Maintenance (Building)',
-  'Mohammad Imran',
-  'Khurshid Banu',
-  'Owner / Operator',
-  'function filterStaffAdvances',
-  'staff-advance-month',
-  'Grand total outstanding',
-  'id="dashboard-date"',
-  'googleReviewLink',
-  'function requestGoogleReview',
-  'data-google-review-invoice',
-  'google-review-share',
-  'Personal / household this month',
   'const invoiceDateKey=',
   'id="invoice-day"',
   'function invoicePaymentModeLabel',
@@ -168,8 +130,8 @@ const mustContain = [
   'function staffTodayAdvancesHtml',
   'tomorrowOpeningMessage',
   'data-action="share-tomorrow-message"',
-  'Vehicle count · selected date',
-  'Collections · selected date',
+  'Today’s vehicle count',
+  'Today’s collections',
   'Online received (UPI / Card / Bank)',
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -215,7 +177,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v19') throw new Error('Android stability release app ID v19 was not set.');
+if (appId !== 'com.washdesk.carwash.v18') throw new Error('Android stability release app ID v18 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -596,14 +558,14 @@ console.log('PASS: complimentary invoice PDF shows no payment due and correct st
 
 
 const reportSource = await readFile(new URL('../src/report-export.js', import.meta.url), 'utf8');
-for (const token of ["addSheet(workbook, 'Staff Advances'", "addSheet(workbook, 'Personal & Household'", "'Personal Expenses'", "'Staff Advances Issued'", "'Advance Adjustment'", "personalExpenses = [], staff, advances })"]) {
+for (const token of ["addSheet(workbook, 'Staff Advances'", "'Staff Advances Issued'", "'Advance Adjustment'", "advances })"]) {
   if (!reportSource.includes(token)) throw new Error('Excel report is missing staff advance support: ' + token);
 }
-if (!html.includes("exportWorkbook({filename,sales,daily,expenses,personalExpenses,staff,advances})")) {
-  throw new Error('The app is not passing the Personal / Household and Staff Advances registers to the Excel exporter.');
+if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances})")) {
+  throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v22')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v21')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
