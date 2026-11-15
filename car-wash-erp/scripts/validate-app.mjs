@@ -123,7 +123,7 @@ const mustContain = [
   'data-action="share-tomorrow-message"',
   'Today’s vehicle count',
   'Today’s collections',
-  'Online received (UPI / Card / Bank)'
+  'Online received (UPI / Card / Bank)',
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
   'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle', 'function canRenderRemoteUpdate', 'remoteRenderPending', 'if(canRenderRemoteUpdate())render()',
