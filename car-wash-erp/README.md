@@ -8,7 +8,7 @@
 - Staff role list now includes Founder and Owner / Operator.
 - Google review link is configured in Business Settings. Review requests can be opened from an invoice or shared from the dashboard; messages request honest feedback and are never auto-sent.
 - Excel exports keep Personal & Household expenses on a dedicated worksheet and separate them in daily totals.
-- No new database table or SQL migration. New personal account/group fields are stored on existing expense records. Android app ID v19 installs alongside v18 to protect the current installation’s local data.
+- No new database table or SQL migration. New personal account/group fields are stored on existing expense records. Android app ID v18 is retained so this update installs over the existing app and preserves local app data.
 
 A mobile-friendly, installable starter app tailored to a car washing centre.
 
