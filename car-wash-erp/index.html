@@ -658,7 +658,7 @@
   function staff(){ 
     db.staffAdvances=db.staffAdvances||[];
     const m=document.getElementById('payroll-month')?.value||monthKey(),salaryPayable=sum(db.staff,st=>staffPayrollBreakdown(st,m).netPayable),advancesOpen=staffAdvancesOutstanding();db.attendance=db.attendance||[];const attendanceDate=document.getElementById('attendance-date')?.value||today(),todaysAttendance=staffAttendanceForDate(attendanceDate),attendanceByStaff=new Map(todaysAttendance.map(a=>[a.staffId,a])),presentCount=todaysAttendance.filter(a=>a.status==='Present').length,absentCount=todaysAttendance.filter(a=>a.status==='Absent').length;
-    const advances=[...db.staffAdvances].sort((a,b)=>String(b.date).localeCompare(String(a.date))||(b.createdAt||0)-(a.createdAt||0));
+    const advanceStaffFilter=document.getElementById('advance-staff-filter')?.value||'all',advanceMonthFilter=document.getElementById('advance-month-filter')?.value||monthKey(),advances=[...db.staffAdvances].filter(a=>monthKey(a.date)===advanceMonthFilter&&(advanceStaffFilter==='all'||a.staffId===advanceStaffFilter)).sort((a,b)=>String(b.date).localeCompare(String(a.date))||(b.createdAt||0)-(a.createdAt||0));
     return `${pageHead('Staff & payroll','Staff directory, individual attendance, shift schedules and monthly salary calculations.', '<button class="btn" data-action="manager-pin">Manager PIN</button><button class="btn" data-action="add-staff-advance">＋ Give advance</button><button class="btn primary" data-action="add-staff">＋ Add staff</button>')}
     <div class="grid stats">
       ${stat('Salary payable this month',INR(salaryPayable),'₹','Unsettled salary liability')}
