@@ -1,5 +1,15 @@
 # WashDesk — Car Wash Business Manager
 
+## Version 2.8.0 — daily reporting, household ledger and customer reviews
+
+- Dashboard date selector: choose any saved date and review that day’s sales, invoice balances, cash/online collections, vehicle counts, business expenses and staff advances. Current-month figures remain separate.
+- Personal / Household expenses: named accounts for Mohammad Imran, Mohammad Shafi, Rukhsana Banu, Zaid, Khurshid Banu and Sayra Bibi; expense heads include Vehicle Petrol, Vehicle CNG, Vehicle Diesel, House Light Bill and House Maintenance (Building). Personal costs remain recorded but are excluded from business operating expenses and estimated business surplus.
+- Staff advance register: filter by staff member and month; view the count and grand totals issued, adjusted and outstanding. Existing salary-adjustment protections remain.
+- Staff role list now includes Founder and Owner / Operator.
+- Google review link is configured in Business Settings. Review requests can be opened from an invoice or shared from the dashboard; messages request honest feedback and are never auto-sent.
+- Excel exports keep Personal & Household expenses on a dedicated worksheet and separate them in daily totals.
+- No new database table or SQL migration. New personal account/group fields are stored on existing expense records. Android app ID v19 installs alongside v18 to protect the current installation’s local data.
+
 A mobile-friendly, installable starter app tailored to a car washing centre.
 
 ## Included
