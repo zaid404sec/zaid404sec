@@ -1115,7 +1115,7 @@
     const customer=db.customers.find(c=>c.id===i.customerId);
     const staffName=i.staffNameSnapshot||db.staff.find(st=>st.id===i.staffId)?.name||'Not recorded';
     const payments=db.payments.filter(p=>p.invoiceId===i.id),totalPaid=paid(i),balance=invoiceDue(i);
-    const status=balance>0?'CREDIT / PAYMENT DUE':'PAID IN FULL';
+    const status=i.complimentary?'COMPLIMENTARY · NO CHARGE':balance>0?'PAYMENT PENDING':'PAID IN FULL';
     const safeText=value=>String(value??'').trim()||'—';
     const details=[b.phone?'Phone: '+b.phone:'',registered&&b.gstin?'GSTIN: '+b.gstin:''].filter(Boolean).join('  |  ');
     const brandDetails=[safeText(b.address),[b.city,b.state].filter(Boolean).join(', '),details].filter(x=>x!=='—').join('  |  ');
@@ -1158,7 +1158,7 @@
     </svg>`;
     const paymentBody=[
       [{text:'PAYMENT DETAILS',style:'sectionTitleDark',colSpan:2,fillColor:'#17130c',border:[false,false,false,false]},{}],
-      [{text:'Payment mode',style:'smallLabel'},{text:safeText(payments.length?'Recorded below':i.paymentMode||'Credit / Not paid'),style:'smallValue',alignment:'right'}]
+      [{text:'Payment mode',style:'smallLabel'},{text:safeText(invoicePaymentModeLabel(i)),style:'smallValue',alignment:'right'}]
     ];
     if(payments.length){
       payments.forEach(p=>paymentBody.push([
@@ -1186,8 +1186,8 @@
     }
     summaryBody.push(
       [{text:'GRAND TOTAL',style:'grandTotalLabel',fillColor:'#d6b15f',border:[true,true,true,true]},{text:formatAmount(i.grandTotal),style:'grandTotalValue',alignment:'right',fillColor:'#d6b15f',border:[true,true,true,true]}],
-      [{text:'Paid',style:'smallLabelBold'},{text:formatAmount(totalPaid),style:'smallValueBold',alignment:'right'}],
-      [{text:'BALANCE DUE',style:'balanceLabel'},{text:formatAmount(balance),style:'balanceValue',alignment:'right'}]
+      [{text:i.complimentary?'Complimentary':'Paid',style:'smallLabelBold'},{text:formatAmount(totalPaid),style:'smallValueBold',alignment:'right'}],
+      [{text:i.complimentary?'NO PAYMENT DUE':'BALANCE DUE',style:'balanceLabel'},{text:formatAmount(balance),style:'balanceValue',alignment:'right'}]
     );
     const lineRows=(i.lines||[]).map((line,index)=>{
       const tax=txLines[index]||{taxable:0,rate:0,tax:0};
@@ -1328,11 +1328,11 @@
             {
               stack:[
                 {text:'PAYMENT DETAILS',style:'sectionTitleDark',fillColor:'#17130c',margin:[6,8,6,8]},
-                {text:'Payment method: '+(payments.length?payments.map(p=>p.mode||'Other').filter((m,n,a)=>a.indexOf(m)===n).join(' / '):safeText(i.paymentMode||'Credit / Not paid')),style:'partyText',margin:[3,5,3,4]},
+                {text:'Payment method: '+invoicePaymentModeLabel(i),style:'partyText',margin:[3,5,3,4]},
                 ...payments.map(p=>({columns:[{text:(p.mode||'Other')+(p.date?'  ·  '+p.date:''),style:'smallLabel',width:'*'},{text:formatAmount(p.amount),style:'smallValue',alignment:'right',width:'auto'}],margin:[3,2,3,2]})),
                 {columns:[{text:'TOTAL RECEIVED',style:'smallLabelBold',width:'*'},{text:formatAmount(totalPaid),style:'smallValueBold',alignment:'right',width:'auto'}],margin:[3,5,3,3]},
                 {text:status,style:'statusValue',margin:[3,5,3,3]},
-                {text:balance>0?'Payment is pending. Please clear the balance at your convenience.':'No balance is outstanding. Thank you.',style:'itemMeta',margin:[3,3,3,4]}
+                {text:i.complimentary?'Complimentary service approved. No payment is due.':balance>0?'Payment is pending. Please clear the balance at your convenience.':'No balance is outstanding. Thank you.',style:'itemMeta',margin:[3,3,3,4]}
               ],
               fillColor:'#fbf5e7',margin:[9,8,9,8],border:[true,true,true,true]
             },
