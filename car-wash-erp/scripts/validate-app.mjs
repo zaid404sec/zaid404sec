@@ -596,11 +596,11 @@ console.log('PASS: complimentary invoice PDF shows no payment due and correct st
 
 
 const reportSource = await readFile(new URL('../src/report-export.js', import.meta.url), 'utf8');
-for (const token of ["addSheet(workbook, 'Staff Advances'", "'Staff Advances Issued'", "'Advance Adjustment'", "advances })"]) {
+for (const token of ["addSheet(workbook, 'Staff Advances'", "addSheet(workbook, 'Personal & Household'", "'Personal Expenses'", "'Staff Advances Issued'", "'Advance Adjustment'", "personalExpenses = [], staff, advances })"]) {
   if (!reportSource.includes(token)) throw new Error('Excel report is missing staff advance support: ' + token);
 }
-if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances})")) {
-  throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
+if (!html.includes("exportWorkbook({filename,sales,daily,expenses,personalExpenses,staff,advances})")) {
+  throw new Error('The app is not passing the Personal / Household and Staff Advances registers to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
 if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v22')) {
