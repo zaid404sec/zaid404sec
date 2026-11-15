@@ -29,6 +29,15 @@ async function openWhatsApp(phone, body) {
   window.location.href=url;
 }
 
+async function openExternalUrl(value) {
+  const parsed=new URL(String(value||''));
+  if(parsed.protocol!=='https:')throw new Error('Only secure HTTPS links can be opened.');
+  if(Capacitor.isNativePlatform())return AppLauncher.openUrl({url:parsed.href});
+  const opened=window.open(parsed.href,'_blank','noopener,noreferrer');
+  if(!opened)window.location.href=parsed.href;
+  return {opened:true};
+}
+
 async function shareText(title, body, dialogTitle) {
   const message=String(body||'').trim();
   if(!message)throw new Error('The offer message is empty.');
@@ -40,4 +49,4 @@ async function shareText(title, body, dialogTitle) {
   });
 }
 
-window.PrimeAutoCareLinks = { openSms, openWhatsApp, shareText };
+window.PrimeAutoCareLinks = { openSms, openWhatsApp, openExternalUrl, shareText };

@@ -6,11 +6,21 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.7.0') throw new Error('The package version must be 2.7.0.');
+if (packageJson.version !== '2.8.0') throw new Error('The package version must be 2.8.0.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v18') {
-  throw new Error('The stability release must use the safe side-by-side Android app ID v18.');
+  throw new Error('The 2.8.0 update must retain Android app ID v18 to update in place and preserve local data.');
 }
-console.log('PASS: Android stability release installs side-by-side and preserves the previous app data');
+console.log('PASS: Android 2.8.0 retains the existing v18 app ID for an in-place update');
+
+if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
+console.log('PASS: historical dashboard and staff/month advance summary');
+if (!html.includes('Founder') || !html.includes('Owner Operator')) throw new Error('Founder and Owner Operator roles are missing.');
+console.log('PASS: Founder and Owner Operator roles');
+if (!html.includes('Personal / Household · Vehicle Petrol') || !html.includes('Personal / Household · House Light Bill') || !html.includes("expenseType==='personal'")) throw new Error('Personal and household expense classification is missing.');
+console.log('PASS: personal and household expense separation');
+if (!html.includes('https://g.page/r/CYMPgw3oQ1hfEBM/review') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
+console.log('PASS: Google review workflow');
+
 if (!html.includes("if(page!=='dashboard')return true;") ||
     !html.includes("if(page!==p)applyPendingRemoteData();") ||
     !html.includes("requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY))")) {
@@ -121,8 +131,8 @@ const mustContain = [
   'function staffTodayAdvancesHtml',
   'tomorrowOpeningMessage',
   'data-action="share-tomorrow-message"',
-  'Today’s vehicle count',
-  'Today’s collections',
+  'Selected date’s',
+  'Selected date’s',
   'Online received (UPI / Card / Bank)',
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
@@ -552,11 +562,11 @@ const reportSource = await readFile(new URL('../src/report-export.js', import.me
 for (const token of ["addSheet(workbook, 'Staff Advances'", "'Staff Advances Issued'", "'Advance Adjustment'", "advances })"]) {
   if (!reportSource.includes(token)) throw new Error('Excel report is missing staff advance support: ' + token);
 }
-if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances})")) {
+if (!html.includes("exportWorkbook({filename,sales,daily,expenses,personalExpenses,staff,advances})")) {
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v21')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v22')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');

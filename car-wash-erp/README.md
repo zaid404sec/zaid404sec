@@ -1,6 +1,16 @@
 # WashDesk — Car Wash Business Manager
 
-A mobile-friendly, installable starter app tailored to a car washing centre.
+## Version 2.8.0 — reporting, household ledger and customer reviews
+
+- Dashboard date selector for historical daily sales, outstanding invoices, collections and vehicle counts.
+- Staff advance report with staff/month filters and issued, adjusted and outstanding totals.
+- Founder and Owner Operator roles.
+- Personal / Household expense heads for Vehicle Petrol, Vehicle CNG, Vehicle Diesel, House Light Bill and House Maintenance (Building), with account/person suggestions. These are excluded from business operating expenses and business surplus.
+- Google review link in settings, dashboard sharing actions and a review link on invoice PDFs. Invitations request honest, optional feedback.
+- Personal expenses are exported to a separate Excel worksheet.
+- Android app ID v18 is retained for an in-place update; no new cloud SQL table is required.
+
+A mobile-friendly, installable app tailored to a car washing centre.
 
 ## Included
 - Customer and vehicle register: contact details, vehicle class, registration number and visit history.

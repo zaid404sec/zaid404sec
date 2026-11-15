@@ -40,7 +40,7 @@ function addSheet(workbook, name, rows, columns, moneyFields = []) {
 }
 
 window.WashDeskExcel = {
-  async exportWorkbook({ filename, sales, daily, expenses, staff, advances }) {
+  async exportWorkbook({ filename, sales, daily, expenses, personalExpenses = [], staff, advances }) {
     const ExcelJS = window.ExcelJS;
     if (!ExcelJS?.Workbook) throw new Error('The Excel workbook library is not loaded. Reopen WashDesk and retry.');
     const workbook = new ExcelJS.Workbook();
@@ -64,14 +64,21 @@ window.WashDeskExcel = {
       { header: 'Date', key: 'Date', width: 16 }, { header: 'Bills Count', key: 'Bills Count', width: 15 },
       { header: 'Sales', key: 'Sales', width: 18 }, { header: 'Payments Received', key: 'Payments Received', width: 21 },
       { header: 'Outstanding', key: 'Outstanding', width: 18 }, { header: 'Expenses', key: 'Expenses', width: 18 },
-      { header: 'Salary Expenses', key: 'Salary Expenses', width: 20 }, { header: 'Staff Advances Issued', key: 'Staff Advances Issued', width: 24 }
-    ], ['Sales','Payments Received','Outstanding','Expenses','Salary Expenses','Staff Advances Issued']);
+      { header: 'Personal Expenses', key: 'Personal Expenses', width: 21 }, { header: 'Salary Expenses', key: 'Salary Expenses', width: 20 }, { header: 'Staff Advances Issued', key: 'Staff Advances Issued', width: 24 }
+    ], ['Sales','Payments Received','Outstanding','Expenses','Personal Expenses','Salary Expenses','Staff Advances Issued']);
     addSheet(workbook, 'Expenses', expenses, [
       { header: 'Date', key: 'Date', width: 16 }, { header: 'Category', key: 'Category', width: 23 },
+      { header: 'Expense Group', key: 'Expense Group', width: 24 }, { header: 'Account / Person', key: 'Account / Person', width: 24 },
       { header: 'Paid To', key: 'Paid To', width: 24 }, { header: 'Staff', key: 'Staff', width: 22 },
       { header: 'Description', key: 'Description', width: 38 }, { header: 'Mode', key: 'Mode', width: 18 },
       { header: 'Amount', key: 'Amount', width: 18 }, { header: 'Advance Adjustment', key: 'Advance Adjustment', width: 22 }
     ], ['Amount','Advance Adjustment']);
+    addSheet(workbook, 'Personal & Household', personalExpenses, [
+      { header: 'Date', key: 'Date', width: 16 }, { header: 'Account', key: 'Account', width: 25 },
+      { header: 'Expense Head', key: 'Category', width: 30 }, { header: 'Paid To', key: 'Paid To', width: 24 },
+      { header: 'Description', key: 'Description', width: 38 }, { header: 'Mode', key: 'Mode', width: 16 },
+      { header: 'Amount', key: 'Amount', width: 18 }
+    ], ['Amount']);
     addSheet(workbook, 'Staff Advances', advances, [
       { header: 'Date', key: 'Date', width: 16 }, { header: 'Staff', key: 'Staff', width: 26 },
       { header: 'Reason', key: 'Reason', width: 34 }, { header: 'Amount Issued', key: 'Amount Issued', width: 18 },
