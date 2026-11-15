@@ -158,7 +158,7 @@ const mustContain = [
   'function requestGoogleReview',
   'data-google-review-invoice',
   'google-review-share',
-  'Personal / household this month'
+  'Personal / household this month',
   'const invoiceDateKey=',
   'id="invoice-day"',
   'function invoicePaymentModeLabel',
