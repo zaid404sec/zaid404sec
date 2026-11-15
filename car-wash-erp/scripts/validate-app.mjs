@@ -562,11 +562,11 @@ const reportSource = await readFile(new URL('../src/report-export.js', import.me
 for (const token of ["addSheet(workbook, 'Staff Advances'", "'Staff Advances Issued'", "'Advance Adjustment'", "advances })"]) {
   if (!reportSource.includes(token)) throw new Error('Excel report is missing staff advance support: ' + token);
 }
-if (!html.includes("exportWorkbook({filename,sales,daily,expenses,staff,advances})")) {
+if (!html.includes("exportWorkbook({filename,sales,daily,expenses,personalExpenses,staff,advances})")) {
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v21')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v22')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
