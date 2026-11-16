@@ -156,7 +156,7 @@
     .staff-attendance-row select{width:100%;min-width:0;min-height:42px;padding:8px 10px;border:1px solid #dce3ee;border-radius:10px;background:#fff;font-size:12px}
     .staff-shift-preview{padding:12px 14px;border:1px solid #e7d8b6;border-radius:12px;background:#fff9eb;color:#6b4d18;font-size:13px;font-weight:800}
     .payroll-table-wrap{width:100%;overflow:auto;overscroll-behavior-x:contain}
-    .payroll-table-wrap table{min-width:1180px}
+    .payroll-table-wrap table{min-width:1180px}.staff-payroll-stats{grid-template-columns:repeat(5,minmax(0,1fr))}@media(max-width:1100px){.staff-payroll-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.staff-payroll-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(min-width:1200px){.content{width:100%;box-sizing:border-box;max-width:1560px;padding:28px clamp(26px,2.4vw,42px) 48px}.stats{gap:15px}.card{padding:21px}}
     @media(min-width:761px) and (max-width:1100px){.content{width:100%;box-sizing:border-box;padding:22px 22px 40px}.stats{gap:12px}}
     @media(max-width:760px){
@@ -748,7 +748,7 @@
     const m=document.getElementById('payroll-month')?.value||monthKey(),salaryPayable=sum(db.staff,st=>Math.max(0,staffPayrollBreakdown(st,m).netPayable)),staffRecoveryDue=sum(db.staff,st=>Math.max(0,-staffPayrollBreakdown(st,m).netPayable)),advancesOpen=staffAdvancesOutstanding();db.attendance=db.attendance||[];const attendanceDate=document.getElementById('attendance-date')?.value||today(),todaysAttendance=staffAttendanceForDate(attendanceDate),attendanceByStaff=new Map(todaysAttendance.map(a=>[a.staffId,a])),presentCount=todaysAttendance.filter(a=>a.status==='Present').length,absentCount=todaysAttendance.filter(a=>a.status==='Absent').length;
     const advanceStaffFilter=document.getElementById('advance-staff-filter')?.value||'all',advanceMonthFilter=document.getElementById('advance-month-filter')?.value||monthKey(),advances=[...db.staffAdvances].filter(a=>monthKey(a.date)===advanceMonthFilter&&(advanceStaffFilter==='all'||a.staffId===advanceStaffFilter)).sort((a,b)=>String(b.date).localeCompare(String(a.date))||(b.createdAt||0)-(a.createdAt||0));
     return `${pageHead('Staff & payroll','Staff directory, individual attendance, shift schedules and monthly salary calculations.', '<button class="btn" data-action="manager-pin">Manager PIN</button><button class="btn" data-action="add-staff-advance">＋ Give advance</button><button class="btn primary" data-action="add-staff">＋ Add staff</button>')}
-    <div class="grid stats">
+    <div class="grid stats staff-payroll-stats">
       ${stat('Salary payable this month',INR(salaryPayable),'₹','Positive unpaid salary only')}
       ${stat('Staff recovery due',INR(staffRecoveryDue),'↘','Advances exceeding current salary')}
       ${stat('Advances to be adjusted',INR(advancesOpen),'↗','Amounts already given to staff')}
