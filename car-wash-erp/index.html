@@ -233,6 +233,27 @@
     return parsed.getFullYear()+'-'+String(parsed.getMonth()+1).padStart(2,'0')+'-'+String(parsed.getDate()).padStart(2,'0');
   };
   const monthKey=d=>{const key=invoiceDateKey(d||today());return key?key.slice(0,7):''};
+  function isoWeekStart(weekValue){
+    const match=String(weekValue||'').match(/^(\\d{4})-W(\\d{2})$/);
+    if(!match)return isoWeekStart(isoWeekKey(today()));
+    const year=Number(match[1]),week=Number(match[2]);
+    if(week<1||week>53)return isoWeekStart(isoWeekKey(today()));
+    const jan4=new Date(year,0,4,12),offset=(jan4.getDay()+6)%7;
+    return invoiceDateKey(new Date(year,0,4-offset+(week-1)*7,12));
+  }
+  function isoWeekKey(value){
+    const key=invoiceDateKey(value||today()),date=new Date(key+'T12:00:00');
+    date.setDate(date.getDate()+3-((date.getDay()+6)%7));
+    const year=date.getFullYear(),jan4=new Date(year,0,4,12),weekOneMonday=new Date(year,0,4-((jan4.getDay()+6)%7),12);
+    const week=1+Math.floor((date.getTime()-weekOneMonday.getTime())/604800000);
+    return year+'-W'+String(week).padStart(2,'0');
+  }
+  function addDateDays(value,days){
+    const date=new Date(String(value)+'T12:00:00');
+    if(Number.isNaN(date.getTime()))return '';
+    date.setDate(date.getDate()+Number(days||0));
+    return invoiceDateKey(date);
+  }
   const id=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
   const blank=()=>({
     business:{name:'Prime Auto Care',phone:'',email:'',address:'',city:'Surat',state:'Gujarat',stateCode:'24',gstin:'',registered:false,invoicePrefix:'CW',upi:'',terms:'Thank you for choosing us. Drive safe!',whatsappGroupInviteLink:'',openingTime:'08:00',closingTime:'20:00',openingReminderEnabled:false,openingReminderTime:'07:50'},
