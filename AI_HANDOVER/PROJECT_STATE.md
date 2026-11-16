@@ -17,11 +17,12 @@ _Last repository verification: 16 November 2026_
 | Python version in CI | 3.12 |
 | Android Java version in CI | 21 |
 | App release source commit | `52ac00acd65b251c3497d16a6eb2c69cdb5d5774` |
-| Latest main HEAD (includes handover docs PR #44) | `23b4e5cf8a42cc8483b4a4068ef45e486677ae9f` |
+| Handover update PR #44 commit | `23b4e5cf8a42cc8483b4a4068ef45e486677ae9f` |
+| Handover correction PR #45 commit | `3d5f1a088a3e0d189ac7185191118baf11d8cbd5` |
 | Release PR | [#43 — merged](https://github.com/zaid404sec/zaid404sec/pull/43) |
 | Main release workflow | [Run #185](https://github.com/zaid404sec/zaid404sec/actions/runs/43873773360) |
 
-Always inspect live `main` before changing code; this file is a checkpoint, not a replacement for source inspection. The app code was released at `52ac00a`; the newer `23b4e5c` main commit only refreshes the handover documentation.
+Always inspect live `main` before changing code; this file is a checkpoint, not a replacement for source inspection. The application code was released at `52ac00a`. PRs #44 and #45 only updated the handover documentation; they did not change app code.
 
 ## Product summary
 
