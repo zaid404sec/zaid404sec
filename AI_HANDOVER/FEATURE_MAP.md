@@ -10,6 +10,7 @@ The current source is in `car-wash-erp/`. Inspect live files before editing; lin
 | Native Android build | `.github/workflows/build-installers.yml` | Android Capacitor sync, generated assets, Java/Gradle and debug APK build. |
 | Windows installer | `.github/workflows/build-installers.yml`, `car-wash-erp/electron/`, `car-wash-erp/electron-builder.yml` | Electron installer pipeline. |
 | App regression validator | `car-wash-erp/scripts/validate-app.mjs` | Runs as `npm run validate`. Extend assertions when new business calculations or critical behaviors are added. |
+| Staff payroll and individual statements | `car-wash-erp/index.html`, `car-wash-erp/src/report-export.js` | `staffPayrollBreakdown` calculates earned salary, full outstanding advances and negative recovery balance; `advanceDeduction` remains capped for actual salary settlement. `buildStaffStatement` scopes data to one employee; `report-export.js` creates the selected employee's Excel workbook. Keep PDF/Excel and table totals consistent. |
 | Local notifications | `car-wash-erp/src/local-notifications.js` | Reminder scheduling, permission handling, pending state and test notification. |
 | Cloud data synchronization | `car-wash-erp/src/cloud-sync.js` | Supabase client and data-sync logic. Treat edits here as data-sensitive. |
 | Cloud schema/setup | `car-wash-erp/cloud-sync-setup.sql` | Existing workspace setup SQL; do not rerun against production as an update shortcut. |
@@ -21,6 +22,13 @@ The current source is in `car-wash-erp/`. Inspect live files before editing; lin
 | Communications | `car-wash-erp/src/communications.js`, `car-wash-erp/supabase/functions/` | Check provider configuration and secret handling before changing. |
 | Offline app shell | `car-wash-erp/sw.js`, `car-wash-erp/manifest.webmanifest` | Update cache version when cached app assets change. |
 | Branding assets | `car-wash-erp/prime-auto-care-logo.jpg`, `car-wash-erp/prime-auto-care-car-photo.jpg`, `car-wash-erp/icon.svg`, `car-wash-erp/scripts/generate-brand-assets.py` | Avoid replacing the established identity without request. |
+
+## Payroll balance rule (2.8.3)
+
+- Monthly Net Payable is earned salary less cash salary already paid and **all** remaining open staff advances.
+- A negative number is a recovery amount owed by staff to the business; do not clamp it to zero.
+- The amount that can be recorded as a salary advance adjustment is still capped at the remaining salary balance. Do not use the negative Net Payable figure as a new cash payment or automatically over-adjust the advance ledger.
+- Individual statement data must always be filtered by the selected staff ID; include the employee name and statement date range in the export summary and filename.
 
 ## Safe extension pattern for a new feature
 

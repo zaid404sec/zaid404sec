@@ -13,10 +13,10 @@ https://github.com/zaid404sec/zaid404sec/tree/main/car-wash-erp
 **This handover folder:**  
 https://github.com/zaid404sec/zaid404sec/tree/main/AI_HANDOVER
 
-**Latest baseline:** version **2.8.2**, branch `main`, commit  
-`1f6d243db00ee35ab46d4a652ca29d82942f2c94`
+**Latest baseline:** version **2.8.3**, branch `main`, commit  
+`52ac00acd65b251c3497d16a6eb2c69cdb5d5774`
 
-This documentation is a portable project memory, not a replacement for the repository. The application source code in `car-wash-erp/` is the authoritative implementation. Always re-read the current `main` branch before editing; a ZIP or old chat can become outdated.
+This documentation is a portable project memory, not a replacement for the repository. The application source code in `car-wash-erp/` is the authoritative implementation. The newest main-branch source ZIP is available at https://github.com/zaid404sec/zaid404sec/archive/refs/heads/main.zip. Always re-read the current `main` branch before editing; a ZIP or old chat can become outdated.
 
 ## What to give an AI in a new chat
 
@@ -24,7 +24,9 @@ Give it either:
 1. This handover ZIP, if you have it saved; or
 2. The repository link above; ideally give both.
 
-Then paste the complete text from [NEW_CHAT_PROMPT.md](NEW_CHAT_PROMPT.md), followed by the new feature you want. For example: "Implement an appointment booking feature."
+Then paste the complete text from [NEW_CHAT_PROMPT.md](NEW_CHAT_PROMPT.md), followed by the new feature you want. For example: "Add an appointment booking feature to the existing app."
+
+**Your part should be simple:** attach the handover ZIP (or give the repository link), paste the prompt, and describe the feature. The AI should inspect the live source, edit through the connected GitHub workflow, run CI, and return the new APK. You should not need an SSH key, terminal, Git CLI, Android Studio or manual source editing. If the AI environment has no GitHub access, it must say that clearly; a ZIP by itself does not grant permission to push changes or run GitHub Actions.
 
 If the AI cannot open GitHub links, it must tell you plainly that it needs the repository source ZIP. In GitHub, open the repository page, tap **Code → Download ZIP**, and attach that ZIP to the AI. Do not give the AI only the APK when asking it to change code: an APK is an installable build, not the editable project source.
 
@@ -55,7 +57,7 @@ Prime Auto Care / WashDesk is a car-wash business manager with:
 
 1. Read this file and all other `AI_HANDOVER/` documents.
 2. Open the latest repository `main` branch and confirm the current version in `car-wash-erp/package.json`, Android app ID in `car-wash-erp/capacitor.config.json`, and latest successful GitHub Actions run.
-3. Inspect the relevant code and tests before proposing or editing anything. Do not assume that the 2.8.2 snapshot remains the newest release.
+3. Inspect the relevant code and tests before proposing or editing anything. Do not assume that the 2.8.3 snapshot remains the newest release.
 4. Make the smallest safe change that meets the request. Preserve all unrelated working features.
 5. Use a separate feature branch and pull request. Do not commit directly to `main` for application changes.
 6. Run the validator and the complete Android + Windows CI workflow. Fix failures; do not merge while required CI is failing.
@@ -72,7 +74,8 @@ Treat existing records as valuable. Never wipe, reset, truncate, recreate, seed 
 - [PROJECT_STATE.md](PROJECT_STATE.md) — current version, build and feature state.
 - [FEATURE_MAP.md](FEATURE_MAP.md) — code areas and key integrations.
 - [SAFE_CHANGE_RULES.md](SAFE_CHANGE_RULES.md) — non-negotiable release and data rules.
-- [RELEASE_2.8.2.md](RELEASE_2.8.2.md) — verified release facts and APK fingerprint.
+- [RELEASE_2.8.3.md](RELEASE_2.8.3.md) — current verified release facts and APK fingerprint.
+- [RELEASE_2.8.2.md](RELEASE_2.8.2.md) — historical release record.
 
 ## Downloading the source ZIP
 

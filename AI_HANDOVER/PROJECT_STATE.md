@@ -9,117 +9,123 @@ _Last repository verification: 16 November 2026_
 | GitHub repository | https://github.com/zaid404sec/zaid404sec |
 | Default branch | `main` |
 | Application source directory | `car-wash-erp/` |
-| App name in Android | Prime Auto Care |
-| Package / npm version | `2.8.2` |
-| Android application ID | `com.washdesk.carwash.v19` |
+| Android app name | Prime Auto Care |
+| App version | `2.8.3` |
+| Android application ID | `com.washdesk.carwash.v20` |
 | Capacitor | 8.x |
-| Node version used in CI | 22 |
-| Python version used in CI | 3.12 |
-| Android Java version used in CI | 21 |
-| Latest verified baseline commit | `1f6d243db00ee35ab46d4a652ca29d82942f2c94` |
-| Release PR | #40 — merged |
-| PR URL | https://github.com/zaid404sec/zaid404sec/pull/40 |
+| Node version in CI | 22 |
+| Python version in CI | 3.12 |
+| Android Java version in CI | 21 |
+| Latest verified main commit | `52ac00acd65b251c3497d16a6eb2c69cdb5d5774` |
+| Release PR | [#43 — merged](https://github.com/zaid404sec/zaid404sec/pull/43) |
+| Main release workflow | [Run #185](https://github.com/zaid404sec/zaid404sec/actions/runs/43873773360) |
 
-Always verify these values against the live repository. This table is a checkpoint, not a substitute for checking `main`.
+Always inspect live `main` before changing code; this file is a checkpoint, not a replacement for source inspection.
 
 ## Product summary
 
-Prime Auto Care / WashDesk is a mobile-first car-wash business management application. The primary implementation is a web app packaged for Android through Capacitor, with a Windows desktop build through Electron and an installable PWA path. The app handles real business data: customers, vehicles, services, invoices, payments, stock, purchases, expenses, employees, attendance, payroll, advances and reporting.
+Prime Auto Care / WashDesk is a mobile-first car-wash business manager. The source is a web app packaged for Android with Capacitor, with a Windows desktop build through Electron and a PWA path. It stores real business data, including customers, vehicles, service catalogue, invoices, payments, stock, purchases, expenses, staff, attendance, salary settlements, advances and reports.
 
-### Features recorded in the 2.8.2 baseline
+## Current feature baseline (2.8.3)
 
-- Customer and vehicle register, visit history and vehicle classification.
-- Service catalogue, vehicle-category pricing, taxi/commercial distinction and service line items.
-- Invoice creation, financial-year numbering, discounts, configured GST values, partial payments, due balances and locally generated A4 invoice PDFs.
-- Android save/share workflow for invoice PDFs and WhatsApp sharing through the native share sheet.
-- Selectable invoice PDF templates: default gold/black, Navy, Forest Green and Burgundy.
-- Inventory, low-stock alerts, purchases, stock adjustments, weighted-average purchase cost and optional per-service consumable recipes.
-- Staff directory, attendance, optional daily hours worked, salary accrual, payments, advances and employee-specific PDF/Excel statements for a date range.
-- Date-wise business report and export, plus monthly workbook reporting.
-- Dashboard monthly daily-sales chart showing ₹ sales and invoice counts; selecting a bar opens the corresponding date.
-- Expense management and separate personal/household expense heads.
-- JSON backup and restore, invoice CSV export and optional shared cloud database.
-- Local daily reminder defaults to 7:50 AM Asia/Kolkata, with permission handling, pending-reminder visibility, next scheduled time and test notification.
-- Offline app shell / PWA support.
+- Customer and vehicle register, vehicle history, duplicate checks and vehicle classification.
+- Service catalogue, private/taxi/commercial/SUV pricing and multi-line invoices.
+- Financial-year invoice numbering, discounts, configured GST, partial payments, due balances, A4 PDF bills and Android save/share / WhatsApp handoff.
+- Selectable invoice PDF palettes: original gold/black, Navy, Forest Green and Burgundy.
+- Inventory, stock movement ledger, low-stock alerts, purchases, weighted-average costs and optional per-service consumable recipes.
+- Staff directory, individual Present/Absent attendance, optional daily hours, shifts, accrued salary, salary payments and advances.
+- Individual employee PDF and Excel statements for a chosen date range. Each export identifies the selected employee and date range in its dialog, summary, filename and confirmation.
+- Monthly payroll Net Payable subtracts the full outstanding advance liability. If advances exceed earned salary, it displays a negative recovery balance in red. A separate staff recovery total is shown. Actual salary-settlement adjustments remain capped at the salary available.
+- Date-wise business report and export; monthly Excel workbook; month-wide daily-sales chart with counts and date selection.
+- Business and personal/household expense tracking.
+- JSON backup/restore, invoice CSV export, optional shared cloud data via Supabase and offline app-shell support.
+- Daily local reminder defaults to 7:50 AM Asia/Kolkata, with permission handling, status/next-time display and test-notification action.
 
-For the precise shipped behavior and limitations, read `car-wash-erp/README.md` and inspect the current source.
+For exact behavior, limitations and integration details, inspect the live source and `car-wash-erp/README.md`.
 
-## Key 2.8.2 changes from PR #40
+## Key 2.8.3 changes from PR #43
 
-- Fixed an invoice theme initialization bug that could throw a temporal-dead-zone ReferenceError in PDF generation.
-- Kept the existing gold/black invoice as default; added three selectable color alternatives.
-- Added optional hours-worked input to daily staff attendance.
-- Added individual employee PDF and Excel statements over a selected date range, including attendance, hours where recorded, pay accrual, absences, salary payments, advance adjustments, issued/outstanding advances, deductions and final balance.
-- Added selected-date business report and export with sales, invoice count, payments/collections, invoice dues, purchases, operating expenses, staff payments and advances.
-- Expanded dashboard daily-sales chart to the selected month with amounts/counts and date selection.
-- Improved daily reminder status, permission flow, test notification, duplicate prevention and rescheduling at startup.
-- Normalised vehicle category handling so taxi is counted as a four-wheeler while commercial is reported separately.
-- Updated cache version and validation assertions.
-- Bumped npm app version to 2.8.2.
+- Fixed the payroll calculation so `netPayable = balanceBeforeAdvances - openAdvances`; the displayed balance uses all outstanding advances instead of the salary-capped advance adjustment.
+- Kept `advanceDeduction` capped at the remaining salary amount. The salary-settlement form therefore cannot consume more salary than is available.
+- Added a visible red **Recovery due** label for negative employee Net Payable and a separate **Staff recovery due** summary card.
+- Changed the salary-payable card to sum only positive salary liability, so negative employee balances do not offset payroll owed to other staff.
+- Made individual statement identity explicit: employee name, role and selected range appear in the statement summary; the export dialog/buttons and success confirmation name the employee.
+- Added a regression case: ₹2,500 in open advances against ₹1,000 earned salary must display **−₹1,500**, while salary adjustment remains capped at ₹1,000.
+- Updated the service worker cache to v24.
+- Bumped app version to 2.8.3 and Android package ID to v20 for the separate debug install described below.
 
-## Latest verified build
+## Latest verified main-branch build
 
-GitHub Actions run:  
-https://github.com/zaid404sec/zaid404sec/actions/runs/43867694662
+GitHub Actions run #185:  
+https://github.com/zaid404sec/zaid404sec/actions/runs/43873773360
 
-- Android job: completed successfully.
-- Windows EXE installer job: completed successfully.
-- The Android job ran `npm run validate`, Capacitor sync, Gradle `assembleDebug` and APK artifact upload.
-- The Windows job completed its EXE installer build and artifact upload.
-- This is CI evidence, not physical device acceptance testing.
+Both required jobs completed successfully:
+- Android APK — success.
+- Windows EXE installer — success.
 
-APK build artifact:
+The Android job completed asset generation, `npm run validate`, Capacitor preparation/sync, Gradle `assembleDebug` and APK artifact upload. The validator includes regression coverage for the excess-advance negative balance and employee-specific statement identity. The Windows EXE build and artifact upload also succeeded.
+
+### APK artifact and fingerprint
+
 - Artifact name: `WashDesk-Android-APK`
-- Artifact ID: `14226003280`
-- Artifact archive SHA-256: `fbb9d364b2ba3484ec290289a2e54e4b21163ba94f89844b998890b43b7524a5`
-- Extracted APK size: 6,526,694 bytes (about 6.22 MiB / 6.5 MB decimal).
-- APK SHA-256: `f9c7b7ef216448d021560ab8045b2f5f65776ab0a46fc7b998fb93931648c712`
-- Embedded app ID checked in the APK: `com.washdesk.carwash.v19`.
+- Artifact ID: `14227899990`
+- Artifact archive SHA-256: `f5962c33e1129d2cdb88cad9a814c77f205833320d3cd8d42ad748ac83361564`
+- Delivered file name: `Prime-Auto-Care-2.8.3.apk`
+- APK size: 6,527,194 bytes (about 6.23 MiB / 6.53 MB decimal).
+- APK SHA-256: `e6aa6a4d99fd135d113a813d6793adda2d886384e8a387a69a5605e461787a64`
+- Embedded Android app ID: `com.washdesk.carwash.v20`
+- Build type: debug APK.
 
-The exact APK from this run was supplied separately as `Prime-Auto-Care-2.8.2.apk`. The GitHub Actions artifact is the reproducible source of this build.
+The artifact ZIP passed integrity verification. The APK itself passed ZIP integrity verification, and its embedded Capacitor config was inspected to confirm the v20 package ID.
 
 ## Android install and data safety
 
-**The 2.8.2 APK is a debug build with package ID `com.washdesk.carwash.v19`.**
+**2.8.3 is a debug APK using package ID `com.washdesk.carwash.v20`.** The build workflow currently does not use a persistent release-signing key, so v20 was selected to install beside the previous v19 app.
 
-- It was intentionally given a new app ID so it can install alongside the previous v18 app when the build uses an ephemeral debug signing key.
-- Installing v19 does not automatically update/replace v18.
-- Keep v18 installed. Do not uninstall it or clear its data while checking v19.
-- Before switching normal business use, confirm the cloud workspace is connected and records have synced, or export a JSON backup from the old app and confirm that backup can be restored.
-- In v19, verify customer, vehicle, invoice, payment, staff, inventory and expense records before considering v18 retirement.
-- Do not ask the owner to uninstall the old app as a troubleshooting step.
+- Installing v20 does not automatically update or replace v19.
+- Keep v19 installed. Do not uninstall it or clear its data while checking v20.
+- The new package has separate local app storage. Existing v19-only local records are not automatically copied into v20.
+- Before moving normal business use to v20, connect it to the same shared cloud workspace and verify that records sync, or export a JSON backup from v19 and restore it in v20.
+- Check customer, vehicle, invoice, payment, staff, payroll, advance, inventory and expense records before considering v19 retirement.
+- Never tell the owner to uninstall the old app as a troubleshooting step.
 
-For future builds, first inspect the current app ID and signing arrangement. A package ID change is not an ordinary version bump. A persistent release keystore could enable in-place updates, but only if managed securely (for example as protected GitHub Actions secrets) and with an intentional signing continuity plan. Never put a keystore, password or signing secret in the public repo or handover ZIP.
+A persistent signing key could enable in-place updates, but only with a deliberate signing continuity plan and protected GitHub Actions secrets. Never place a keystore or password in the public repository or handover ZIP. Do not change the app ID casually.
 
-## Reminder verification status
+## Physical device verification still required
 
-The 2.8.2 code schedules a daily 7:50 AM Asia/Kolkata reminder and reconciles its local notification schedule when the app starts. It shows permission / pending / next-time status and a test-notification action.
+CI success is not a real handset test. Still check on the owner's Android phone:
+- notification permission, test notification and scheduled reminder after reboot;
+- battery optimisation / Doze and device-vendor background restrictions;
+- native PDF save/share and WhatsApp handoff;
+- cloud sync during offline/online changes;
+- restoration from the actual business backup.
 
-**Not claimed as verified on a physical phone:** actual delivery after phone reboot, Android Doze, battery optimisation, permission denial/re-grant, OS vendor autostart restrictions and long-term alarm reliability. These require real device acceptance checks. Do not promise guaranteed reboot delivery based on CI alone.
+Do not claim these were tested unless someone tests them on the phone.
 
 ## Cloud and real-data safety
 
-The app has optional shared cloud database functionality through Supabase. Read these carefully before touching anything cloud-related:
+The optional shared workspace uses Supabase. Before cloud-related changes, inspect:
 - `car-wash-erp/README.md`
 - `car-wash-erp/cloud-sync-setup.sql`
 - `car-wash-erp/src/cloud-sync.js`
 - `car-wash-erp/supabase/`
 
-Do not change the Supabase project, pairing model, row identity, merge logic or schema without tracing the current code and checking backward compatibility. The SQL setup file and the app migrations are part of the existing system. Do not run setup SQL again as a shortcut on an existing live workspace. Do not reveal, log or commit pairing codes or Supabase credentials.
+Do not replace the Supabase project, pairing model, record identity or merge logic. Do not re-run one-time setup SQL on a live workspace as an update shortcut. Never expose pairing codes or credentials.
 
-## Known product limitations to retain unless explicitly addressed
+## Product limitations to preserve truthfully
 
-The README states this is not a full double-entry accounting product or a statutory compliance product. Among the functions not represented as complete are audited Profit & Loss / Balance Sheet, bank reconciliation, GST return filing, IRN e-invoicing, e-way bills, payroll statutory compliance and complete supplier ledgers. Tax configuration and invoice legal details should be checked by the business's chartered accountant. Do not claim legal, accounting or tax compliance without appropriate review.
+The README states this is not a complete double-entry accounting or statutory compliance product. Do not claim audited P&L / balance sheet, bank reconciliation, GST return filing, IRN e-invoicing, e-way bills, statutory payroll compliance or complete supplier ledgers. Have the business's chartered accountant check tax configuration and legal invoice particulars. WhatsApp sends remain user-initiated unless the official WhatsApp Business Platform is configured.
 
-WhatsApp messages are user-initiated unless the official WhatsApp Business Platform has been configured; do not imply that the app can silently send messages through a personal WhatsApp account.
+## Development posture for the next AI
 
-## Current development posture
+For every future feature:
+1. Verify latest `main`, app version, app ID and workflow status.
+2. Read the handover files and inspect related source/test code.
+3. Make the smallest focused change on a feature branch and PR.
+4. Preserve existing data and unrelated features; prefer additive migrations.
+5. Extend `npm run validate` for important calculations and regression risks.
+6. Pass the full Android + Windows workflow before merge.
+7. After merge, verify the main build, retrieve the APK, check integrity, size and SHA-256.
+8. Update this handover, add a historical release note and refresh the downloadable handover ZIP.
 
-The 2.8.2 baseline has passed the repository's Android and Windows CI pipeline. Future work should be implemented incrementally with:
-- explicit feature requirements and acceptance criteria;
-- a small, focused branch and reviewable diff;
-- regression tests for existing calculations and workflows;
-- validation and complete CI;
-- safe database migrations where required;
-- a real-device check for Android-only/native behavior;
-- a fresh build artifact linked in the final response.
+The owner uses Android and does not use terminal, Git CLI, Android Studio or SSH keys. Use connected GitHub tools and GitHub Actions; do not ask the owner to edit source files or provide secrets.
