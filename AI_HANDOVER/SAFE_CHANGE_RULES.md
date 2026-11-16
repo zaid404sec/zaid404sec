@@ -40,7 +40,19 @@ These rules are mandatory for every future AI working on Prime Auto Care.
 
 Do not say "done" when only code has been edited. A completed delivery means the code is merged, the build is successful, and the actual APK artifact is linked—or a blocker is stated honestly.
 
-## 4. Android package and signing continuity
+## 4. Keep the handover current after every release
+
+This is a continuing project. After each completed app release, update the handover documents in the repository:
+- Replace the current baseline in `PROJECT_STATE.md` with the latest verified version, branch/main commit, app ID and build status.
+- Add a dated release note file (do not delete older release records) with PR URL, merge commit, CI run URL, artifact name and ID, APK file size/hash, app ID and installation/data migration warning.
+- Update `FEATURE_MAP.md` whenever code responsibilities or feature locations change.
+- Update `START_HERE.md` if the primary repository, app folder or new-chat process changes.
+- Update the reusable prompt if user constraints or the workflow change.
+- Ensure old versions are labelled historical and never presented as the latest build.
+- Include handover-document updates in the feature PR where practical; otherwise create a small follow-up docs PR.
+- Refresh or rebuild the downloadable handover ZIP whenever release facts change, so an old ZIP does not masquerade as the latest source state.
+
+## 5. Android package and signing continuity
 
 The documented 2.8.2 build uses `com.washdesk.carwash.v19`. It is a debug APK produced by GitHub Actions using an ephemeral debug signing key. The v19 package was chosen to install beside v18 without replacing it.
 
@@ -51,7 +63,7 @@ The documented 2.8.2 build uses `com.washdesk.carwash.v19`. It is a debug APK pr
 - Never tell the owner to uninstall the previous working version before checking the new build's data.
 - Never place a keystore or signing password in the repository or handover ZIP. If a persistent signing setup is introduced, use protected GitHub secrets and verify the release pipeline carefully.
 
-## 5. Truthful testing statements
+## 6. Truthful testing statements
 
 Separate automated CI results from manual handset acceptance testing.
 
@@ -66,7 +78,7 @@ A successful Android build does not prove:
 
 List these as phone tests unless they have actually been performed. Never invent a test result.
 
-## 6. User interaction constraints
+## 7. User interaction constraints
 
 - The owner is a non-developer and primarily uses Android.
 - Do not make the owner operate Git, SSH, shell commands, Android Studio or code editors.
@@ -75,6 +87,6 @@ List these as phone tests unless they have actually been performed. Never invent
 - The final deliverable should be the actual APK link, not instructions that leave the build unfinished.
 - Ask only for information or permissions that genuinely cannot be obtained safely from the current repo / tools.
 
-## 7. When a requested feature is too large for one safe release
+## 8. When a requested feature is too large for one safe release
 
 Split work into stages with separate acceptance criteria. Keep `main` buildable after every merge. Do not merge half-finished code into the production branch simply to report progress. Maintain the existing app as the rollback baseline.
