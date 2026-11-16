@@ -67,10 +67,10 @@ For exact behavior, limitations and integration details, inspect the live source
 - Updated the service worker cache to v24.
 - Bumped app version to 2.8.3 and Android package ID to v20 for the separate debug install described below.
 
-## Latest verified 2.8.4 build (PR validation build)
+## Latest verified 2.8.4 main-branch build
 
-GitHub Actions run #188 (PR #47 merge-ref build):  
-https://github.com/zaid404sec/zaid404sec/actions/runs/43888779236
+GitHub Actions run #190 (main branch, merged release commit):  
+https://github.com/zaid404sec/zaid404sec/actions/runs/43889275791
 
 Both required jobs completed successfully:
 - Android APK — success.
@@ -81,15 +81,15 @@ The Android job completed asset generation, `npm run validate`, Capacitor prepar
 ### APK artifact and fingerprint
 
 - Artifact name: `WashDesk-Android-APK`
-- Artifact ID: `14234694316`
-- Artifact archive SHA-256: `b08e314bc77f58a947394ad981df2511ccdcf13230adc70d8459184b0b376ef0`
+- Artifact ID: `14235253589`
+- Artifact archive SHA-256: `65b659ade9050c81f1c9085b656bd73474302ff0ef6bbd3cd029f13882a9430b`
 - Delivered file name: `Prime-Auto-Care-2.8.4.apk`
 - APK size: 6,532,798 bytes (about 6.23 MiB / 6.53 MB decimal).
-- APK SHA-256: `bdede1d7aa0f6d77a05a7eb252511ddb5c415e730599c63ef09dfbfa29e0b22f`
+- APK SHA-256: `973134dfab11c754f9ef963339ebed1ab9d30693d1eae50ecacce3656310661a`
 - Embedded Android app ID: `com.washdesk.carwash.v21`
 - Build type: debug APK.
 
-The artifact ZIP passed integrity verification. The APK itself passed ZIP integrity verification. The package ID is confirmed by the release source configuration and validator; the APK was not separately decoded with Android SDK tooling in this environment.
+The main-branch artifact ZIP and APK both passed ZIP integrity verification. The package ID is confirmed by the release source configuration and validator; the APK was not separately decoded with Android SDK tooling in this environment.
 
 ## Android install and data safety
 
