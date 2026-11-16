@@ -13,8 +13,8 @@ https://github.com/zaid404sec/zaid404sec/tree/main/car-wash-erp
 **This handover folder:**  
 https://github.com/zaid404sec/zaid404sec/tree/main/AI_HANDOVER
 
-**Latest baseline:** version **2.8.3**, branch `main`, commit  
-`52ac00acd65b251c3497d16a6eb2c69cdb5d5774` (app release commit; the handover docs were refreshed in PR #44, main commit `23b4e5cf8a42cc8483b4a4068ef45e486677ae9f`)
+**Latest baseline:** version **2.8.4**, branch `main`, commit  
+`b5c9954e71aef18cf9195ce4d0a47fbe4b23e834` (PR #47, merged).
 
 This documentation is a portable project memory, not a replacement for the repository. The application source code in `car-wash-erp/` is the authoritative implementation. The newest main-branch source ZIP is available at https://github.com/zaid404sec/zaid404sec/archive/refs/heads/main.zip. Always re-read the current `main` branch before editing; a ZIP or old chat can become outdated.
 
@@ -74,7 +74,8 @@ Treat existing records as valuable. Never wipe, reset, truncate, recreate, seed 
 - [PROJECT_STATE.md](PROJECT_STATE.md) — current version, build and feature state.
 - [FEATURE_MAP.md](FEATURE_MAP.md) — code areas and key integrations.
 - [SAFE_CHANGE_RULES.md](SAFE_CHANGE_RULES.md) — non-negotiable release and data rules.
-- [RELEASE_2.8.3.md](RELEASE_2.8.3.md) — current verified release facts and APK fingerprint.
+- [RELEASE_2.8.4.md](RELEASE_2.8.4.md) — current verified release facts and APK fingerprint.
+- [RELEASE_2.8.3.md](RELEASE_2.8.3.md) — historical release record.
 - [RELEASE_2.8.2.md](RELEASE_2.8.2.md) — historical release record.
 
 ## Downloading the source ZIP
