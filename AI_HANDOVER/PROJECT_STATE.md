@@ -16,11 +16,12 @@ _Last repository verification: 16 November 2026_
 | Node version in CI | 22 |
 | Python version in CI | 3.12 |
 | Android Java version in CI | 21 |
-| Latest verified main commit | `52ac00acd65b251c3497d16a6eb2c69cdb5d5774` |
+| App release source commit | `52ac00acd65b251c3497d16a6eb2c69cdb5d5774` |
+| Latest main HEAD (includes handover docs PR #44) | `23b4e5cf8a42cc8483b4a4068ef45e486677ae9f` |
 | Release PR | [#43 — merged](https://github.com/zaid404sec/zaid404sec/pull/43) |
 | Main release workflow | [Run #185](https://github.com/zaid404sec/zaid404sec/actions/runs/43873773360) |
 
-Always inspect live `main` before changing code; this file is a checkpoint, not a replacement for source inspection.
+Always inspect live `main` before changing code; this file is a checkpoint, not a replacement for source inspection. The app code was released at `52ac00a`; the newer `23b4e5c` main commit only refreshes the handover documentation.
 
 ## Product summary
 
