@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.8.2') throw new Error('The package version must be 2.8.1.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v19') {
-  throw new Error('The 2.8.2 debug APK uses v19 to install beside v18 without an update-signature conflict.');
+if (packageJson.version !== '2.8.3') throw new Error('The package version must be 2.8.3.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v20') {
+  throw new Error('The 2.8.3 debug APK uses v20 to install beside v19 without an update-signature conflict.');
 }
-console.log('PASS: Android 2.8.2 uses v19 for a side-by-side install that keeps v18 data untouched');
+console.log('PASS: Android 2.8.3 uses v20 for a side-by-side install that keeps v19 data untouched');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -120,6 +120,16 @@ const staffBalanceFn=html.slice(staffBalanceStart,staffBalanceEnd);
 const staffBalance=vm.runInNewContext(staffBalanceFn+String.fromCharCode(10)+"calculateStaffStatementBalance({grossAccrual:12000,absenceDeduction:1000,salaryPayments:9000,advanceAdjustments:1500,openAdvances:750})",{});
 if(staffBalance!==-250)throw new Error('Staff statement must preserve negative final balances: '+staffBalance);
 console.log('PASS: employee statements preserve negative final balance values');
+if (!html.includes("'Staff Member':st.name") ||
+    !html.includes("'Statement From':fromDate") ||
+    !html.includes("This export contains records for <b>${esc(st.name)}</b> only.") ||
+    !html.includes("Export ${esc(st.name)} PDF") ||
+    !html.includes("Export ${esc(st.name)} Excel") ||
+    !html.includes("notify(statement.staff.name+' individual staff PDF statement exported.')") ||
+    !html.includes("notify(statement.staff.name+' individual staff Excel statement exported.')")) {
+  throw new Error('Individual staff PDF/Excel exports must clearly identify the selected employee and date range.');
+}
+console.log('PASS: individual staff statement identity appears in the export dialog, PDF/Excel summary and confirmation');
 if (!html.includes('Date-wise business report') || !html.includes('data-action="export-daily-report"') || !html.includes('id="report-date"')) throw new Error('Selected-date business report is incomplete.');
 if (!html.includes('id="sales-chart-month"') || !html.includes('data-sales-date=') || !html.includes('chartSalesTotal')) throw new Error('Interactive monthly sales chart is incomplete.');
 if (!html.includes('function vehicleCategory(value)') || !html.includes("return 'Four-wheeler'") || !html.includes("return 'Commercial'")) throw new Error('Central vehicle category normalisation is missing.');
@@ -198,7 +208,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v19') throw new Error('Android 2.8.2 side-by-side app ID v19 was not set.');
+if (appId !== 'com.washdesk.carwash.v20') throw new Error('Android 2.8.3 side-by-side app ID v20 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -296,6 +306,22 @@ if (novemberPayroll.calendarDays !== 30 || novemberPayroll.accruedDays !== 15 ||
   throw new Error('30-day payroll calculation failed: ' + JSON.stringify(novemberPayroll));
 }
 console.log('PASS: 30-day payroll deducts absence days and outstanding advances from monthly salary');
+const excessAdvancePayroll = vm.runInNewContext(
+  payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:1000},'2026-11')",
+  {
+    db: { staffAdvances:[{staffId:'staff-1',amount:2500,recoveredAmount:0}], attendance:[], expenses:[] },
+    today: () => '2026-11-30',
+    monthKey: date => date ? String(date).slice(0,7) : '2026-11',
+    sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
+  }
+);
+if (Math.abs(excessAdvancePayroll.balanceBeforeAdvances-1000) > 0.01 ||
+    Math.abs(excessAdvancePayroll.openAdvances-2500) > 0.01 ||
+    Math.abs(excessAdvancePayroll.advanceDeduction-1000) > 0.01 ||
+    Math.abs(excessAdvancePayroll.netPayable-(-1500)) > 0.01) {
+  throw new Error('Advances greater than earned salary must show a negative recovery balance while settlement adjustment stays capped: ' + JSON.stringify(excessAdvancePayroll));
+}
+console.log('PASS: excess staff advances show a negative recovery balance without over-adjusting salary');
 const februaryPayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2027-02')",
   {
@@ -605,7 +631,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v23')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v24')) {
   throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
