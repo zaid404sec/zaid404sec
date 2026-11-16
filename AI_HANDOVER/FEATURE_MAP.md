@@ -16,12 +16,21 @@ The current source is in `car-wash-erp/`. Inspect live files before editing; lin
 | Cloud schema/setup | `car-wash-erp/cloud-sync-setup.sql` | Existing workspace setup SQL; do not rerun against production as an update shortcut. |
 | Cloud Edge Functions | `car-wash-erp/supabase/functions/` | Communication API, webhook and worker. Secrets must remain outside Git. |
 | Database migrations | `car-wash-erp/supabase/migrations/` | Additive, backwards-compatible migrations only after examining deployed schema. |
-| Reports and exports | `car-wash-erp/src/report-export.js` | Excel/report generation helpers. Check consistency with on-screen totals. |
+| Reports and exports | `car-wash-erp/index.html`, `car-wash-erp/src/report-export.js` | `buildDateWiseBusinessReport` is the shared selected-day dataset. `exportDailyBusinessReportPdf` creates an A4 landscape PDF; `exportDailyBusinessReportExcel` calls the multi-sheet Excel exporter. Monthly Excel workbook remains separate. Keep selected-date totals consistent across screen, PDF and workbook. |
+| Dashboard weekly sales trend and Recent Invoices | `car-wash-erp/index.html` | ISO week helpers (`isoWeekKey`, `isoWeekStart`, `addDateDays`) drive Monday–Sunday daily sales bars. Recent invoice cards use the existing `data-invoice` click delegation to open the invoice. |
 | Native invoice file handling | `car-wash-erp/src/invoice-native.js` | Native save/share helpers. |
 | Native URL / app links | `car-wash-erp/src/native-links.js` | External navigation and native-link helpers. |
 | Communications | `car-wash-erp/src/communications.js`, `car-wash-erp/supabase/functions/` | Check provider configuration and secret handling before changing. |
 | Offline app shell | `car-wash-erp/sw.js`, `car-wash-erp/manifest.webmanifest` | Update cache version when cached app assets change. |
 | Branding assets | `car-wash-erp/prime-auto-care-logo.jpg`, `car-wash-erp/prime-auto-care-car-photo.jpg`, `car-wash-erp/icon.svg`, `car-wash-erp/scripts/generate-brand-assets.py` | Avoid replacing the established identity without request. |
+
+## Reporting and dashboard rule (2.8.4)
+
+- Date-wise PDF and Excel exports must use `buildDateWiseBusinessReport(dateKey)` as their single data source.
+- Keep all records filtered to the selected business date. Keep personal/household expenses and staff advances separate from operating expenses to avoid double counting.
+- Preserve the seven Excel sheets and corresponding PDF sections. If a field is added, update both formats and regression tests.
+- Weekly trend uses ISO week numbers and seven local calendar dates, Monday through Sunday. Keep year-boundary behavior covered by tests.
+- Recent invoice cards must continue using the established `data-invoice` click handler and preserve cancelled/paid/due status.
 
 ## Payroll balance rule (2.8.3)
 
