@@ -191,7 +191,7 @@ const notificationSource = await readFile(new URL('../src/local-notifications.js
 for (const token of ["Asia/Kolkata","725401","725402","LocalNotifications.getPending()","LocalNotifications.cancel","sendTestNotification","getReminderStatus","schedule: { on:"]) if (!notificationSource.includes(token)) throw new Error('Native reminder feature missing: '+token);
 const staffReportSource = await readFile(new URL('../src/report-export.js', import.meta.url), 'utf8');
 if (!staffReportSource.includes('exportStaffStatement') || !staffReportSource.includes("addSheet(workbook, 'Attendance & Hours'") || !staffReportSource.includes("addSheet(workbook, 'Staff Advances'")) throw new Error('Individual staff Excel workbook sheets are incomplete.');
-for(const token of ['exportDailyBusinessReport','addSheet(workbook, \'Daily Summary\'','addSheet(workbook, \'Sales Register\'','addSheet(workbook, \'Collections\'','addSheet(workbook, \'Business Expenses\'','addSheet(workbook, \'Personal & Household\'','addSheet(workbook, \'Staff Advances\''])) {
+for(const token of ['exportDailyBusinessReport','addSheet(workbook, \'Daily Summary\'','addSheet(workbook, \'Sales Register\'','addSheet(workbook, \'Collections\'','addSheet(workbook, \'Business Expenses\'','addSheet(workbook, \'Personal & Household\'','addSheet(workbook, \'Staff Advances\'']) {
   if(!staffReportSource.includes(token))throw new Error('Date-wise Excel workbook is missing a required detail sheet or export method: '+token);
 }
 console.log('PASS: notification permission/status/test workflow and employee-only workbook are present');
