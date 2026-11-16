@@ -133,8 +133,8 @@ console.log('PASS: individual staff statement identity appears in the export dia
 if (!html.includes('Date-wise business report') || !html.includes('data-action="export-daily-report-pdf"') || !html.includes('data-action="export-daily-report-excel"') || !html.includes('id="report-date"') || !html.includes('function exportDailyBusinessReportPdf(') || !html.includes('function exportDailyBusinessReportExcel(')) {
   throw new Error('Date-wise business report must expose separate PDF and Excel workbook exports.');
 }
-if (!html.includes('function buildDateWiseBusinessReport(') || !html.includes('function exportDailyBusinessReport(') || !html.includes("'Daily Summary'") || !html.includes("'Collections'") || !html.includes("'Business Expenses'") || !html.includes("'Personal & Household'") || !html.includes("'Staff Advances'")) {
-  throw new Error('Date-wise PDF/Excel export data model and detail sections are incomplete.');
+if (!html.includes('function buildDateWiseBusinessReport(') || !html.includes('function exportDailyBusinessReportPdf(') || !html.includes('function exportDailyBusinessReportExcel(')) {
+  throw new Error('Date-wise PDF/Excel export data model or save actions are incomplete.');
 }
 if (!html.includes('id="sales-chart-week"') || !html.includes('function isoWeekStart(') || !html.includes('function isoWeekKey(') || !html.includes('Weekly sales trend') || html.includes('id="sales-chart-month"') || html.includes('Monthly sales trend')) {
   throw new Error('Dashboard must show a selectable weekly sales trend instead of the monthly trend.');
@@ -191,6 +191,9 @@ const notificationSource = await readFile(new URL('../src/local-notifications.js
 for (const token of ["Asia/Kolkata","725401","725402","LocalNotifications.getPending()","LocalNotifications.cancel","sendTestNotification","getReminderStatus","schedule: { on:"]) if (!notificationSource.includes(token)) throw new Error('Native reminder feature missing: '+token);
 const staffReportSource = await readFile(new URL('../src/report-export.js', import.meta.url), 'utf8');
 if (!staffReportSource.includes('exportStaffStatement') || !staffReportSource.includes("addSheet(workbook, 'Attendance & Hours'") || !staffReportSource.includes("addSheet(workbook, 'Staff Advances'")) throw new Error('Individual staff Excel workbook sheets are incomplete.');
+for(const token of ['exportDailyBusinessReport','addSheet(workbook, \'Daily Summary\'','addSheet(workbook, \'Sales Register\'','addSheet(workbook, \'Collections\'','addSheet(workbook, \'Business Expenses\'','addSheet(workbook, \'Personal & Household\'','addSheet(workbook, \'Staff Advances\''])) {
+  if(!staffReportSource.includes(token))throw new Error('Date-wise Excel workbook is missing a required detail sheet or export method: '+token);
+}
 console.log('PASS: notification permission/status/test workflow and employee-only workbook are present');
 
 const dateHelpersStart=html.indexOf('const today=');
