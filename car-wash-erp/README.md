@@ -1,3 +1,12 @@
+## Version 2.8.3 — negative payroll recovery and clearer staff statements
+
+- Monthly payroll now subtracts the **full outstanding staff advance** when calculating Net Payable. If advances are greater than salary earned, the row shows the negative amount in red and labels it **Recovery due** instead of showing ₹0.
+- The summary separates positive **Salary payable this month** from **Staff recovery due**, so staff debt is not incorrectly presented as salary owed by the business.
+- Salary settlement remains protected: the advance amount that can be adjusted against salary is still capped at the available salary balance. A negative recovery balance does not automatically create an extra deduction or payment.
+- The individual statement dialog, PDF and Excel identify the selected employee and date range. The employee name appears in each export filename, in the statement summary and in the export confirmation.
+- Added a regression test for ₹2,500 outstanding advances against ₹1,000 earned salary: the expected net payable is **−₹1,500**, while the maximum salary adjustment remains ₹1,000.
+- Android application ID changes to `com.washdesk.carwash.v20` because CI produces debug APKs without a persistent release-signing key. It installs beside v19 and does not automatically inherit v19's local-only records. Keep v19 installed and confirm shared-cloud sync or export/restore a JSON backup before switching.
+
 ## Version 2.8.2 — individual reports, invoice and reminder improvements
 
 - Each employee has a separate statement export (PDF and Excel) for a selected date range. Statements include attendance, recorded daily working hours, salary accrual, absences, salary payments, advance adjustments, advances issued, remaining advances, deductions and final balance. Negative balances remain negative.
