@@ -1,3 +1,13 @@
+## Version 2.8.2 — individual reports, invoice and reminder improvements
+
+- Each employee has a separate statement export (PDF and Excel) for a selected date range. Statements include attendance, recorded daily working hours, salary accrual, absences, salary payments, advance adjustments, advances issued, remaining advances, deductions and final balance. Negative balances remain negative.
+- Daily attendance supports optional hours-worked entry. Older attendance records without hours are shown as “Not recorded”.
+- Business reports include a date-wise export for one selected date and the existing full-month workbook. The date-wise dashboard shows sales, invoice count, purchases, operating expenses, collections, invoice balances, staff payments and advances.
+- Dashboard analytics show every date in the selected month, daily invoice counts and ₹ sales; selecting a daily bar opens that date in the business overview.
+- Original gold-and-black invoice remains the default. Three professional PDF colour alternatives are selectable in Business Settings. The invoice theme initialisation error is corrected.
+- Daily reminder defaults to 7:50 AM Asia/Kolkata, checks notification permissions, prevents duplicate reminder IDs, displays the next scheduled time, includes a test-notification action and re-synchronises the native schedule when the app starts. Physical reboot delivery still requires a handset test.
+- Android package ID changes from v18 to v19 because CI builds debug APKs without a persistent release signing key. The new APK installs beside v18 and does not overwrite the existing app's local data. Keep v18 installed; verify cloud pairing or export/restore a JSON backup before switching.
+
 # WashDesk — Car Wash Business Manager
 
 ## Version 2.8.0 — reporting, household ledger and customer reviews
