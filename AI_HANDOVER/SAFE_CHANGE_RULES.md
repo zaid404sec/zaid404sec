@@ -54,7 +54,7 @@ This is a continuing project. After each completed app release, update the hando
 
 ## 5. Android package and signing continuity
 
-The documented 2.8.2 build uses `com.washdesk.carwash.v19`. It is a debug APK produced by GitHub Actions using an ephemeral debug signing key. The v19 package was chosen to install beside v18 without replacing it.
+The documented 2.8.3 build uses `com.washdesk.carwash.v20`. It is a debug APK produced by GitHub Actions using an ephemeral debug signing key. The v20 package was chosen to install beside v19 without replacing it.
 
 - A package ID change creates a separate app installation. It does not migrate the old app's local storage.
 - A package ID change is not a routine release version bump.
