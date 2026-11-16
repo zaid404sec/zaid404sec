@@ -20,6 +20,7 @@ You are continuing work on my existing **Prime Auto Care / WashDesk** app. This 
 7. Merge only after successful checks. Verify the merged commit and the main-branch build, then retrieve the actual APK artifact from GitHub Actions.
 8. Check the APK archive integrity and report its file size and SHA-256 if tooling permits. Give me the direct APK download link, not only a source-code diff or build log.
 9. Explain in simple English what changed, what CI tested, what still needs a real Android phone test, and any installation/data migration warning.
+10. **Update this handover after every completed release.** Replace the current values in `AI_HANDOVER/PROJECT_STATE.md` and add/update a release record containing the new version, merged commit, PR, successful workflow run, APK artifact name/ID, app ID, APK size/hash and install or migration warning. Update `FEATURE_MAP.md`, `START_HERE.md` and other documents if architecture, workflows or constraints changed. Keep historical release records, but clearly identify the current baseline. Do not leave old release data labelled as latest. Include the handover-document changes in the same safe PR or a follow-up docs PR.
 
 ## Critical constraints
 
