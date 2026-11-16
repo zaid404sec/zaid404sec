@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.8.0') throw new Error('The package version must be 2.8.0.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v18') {
-  throw new Error('The 2.8.0 update must retain Android app ID v18 to update in place and preserve local data.');
+if (packageJson.version !== '2.9.0') throw new Error('The package version must be 2.9.0.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v19') {
+  throw new Error('The 2.9.0 release must use the safe side-by-side Android app ID v19 so the prior app and its local data remain untouched.');
 }
-console.log('PASS: Android 2.8.0 retains the existing v18 app ID for an in-place update');
+console.log('PASS: Android 2.9.0 uses a separate v19 install to protect the existing app and its local data');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
