@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.8.1') throw new Error('The package version must be 2.8.1.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v18') {
-  throw new Error('The 2.8.1 update must retain Android app ID v18 to update in place and preserve local data.');
+if (packageJson.version !== '2.8.2') throw new Error('The package version must be 2.8.1.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v19') {
+  throw new Error('The 2.8.2 debug APK uses v19 to install beside v18 without an update-signature conflict.');
 }
-console.log('PASS: Android 2.8.1 retains the existing v18 app ID for an in-place update');
+console.log('PASS: Android 2.8.2 uses v19 for a side-by-side install that keeps v18 data untouched');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -20,8 +20,9 @@ if (!html.includes('Personal / Household · Vehicle Petrol') || !html.includes('
 console.log('PASS: personal and household expense separation');
 if (!html.includes('https://g.page/r/CYMPgw3oQ1hfEBM/review') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
 console.log('PASS: Google review workflow');
-if (!html.includes('invoiceThemeIndex') || !html.includes("{dark:'#10243d',primary:'#1d426d'") || !html.includes("{dark:'#153b31',primary:'#23624f'") || !html.includes("{dark:'#401722',primary:'#8a2635'")) throw new Error('Rotating invoice PDF color themes are missing.');
-console.log('PASS: invoice PDFs rotate through four branded color themes');
+if (!html.includes("db.settings?.invoiceTemplate||'classic'") || !html.includes("{dark:'#17130c',primary:'#d6b15f'") || html.includes('{dark:invoiceTheme.dark')) throw new Error('Original default invoice template or safe theme initialisation is missing.');
+if (!html.includes('invoice-template-selector') || !html.includes('Navy Professional') || !html.includes('Forest Green') || !html.includes('Burgundy Professional')) throw new Error('The professional invoice template selector is incomplete.');
+console.log('PASS: original invoice is the default; alternative professional PDF templates are selectable');
 
 if (!html.includes("if(page!=='dashboard')return true;") ||
     !html.includes("if(page!==p)applyPendingRemoteData();") ||
@@ -72,13 +73,13 @@ if (!html.includes("Opening announcement prepared in the offer message box.") ||
     !html.includes('function openingAnnouncementMessage()') ||
     !html.includes('function previewOpeningAnnouncement()') ||
     !html.includes("const DEVICE_REMINDER_KEY='prime-auto-care-device-opening-reminder-v1'") ||
-    !html.includes("time:deviceReminder.time||'07:00'")) {
-  throw new Error('Daily opening announcement and phone-local 7:00 AM notification workflow is incomplete.');
+    !html.includes("time:deviceReminder.time||'07:50'")) {
+  throw new Error('Daily 7:50 AM IST reminder controls, status and test action are incomplete.');
 }
 console.log('PASS: offers share to the existing WhatsApp group through the Android share menu');
 console.log('PASS: group invite link is stored and new customers can be invited manually without silent auto-add');
 console.log('PASS: invoice saves a PDF then opens the direct customer WhatsApp chat for manual attachment/send');
-console.log('PASS: daily opening reminder is local to the phone and defaults to 7:00 AM');
+console.log('PASS: daily reminder defaults to 7:50 AM IST and exposes next-run and test controls');
 if (!html.includes('data-customer-sms=') ||
     !html.includes('data-invoice-sms=') ||
     !html.includes('function openCustomerSmsComposer(customerId)') ||
@@ -111,6 +112,23 @@ if (!offerShareSource.includes('window.WashDeskFileSharer?.share') ||
 }
 console.log('PASS: Android offers use native share sheet for text and attached promotional images; browser fallback remains available');
 
+
+if (!html.includes('function buildStaffStatement(') || !html.includes('function exportStaffStatementPdf(') || !html.includes('function exportStaffStatementExcel(') || !html.includes('data-staff-statement=') || !html.includes("hours_'+esc(st.id)")) throw new Error('Individual staff statements and daily working-hour capture are incomplete.');
+const staffBalanceStart=html.indexOf('function calculateStaffStatementBalance('),staffBalanceEnd=html.indexOf('function buildStaffStatement(',staffBalanceStart);
+if(staffBalanceStart<0||staffBalanceEnd<0)throw new Error('Staff statement balance helper was not found.');
+const staffBalanceFn=html.slice(staffBalanceStart,staffBalanceEnd);
+const staffBalance=vm.runInNewContext(staffBalanceFn+String.fromCharCode(10)+"calculateStaffStatementBalance({grossAccrual:12000,absenceDeduction:1000,salaryPayments:9000,advanceAdjustments:1500,openAdvances:750})",{});
+if(staffBalance!==-250)throw new Error('Staff statement must preserve negative final balances: '+staffBalance);
+console.log('PASS: employee statements preserve negative final balance values');
+if (!html.includes('Date-wise business report') || !html.includes('data-action="export-daily-report"') || !html.includes('id="report-date"')) throw new Error('Selected-date business report is incomplete.');
+if (!html.includes('id="sales-chart-month"') || !html.includes('data-sales-date=') || !html.includes('chartSalesTotal')) throw new Error('Interactive monthly sales chart is incomplete.');
+if (!html.includes('function vehicleCategory(value)') || !html.includes("return 'Four-wheeler'") || !html.includes("return 'Commercial'")) throw new Error('Central vehicle category normalisation is missing.');
+console.log('PASS: date-wise reporting, interactive monthly analytics and legacy vehicle classification are present');
+const notificationSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
+for (const token of ["Asia/Kolkata","725401","725402","LocalNotifications.getPending()","LocalNotifications.cancel","sendTestNotification","getReminderStatus","schedule: { on:"]) if (!notificationSource.includes(token)) throw new Error('Native reminder feature missing: '+token);
+const staffReportSource = await readFile(new URL('../src/report-export.js', import.meta.url), 'utf8');
+if (!staffReportSource.includes('exportStaffStatement') || !staffReportSource.includes("addSheet(workbook, 'Attendance & Hours'") || !staffReportSource.includes("addSheet(workbook, 'Staff Advances'")) throw new Error('Individual staff Excel workbook sheets are incomplete.');
+console.log('PASS: notification permission/status/test workflow and employee-only workbook are present');
 
 const dateHelpersStart=html.indexOf('const today=');
 const dateHelpersEnd=html.indexOf('const id=',dateHelpersStart);
@@ -306,11 +324,11 @@ if (negativePayroll.balanceBeforeAdvances !== -1000 || negativePayroll.netPayabl
   throw new Error('Negative salary balance must remain visible and must not be clamped to zero: ' + JSON.stringify(negativePayroll));
 }
 console.log('PASS: overpaid salary shows a negative net payable instead of zero');
-if (!html.includes("i.vehicleType==='Commercial Vehicle'") || !html.includes("['Private Car','Taxi','SUV'].includes(i.vehicleType)")) {
+if (!html.includes("vehicleCategory(i.vehicleType)==='Commercial'") || !html.includes("vehicleCategory(i.vehicleType)==='Four-wheeler'")) {
   throw new Error('Taxi must be counted under four-wheelers and commercial vehicles separately.');
 }
 console.log('PASS: taxi is classified under four-wheelers; commercial vehicles remain separate');
-if (!html.includes('class="bar-value">${INR(d.v)}')) throw new Error('Sales chart must show rupee amounts on each date bar.');
+if (!html.includes('class="bar-value">${d.v?INR(d.v):\'—\'}')) throw new Error('Sales chart must show daily rupee amounts.');
 console.log('PASS: sales trend displays daily rupee amounts');
 const staffHelpersStart = html.indexOf('function staffAttendanceForDate(');
 const staffHelpersEnd = html.indexOf('function staff(){', staffHelpersStart);
