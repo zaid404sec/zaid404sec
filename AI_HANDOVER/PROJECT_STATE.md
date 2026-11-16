@@ -10,25 +10,25 @@ _Last repository verification: 16 November 2026_
 | Default branch | `main` |
 | Application source directory | `car-wash-erp/` |
 | Android app name | Prime Auto Care |
-| App version | `2.8.3` |
-| Android application ID | `com.washdesk.carwash.v20` |
+| App version | `2.8.4` |
+| Android application ID | `com.washdesk.carwash.v21` |
 | Capacitor | 8.x |
 | Node version in CI | 22 |
 | Python version in CI | 3.12 |
 | Android Java version in CI | 21 |
-| App release source commit | `52ac00acd65b251c3497d16a6eb2c69cdb5d5774` |
+| App release source commit | `b5c9954e71aef18cf9195ce4d0a47fbe4b23e834` |
 | Handover update PR #44 commit | `23b4e5cf8a42cc8483b4a4068ef45e486677ae9f` |
 | Handover correction PR #45 commit | `3d5f1a088a3e0d189ac7185191118baf11d8cbd5` |
-| Release PR | [#43 — merged](https://github.com/zaid404sec/zaid404sec/pull/43) |
-| Main release workflow | [Run #185](https://github.com/zaid404sec/zaid404sec/actions/runs/43873773360) |
+| Release PR | [#47 — merged](https://github.com/zaid404sec/zaid404sec/pull/47) |
+| Release workflow | [Run #188 — Android + Windows succeeded](https://github.com/zaid404sec/zaid404sec/actions/runs/43888779236) |
 
-Always inspect live `main` before changing code; this file is a checkpoint, not a replacement for source inspection. The application code was released at `52ac00a`. PRs #44 and #45 only updated the handover documentation; they did not change app code.
+Always inspect live `main` before changing code; this file is a checkpoint, not a replacement for source inspection. The application code is released at `b5c9954`. PRs #44 and #45 were earlier handover-documentation updates; PR #47 contains the 2.8.4 app release.
 
 ## Product summary
 
 Prime Auto Care / WashDesk is a mobile-first car-wash business manager. The source is a web app packaged for Android with Capacitor, with a Windows desktop build through Electron and a PWA path. It stores real business data, including customers, vehicles, service catalogue, invoices, payments, stock, purchases, expenses, staff, attendance, salary settlements, advances and reports.
 
-## Current feature baseline (2.8.3)
+## Current feature baseline (2.8.4)
 
 - Customer and vehicle register, vehicle history, duplicate checks and vehicle classification.
 - Service catalogue, private/taxi/commercial/SUV pricing and multi-line invoices.
@@ -38,12 +38,23 @@ Prime Auto Care / WashDesk is a mobile-first car-wash business manager. The sour
 - Staff directory, individual Present/Absent attendance, optional daily hours, shifts, accrued salary, salary payments and advances.
 - Individual employee PDF and Excel statements for a chosen date range. Each export identifies the selected employee and date range in its dialog, summary, filename and confirmation.
 - Monthly payroll Net Payable subtracts the full outstanding advance liability. If advances exceed earned salary, it displays a negative recovery balance in red. A separate staff recovery total is shown. Actual salary-settlement adjustments remain capped at the salary available.
-- Date-wise business report and export; monthly Excel workbook; month-wide daily-sales chart with counts and date selection.
+- Date-wise business report with separate A4 landscape PDF and multi-sheet Excel workbook exports, both using the same selected-date dataset: daily summary, sales register, collections, purchases, business expenses, personal/household expenses and staff advances.
+- Monthly Excel business workbook remains available. Dashboard sales trend is now a selectable ISO weekly chart (Monday–Sunday) with seven daily bars, invoice counts and rupee totals.
+- Dashboard Recent Invoices uses responsive tap-to-open invoice cards with customer, vehicle, status, amount and due balance.
 - Business and personal/household expense tracking.
 - JSON backup/restore, invoice CSV export, optional shared cloud data via Supabase and offline app-shell support.
 - Daily local reminder defaults to 7:50 AM Asia/Kolkata, with permission handling, status/next-time display and test-notification action.
 
 For exact behavior, limitations and integration details, inspect the live source and `car-wash-erp/README.md`.
+
+## Key 2.8.4 changes from PR #47
+
+- Added selected-date business report export to a professional A4 landscape PDF and a seven-sheet Excel workbook. Both are generated from the same date-filtered report model.
+- PDF and Excel contain daily summary, sales register, payments received, purchases, business expenses, personal/household expenses and staff advances.
+- Replaced the dashboard Monthly Sales Trend with a selectable ISO weekly sales trend, Monday through Sunday, with daily amounts and invoice counts.
+- Reworked Recent Invoices into responsive, touch-friendly invoice cards that open the selected invoice.
+- Updated the service-worker cache to v25.
+- Bumped app version to 2.8.4 and Android package ID to v21 for a separate debug install. Keep v20 installed until v21 cloud sync or backup restoration is verified.
 
 ## Key 2.8.3 changes from PR #43
 
@@ -56,10 +67,10 @@ For exact behavior, limitations and integration details, inspect the live source
 - Updated the service worker cache to v24.
 - Bumped app version to 2.8.3 and Android package ID to v20 for the separate debug install described below.
 
-## Latest verified main-branch build
+## Latest verified 2.8.4 build (PR validation build)
 
-GitHub Actions run #185:  
-https://github.com/zaid404sec/zaid404sec/actions/runs/43873773360
+GitHub Actions run #188 (PR #47 merge-ref build):  
+https://github.com/zaid404sec/zaid404sec/actions/runs/43888779236
 
 Both required jobs completed successfully:
 - Android APK — success.
@@ -70,25 +81,25 @@ The Android job completed asset generation, `npm run validate`, Capacitor prepar
 ### APK artifact and fingerprint
 
 - Artifact name: `WashDesk-Android-APK`
-- Artifact ID: `14227899990`
-- Artifact archive SHA-256: `f5962c33e1129d2cdb88cad9a814c77f205833320d3cd8d42ad748ac83361564`
-- Delivered file name: `Prime-Auto-Care-2.8.3.apk`
-- APK size: 6,527,194 bytes (about 6.23 MiB / 6.53 MB decimal).
-- APK SHA-256: `e6aa6a4d99fd135d113a813d6793adda2d886384e8a387a69a5605e461787a64`
-- Embedded Android app ID: `com.washdesk.carwash.v20`
+- Artifact ID: `14234694316`
+- Artifact archive SHA-256: `b08e314bc77f58a947394ad981df2511ccdcf13230adc70d8459184b0b376ef0`
+- Delivered file name: `Prime-Auto-Care-2.8.4.apk`
+- APK size: 6,532,798 bytes (about 6.23 MiB / 6.53 MB decimal).
+- APK SHA-256: `bdede1d7aa0f6d77a05a7eb252511ddb5c415e730599c63ef09dfbfa29e0b22f`
+- Embedded Android app ID: `com.washdesk.carwash.v21`
 - Build type: debug APK.
 
-The artifact ZIP passed integrity verification. The APK itself passed ZIP integrity verification, and its embedded Capacitor config was inspected to confirm the v20 package ID.
+The artifact ZIP passed integrity verification. The APK itself passed ZIP integrity verification. The package ID is confirmed by the release source configuration and validator; the APK was not separately decoded with Android SDK tooling in this environment.
 
 ## Android install and data safety
 
-**2.8.3 is a debug APK using package ID `com.washdesk.carwash.v20`.** The build workflow currently does not use a persistent release-signing key, so v20 was selected to install beside the previous v19 app.
+**2.8.4 is a debug APK using package ID `com.washdesk.carwash.v21`.** The build workflow currently does not use a persistent release-signing key, so v21 was selected to install beside the previous v20 app.
 
-- Installing v20 does not automatically update or replace v19.
-- Keep v19 installed. Do not uninstall it or clear its data while checking v20.
-- The new package has separate local app storage. Existing v19-only local records are not automatically copied into v20.
-- Before moving normal business use to v20, connect it to the same shared cloud workspace and verify that records sync, or export a JSON backup from v19 and restore it in v20.
-- Check customer, vehicle, invoice, payment, staff, payroll, advance, inventory and expense records before considering v19 retirement.
+- Installing v21 does not automatically update or replace v20.
+- Keep v20 installed. Do not uninstall it or clear its data while checking v21.
+- The new package has separate local app storage. Existing v20-only local records are not automatically copied into v21.
+- Before moving normal business use to v21, connect it to the same shared cloud workspace and verify that records sync, or export a JSON backup from v20 and restore it in v21.
+- Check customer, vehicle, invoice, payment, staff, payroll, advance, inventory and expense records before considering v20 retirement.
 - Never tell the owner to uninstall the old app as a troubleshooting step.
 
 A persistent signing key could enable in-place updates, but only with a deliberate signing continuity plan and protected GitHub Actions secrets. Never place a keystore or password in the public repository or handover ZIP. Do not change the app ID casually.
