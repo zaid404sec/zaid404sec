@@ -3,14 +3,14 @@
 - Release date: 16 November 2026
 - Pull request: [#47 — merged](https://github.com/zaid404sec/zaid404sec/pull/47)
 - Main merge commit: `b5c9954e71aef18cf9195ce4d0a47fbe4b23e834`
-- CI workflow run: [#188 — Android and Windows jobs succeeded](https://github.com/zaid404sec/zaid404sec/actions/runs/43888779236)
+- CI workflow run: [#190 — main-branch Android and Windows jobs succeeded](https://github.com/zaid404sec/zaid404sec/actions/runs/43889275791)
 - App version: `2.8.4`
 - Android application ID: `com.washdesk.carwash.v21`
 - Artifact: `WashDesk-Android-APK` (ID `14234694316`)
-- Artifact archive SHA-256 digest: `b08e314bc77f58a947394ad981df2511ccdcf13230adc70d8459184b0b376ef0`
+- Artifact archive SHA-256 digest: `65b659ade9050c81f1c9085b656bd73474302ff0ef6bbd3cd029f13882a9430b`
 - APK file: `Prime-Auto-Care-2.8.4.apk`
 - APK size: 6,532,798 bytes
-- APK SHA-256: `bdede1d7aa0f6d77a05a7eb252511ddb5c415e730599c63ef09dfbfa29e0b22f`
+- APK SHA-256: `973134dfab11c754f9ef963339ebed1ab9d30693d1eae50ecacce3656310661a`
 - APK archive integrity: verified; no ZIP errors.
 - Automated validation: passed, including daily report filtering/totals, Excel workbook sheet presence, ISO week boundary behavior, weekly chart labels, dashboard invoice cards and existing payroll regressions.
 - Android CI: successful, including `npm run validate`, Capacitor sync, Gradle debug build and artifact upload.
