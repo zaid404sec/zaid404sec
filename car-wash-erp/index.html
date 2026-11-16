@@ -1781,7 +1781,7 @@
       if(!pdfMake?.createPdf||!window.__primeAutoCarePdfFontsReady)throw new Error('The local PDF engine is not ready. Close and reopen Prime Auto Care, then retry.');
       const money=value=>INR(Number(value)||0),safe=String(db.business.name||'Prime Auto Care').replace(/[^A-Za-z0-9_-]+/g,'-').slice(0,40);
       const section=(title,headers,rows,widths)=>{
-        const body=rows.length?rows.map(row=>headers.map(key=>String(row[key]??'—'))):[[{text:'No records for this date',colSpan:headers.length,alignment:'center',color:'#777777',margin:[4,5,4,5]},...Array(Math.max(0,headers.length-1)).fill('')]];
+        const body=rows.length?rows.map(row=>row.map(value=>String(value??'—'))):[[{text:'No records for this date',colSpan:headers.length,alignment:'center',color:'#777777',margin:[4,5,4,5]},...Array(Math.max(0,headers.length-1)).fill('')]];
         return [
           {text:title,style:'sectionTitle',margin:[0,12,0,5]},
           {table:{headerRows:1,keepWithHeaderRows:1,widths,body:[headers,...body]},layout:'lightHorizontalLines',dontBreakRows:true}
