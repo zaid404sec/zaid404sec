@@ -111,5 +111,24 @@ window.WashDeskExcel = {
     const a = document.createElement('a'); a.href = url; a.download = filename; a.style.display = 'none';
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
     return { saved: true, location: 'browser Downloads' };
+  },
+  async exportStaffStatement({ filename, summary, attendance, salaryRows, advances }) {
+    const ExcelJS = window.ExcelJS;
+    if (!ExcelJS?.Workbook) throw new Error('The Excel workbook library is not loaded. Reopen Prime Auto Care and retry.');
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Prime Auto Care'; workbook.subject = 'Individual staff payroll statement'; workbook.title = filename.replace(/\\.xlsx$/i, '');
+    workbook.created = new Date(); workbook.modified = new Date();
+    addSheet(workbook, 'Statement Summary', Object.entries(summary || {}).map(([Metric, Value]) => ({ Metric, Value })), [{ header: 'Metric', key: 'Metric', width: 34 }, { header: 'Value', key: 'Value', width: 24 }], ['Value']);
+    addSheet(workbook, 'Attendance & Hours', attendance || [], [{ header: 'Date', key: 'Date', width: 16 }, { header: 'Status', key: 'Status', width: 16 }, { header: 'Hours Worked', key: 'Hours Worked', width: 18 }, { header: 'Shift', key: 'Shift', width: 28 }]);
+    addSheet(workbook, 'Salary Payments', salaryRows || [], [{ header: 'Date', key: 'Date', width: 16 }, { header: 'Amount', key: 'Amount', width: 18 }, { header: 'Advance Adjustment', key: 'Advance Adjustment', width: 22 }, { header: 'Mode', key: 'Mode', width: 18 }, { header: 'Note', key: 'Note', width: 36 }], ['Amount','Advance Adjustment']);
+    addSheet(workbook, 'Staff Advances', advances || [], [{ header: 'Date', key: 'Date', width: 16 }, { header: 'Reason', key: 'Reason', width: 34 }, { header: 'Amount Issued', key: 'Amount Issued', width: 18 }, { header: 'Adjusted', key: 'Adjusted', width: 18 }, { header: 'Outstanding', key: 'Outstanding', width: 18 }, { header: 'Mode', key: 'Mode', width: 16 }], ['Amount Issued','Adjusted','Outstanding']);
+    const buffer = await workbook.xlsx.writeBuffer(),base64Data = arrayBufferToBase64(buffer),contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (window.WashDeskFileSharer?.save) {
+      await window.WashDeskFileSharer.save({ filename, contentType, base64Data, android: { saveDirectory: 'downloads', relativePath: 'Download/Prime Auto Care/Staff Statements' } });
+      return { saved: true, location: 'Downloads/Prime Auto Care/Staff Statements' };
+    }
+    const blob = new Blob([buffer], { type: contentType }),url = URL.createObjectURL(blob),a = document.createElement('a');
+    a.href = url; a.download = filename; a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return { saved: true, location: 'browser Downloads' };
   }
 };
