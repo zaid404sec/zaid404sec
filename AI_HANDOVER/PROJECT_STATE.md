@@ -89,17 +89,17 @@ The Android job completed asset generation, `npm run validate`, Capacitor prepar
 - Embedded Android app ID: `com.washdesk.carwash.v21`
 - Build type: debug APK.
 
-The artifact ZIP passed integrity verification. The APK itself passed ZIP integrity verification, and its embedded Capacitor config was inspected to confirm the v20 package ID.
+The artifact ZIP passed integrity verification. The APK itself passed ZIP integrity verification. The package ID is confirmed by the release source configuration and validator; the APK was not separately decoded with Android SDK tooling in this environment.
 
 ## Android install and data safety
 
-**2.8.4 is a debug APK using package ID `com.washdesk.carwash.v20`.** The build workflow currently does not use a persistent release-signing key, so v21 was selected to install beside the previous v20 app.
+**2.8.4 is a debug APK using package ID `com.washdesk.carwash.v21`.** The build workflow currently does not use a persistent release-signing key, so v21 was selected to install beside the previous v20 app.
 
-- Installing v21 does not automatically update or replace v19.
-- Keep v19 installed. Do not uninstall it or clear its data while checking v20.
-- The new package has separate local app storage. Existing v19-only local records are not automatically copied into v20.
-- Before moving normal business use to v20, connect it to the same shared cloud workspace and verify that records sync, or export a JSON backup from v19 and restore it in v20.
-- Check customer, vehicle, invoice, payment, staff, payroll, advance, inventory and expense records before considering v19 retirement.
+- Installing v21 does not automatically update or replace v20.
+- Keep v20 installed. Do not uninstall it or clear its data while checking v21.
+- The new package has separate local app storage. Existing v20-only local records are not automatically copied into v21.
+- Before moving normal business use to v21, connect it to the same shared cloud workspace and verify that records sync, or export a JSON backup from v20 and restore it in v21.
+- Check customer, vehicle, invoice, payment, staff, payroll, advance, inventory and expense records before considering v20 retirement.
 - Never tell the owner to uninstall the old app as a troubleshooting step.
 
 A persistent signing key could enable in-place updates, but only with a deliberate signing continuity plan and protected GitHub Actions secrets. Never place a keystore or password in the public repository or handover ZIP. Do not change the app ID casually.
