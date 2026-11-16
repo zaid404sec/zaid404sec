@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.8.3') throw new Error('The package version must be 2.8.3.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v20') {
-  throw new Error('The 2.8.3 debug APK uses v20 to install beside v19 without an update-signature conflict.');
+if (packageJson.version !== '2.8.4') throw new Error('The package version must be 2.8.4.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v21') {
+  throw new Error('The 2.8.4 debug APK uses v21 to install beside v20 without an update-signature conflict.');
 }
-console.log('PASS: Android 2.8.3 uses v20 for a side-by-side install that keeps v19 data untouched');
+console.log('PASS: Android 2.8.4 uses v21 for a side-by-side install that keeps v20 data untouched');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -130,10 +130,63 @@ if (!html.includes("'Staff Member':st.name") ||
   throw new Error('Individual staff PDF/Excel exports must clearly identify the selected employee and date range.');
 }
 console.log('PASS: individual staff statement identity appears in the export dialog, PDF/Excel summary and confirmation');
-if (!html.includes('Date-wise business report') || !html.includes('data-action="export-daily-report"') || !html.includes('id="report-date"')) throw new Error('Selected-date business report is incomplete.');
-if (!html.includes('id="sales-chart-month"') || !html.includes('data-sales-date=') || !html.includes('chartSalesTotal')) throw new Error('Interactive monthly sales chart is incomplete.');
+if (!html.includes('Date-wise business report') || !html.includes('data-action="export-daily-report-pdf"') || !html.includes('data-action="export-daily-report-excel"') || !html.includes('id="report-date"') || !html.includes('function exportDailyBusinessReportPdf(') || !html.includes('function exportDailyBusinessReportExcel(')) {
+  throw new Error('Date-wise business report must expose separate PDF and Excel workbook exports.');
+}
+if (!html.includes('function buildDateWiseBusinessReport(') || !html.includes('function exportDailyBusinessReport(') || !html.includes("'Daily Summary'") || !html.includes("'Collections'") || !html.includes("'Business Expenses'") || !html.includes("'Personal & Household'") || !html.includes("'Staff Advances'")) {
+  throw new Error('Date-wise PDF/Excel export data model and detail sections are incomplete.');
+}
+if (!html.includes('id="sales-chart-week"') || !html.includes('function isoWeekStart(') || !html.includes('function isoWeekKey(') || !html.includes('Weekly sales trend') || html.includes('id="sales-chart-month"') || html.includes('Monthly sales trend')) {
+  throw new Error('Dashboard must show a selectable weekly sales trend instead of the monthly trend.');
+}
+if (!html.includes('recent-invoice-list') || !html.includes('recent-invoice-item') || !html.includes('Tap an invoice to open it')) {
+  throw new Error('Dashboard recent invoices must use the new responsive, tappable invoice cards.');
+}
 if (!html.includes('function vehicleCategory(value)') || !html.includes("return 'Four-wheeler'") || !html.includes("return 'Commercial'")) throw new Error('Central vehicle category normalisation is missing.');
-console.log('PASS: date-wise reporting, interactive monthly analytics and legacy vehicle classification are present');
+console.log('PASS: date-wise PDF/Excel report, weekly dashboard trend and recent invoice cards are present');
+const dailyReportStart=html.indexOf('function buildDateWiseBusinessReport('),dailyReportEnd=html.indexOf('async function exportDailyBusinessReportPdf(',dailyReportStart);
+if(dailyReportStart<0||dailyReportEnd<0)throw new Error('Date-wise report data builder was not found.');
+const dailyReportFn=html.slice(dailyReportStart,dailyReportEnd);
+const dailyReport=vm.runInNewContext(dailyReportFn+String.fromCharCode(10)+"buildDateWiseBusinessReport('2026-11-16')",{
+  db:{
+    invoices:[
+      {id:'inv-day',date:'2026-11-16',number:'PAC-TEST-01',customerId:'c1',vehicleNumber:'GJ05AB1234',staffId:'s1',grandTotal:500,paidAmount:200,paymentMode:'Cash',notes:'Same-day invoice'},
+      {id:'inv-old',date:'2026-11-15',number:'PAC-TEST-OLD',customerId:'c1',grandTotal:300,paidAmount:300},
+      {id:'inv-cancel',date:'2026-11-16',number:'PAC-TEST-CANCEL',customerId:'c1',grandTotal:900,paidAmount:0,cancelled:true}
+    ],
+    payments:[{id:'pay-day',invoiceId:'inv-day',date:'2026-11-16',amount:200,mode:'Cash'},{id:'pay-old',invoiceId:'inv-old',date:'2026-11-15',amount:300,mode:'UPI'}],
+    purchases:[{id:'purchase-day',date:'2026-11-16',supplier:'Supplier A',productId:'prod1',qty:2,unitCost:60,total:120,paymentMode:'Cash'}],
+    expenses:[
+      {id:'salary-day',date:'2026-11-16',category:'Salary',amount:100,advanceAdjustment:50,staffId:'s1',paidTo:'Ansu'},
+      {id:'utility-day',date:'2026-11-16',category:'Water',amount:75,paidTo:'Supplier B'},
+      {id:'personal-day',date:'2026-11-16',category:'Personal / Household · Vehicle Petrol',expenseType:'personal',amount:200,paidTo:'Owner'},
+      {id:'advance-ledger',date:'2026-11-16',category:'Staff Advance',amount:300,staffId:'s1',paidTo:'Ansu'}
+    ],
+    staffAdvances:[{id:'advance-day',date:'2026-11-16',staffId:'s1',amount:300,recoveredAmount:100,reason:'Travel advance',mode:'Cash'}],
+    customers:[{id:'c1',name:'Test Customer',phone:'9876543210'}],
+    staff:[{id:'s1',name:'Ansu'}],
+    products:[{id:'prod1',name:'Car Shampoo'}]
+  },
+  invoiceDateKey:value=>String(value||'').slice(0,10),
+  invoiceCustomerName:i=>'Test Customer',
+  paid:i=>Number(i.paidAmount)||0,
+  invoiceDue:i=>Math.max(0,(Number(i.grandTotal)||0)-(Number(i.paidAmount)||0)),
+  invoiceRevenueAmount:i=>i?.cancelled?0:Number(i?.grandTotal)||0,
+  invoicePaymentModeLabel:i=>i?.paymentMode||'Cash',
+  staffAdvanceRecoveredAmount:a=>Number(a.recoveredAmount)||0,
+  productName:id=>id==='prod1'?'Car Shampoo':'Item',
+  sum:(rows,fn)=>rows.reduce((total,row)=>total+Number(fn?fn(row):row||0),0)
+});
+if(dailyReport.sales.length!==1||dailyReport.collections.length!==1||dailyReport.purchases.length!==1||
+   dailyReport.expenses.length!==2||dailyReport.personalExpenses.length!==1||dailyReport.advances.length!==1||
+   dailyReport.summary['Invoice Count']!==1||dailyReport.summary.Sales!==500||
+   dailyReport.summary.Collections!==200||dailyReport.summary['Invoice Outstanding']!==300||
+   dailyReport.summary.Purchases!==120||dailyReport.summary['Operating Expenses']!==175||
+   dailyReport.summary['Personal Expenses']!==200||dailyReport.summary['Staff Payments']!==100||
+   dailyReport.summary['Staff Advances Issued']!==300||dailyReport.advances[0].Outstanding!==200){
+  throw new Error('Date-wise report filtering or totals are incorrect: '+JSON.stringify(dailyReport.summary));
+}
+console.log('PASS: date-wise report includes only selected-date records and reconciles all daily totals');
 const notificationSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
 for (const token of ["Asia/Kolkata","725401","725402","LocalNotifications.getPending()","LocalNotifications.cancel","sendTestNotification","getReminderStatus","schedule: { on:"]) if (!notificationSource.includes(token)) throw new Error('Native reminder feature missing: '+token);
 const staffReportSource = await readFile(new URL('../src/report-export.js', import.meta.url), 'utf8');
@@ -150,6 +203,13 @@ if(parsedInvoiceDates.iso!=='2026-11-15'||parsedInvoiceDates.dayFirst!=='2026-11
   throw new Error('Legacy invoice date normalisation failed: '+JSON.stringify(parsedInvoiceDates));
 }
 console.log('PASS: invoice list month/date filters normalise ISO and day-first legacy dates');
+const weekChecks=vm.runInNewContext(dateHelpers+String.fromCharCode(10)+
+  "({selectedStart:isoWeekStart('2026-W47'),crossYearStart:isoWeekStart('2027-W01'),selectedWeek:isoWeekKey('2026-11-16'),lastDay:addDateDays(isoWeekStart('2026-W47'),6)})",{});
+if(weekChecks.selectedStart!=='2026-11-16'||weekChecks.crossYearStart!=='2027-01-04'||
+   weekChecks.selectedWeek!=='2026-W47'||weekChecks.lastDay!=='2026-11-22'){
+  throw new Error('Weekly sales trend ISO week calculation failed: '+JSON.stringify(weekChecks));
+}
+console.log('PASS: selectable weekly sales trend handles ISO week boundaries and seven daily bars');
 
 const mustContain = [
   'const invoiceDateKey=',
@@ -208,7 +268,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v20') throw new Error('Android 2.8.3 side-by-side app ID v20 was not set.');
+if (appId !== 'com.washdesk.carwash.v21') throw new Error('Android 2.8.4 side-by-side app ID v21 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -631,8 +691,8 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v24')) {
-  throw new Error('The offline app cache does not include the original Prime Auto Care logo.');
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v25')) {
+  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v25 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
