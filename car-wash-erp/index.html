@@ -239,7 +239,7 @@
   };
   const monthKey=d=>{const key=invoiceDateKey(d||today());return key?key.slice(0,7):''};
   function isoWeekStart(weekValue){
-    const match=String(weekValue||'').match(/^(\\d{4})-W(\\d{2})$/);
+    const match=String(weekValue||'').match(/^(\d{4})-W(\d{2})$/);
     if(!match)return isoWeekStart(isoWeekKey(today()));
     const year=Number(match[1]),week=Number(match[2]);
     if(week<1||week>53)return isoWeekStart(isoWeekKey(today()));
