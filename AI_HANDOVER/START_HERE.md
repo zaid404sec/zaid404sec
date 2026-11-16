@@ -14,7 +14,7 @@ https://github.com/zaid404sec/zaid404sec/tree/main/car-wash-erp
 https://github.com/zaid404sec/zaid404sec/tree/main/AI_HANDOVER
 
 **Latest baseline:** version **2.8.3**, branch `main`, commit  
-`52ac00acd65b251c3497d16a6eb2c69cdb5d5774`
+`52ac00acd65b251c3497d16a6eb2c69cdb5d5774` (app release commit; the handover docs were refreshed in PR #44, main commit `23b4e5cf8a42cc8483b4a4068ef45e486677ae9f`)
 
 This documentation is a portable project memory, not a replacement for the repository. The application source code in `car-wash-erp/` is the authoritative implementation. The newest main-branch source ZIP is available at https://github.com/zaid404sec/zaid404sec/archive/refs/heads/main.zip. Always re-read the current `main` branch before editing; a ZIP or old chat can become outdated.
 
