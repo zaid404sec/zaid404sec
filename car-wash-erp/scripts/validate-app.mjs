@@ -417,7 +417,7 @@ if (!html.includes("vehicleCategory(i.vehicleType)==='Commercial'") || !html.inc
   throw new Error('Taxi must be counted under four-wheelers and commercial vehicles separately.');
 }
 console.log('PASS: taxi is classified under four-wheelers; commercial vehicles remain separate');
-if (!html.includes('class="bar-value">${d.v?INR(d.v):\'—\'}')) throw new Error('Sales chart must show daily rupee amounts.');
+if (!html.includes('class="bar-value">\'+(d.v?INR(d.v):\'—\')') || !html.includes('Weekly sales trend')) throw new Error('Weekly sales chart must show daily rupee amounts.');
 console.log('PASS: sales trend displays daily rupee amounts');
 const staffHelpersStart = html.indexOf('function staffAttendanceForDate(');
 const staffHelpersEnd = html.indexOf('function staff(){', staffHelpersStart);
