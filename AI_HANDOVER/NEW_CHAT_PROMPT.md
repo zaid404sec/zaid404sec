@@ -11,7 +11,7 @@ You are continuing work on my existing **Prime Auto Care / WashDesk** app. This 
 
 ## Your job
 
-1. Inspect the latest `main` branch. Verify the current app version and Android application ID from the live files. The documented starting baseline is 2.8.2 / `com.washdesk.carwash.v19`, but the live repository may have moved on.
+1. Inspect the latest `main` branch. Verify the current app version and Android application ID from the live files. The documented starting baseline is 2.8.3 / `com.washdesk.carwash.v20`, but the live repository may have moved on. Always verify the latest `main` branch before making assumptions.
 2. Understand the existing architecture and inspect the exact relevant code before changing it.
 3. Implement my requested feature **inside the existing app**. Do not rebuild the app from scratch, replace the existing design, or remove existing functionality.
 4. Keep changes minimal, additive and backward-compatible. Preserve all existing business data and cloud synchronisation.
