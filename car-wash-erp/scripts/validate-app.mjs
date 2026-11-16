@@ -198,7 +198,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v18') throw new Error('Android stability release app ID v18 was not set.');
+if (appId !== 'com.washdesk.carwash.v19') throw new Error('Android 2.8.2 side-by-side app ID v19 was not set.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
