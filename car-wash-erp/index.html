@@ -703,7 +703,7 @@
   function openStaffStatementForm(staffId){
     const st=db.staff.find(x=>x.id===staffId);if(!st)return;
     const month=document.getElementById('payroll-month')?.value||monthKey(),from=month+'-01',monthEnd=month+'-'+String(staffMonthDayCount(month)).padStart(2,'0'),to=today()<monthEnd?today():monthEnd;
-    openModal('Staff statement · '+esc(st.name),`<form id="staff-statement-form"><input type="hidden" id="staff-statement-id" value="${esc(st.id)}" /><div class="field-grid"><div class="field"><label>From date</label><input id="staff-statement-from" type="date" value="${from}" required /></div><div class="field"><label>To date</label><input id="staff-statement-to" type="date" value="${to}" max="${today()}" required /></div></div><p class="help">Only ${esc(st.name)}'s records are included: attendance, recorded daily hours, salary accrual, absences, salary payments, advances, deductions and final balance. Hours not entered in attendance are shown as “Not recorded”.</p><div class="form-actions"><button type="button" class="btn" id="cancel-modal">Cancel</button><button type="button" class="btn" data-statement-export="pdf" data-staff-id="${esc(st.id)}">Export PDF</button><button type="button" class="btn primary" data-statement-export="excel" data-staff-id="${esc(st.id)}">Export Excel</button></div></form>`);
+    openModal('Staff statement · '+esc(st.name),`<form id="staff-statement-form"><input type="hidden" id="staff-statement-id" value="${esc(st.id)}" /><p class="success-note">This export contains records for <b>${esc(st.name)}</b> only. The employee name and selected date range will also appear inside the downloaded PDF or Excel statement.</p><div class="field-grid"><div class="field"><label>From date</label><input id="staff-statement-from" type="date" value="${from}" required /></div><div class="field"><label>To date</label><input id="staff-statement-to" type="date" value="${to}" max="${today()}" required /></div></div><p class="help">Only ${esc(st.name)}'s records are included: attendance, recorded daily hours, salary accrual, absences, salary payments, advances, deductions and final balance. Hours not entered in attendance are shown as “Not recorded”.</p><div class="form-actions"><button type="button" class="btn" id="cancel-modal">Cancel</button><button type="button" class="btn" data-statement-export="pdf" data-staff-id="${esc(st.id)}">Export ${esc(st.name)} PDF</button><button type="button" class="btn primary" data-statement-export="excel" data-staff-id="${esc(st.id)}">Export ${esc(st.name)} Excel</button></div></form>`);
   }
   async function exportStaffStatementPdf(staffId,fromDate,toDate){
     try{
@@ -731,7 +731,7 @@
       const safe=String(statement.staff.name||'Staff').replace(/[^A-Za-z0-9_-]+/g,'-'),filename='Prime-Auto-Care-Staff-'+safe+'-'+fromDate+'-to-'+toDate+'.pdf',dataUrl=await blobAsDataUrl(blob);
       if(window.WashDeskFileSharer?.save)await window.WashDeskFileSharer.save({filename,contentType:'application/pdf',base64Data:dataUrl,android:{saveDirectory:'downloads',relativePath:'Download/Prime Auto Care/Staff Statements'}});
       else downloadBlob(blob,filename);
-      notify('Individual staff PDF exported for '+statement.staff.name+'.');
+      notify(statement.staff.name+' individual staff PDF statement exported.');
     }catch(error){console.error('Staff statement PDF:',error);notify(error?.message||'Staff PDF export failed.')}
   }
   async function exportStaffStatementExcel(staffId,fromDate,toDate){
@@ -740,7 +740,7 @@
       if(!window.WashDeskExcel?.exportStaffStatement)throw new Error('The staff statement Excel module is not loaded. Reopen the app and retry.');
       const safe=String(statement.staff.name||'Staff').replace(/[^A-Za-z0-9_-]+/g,'-');
       await window.WashDeskExcel.exportStaffStatement({filename:'Prime-Auto-Care-Staff-'+safe+'-'+fromDate+'-to-'+toDate+'.xlsx',summary:statement.summary,attendance:statement.attendance,salaryRows:statement.salaryRows,advances:statement.advances});
-      notify('Individual staff Excel exported for '+statement.staff.name+'.');
+      notify(statement.staff.name+' individual staff Excel statement exported.');
     }catch(error){console.error('Staff statement Excel:',error);notify(error?.message||'Staff Excel export failed.')}
   }
   function staff(){ 
