@@ -130,5 +130,73 @@ window.WashDeskExcel = {
     const blob = new Blob([buffer], { type: contentType }),url = URL.createObjectURL(blob),a = document.createElement('a');
     a.href = url; a.download = filename; a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
     return { saved: true, location: 'browser Downloads' };
+  },
+  async exportDailyBusinessReport({ filename, summary, sales, collections, purchases = [], expenses = [], personalExpenses = [], advances = [] }) {
+    const ExcelJS = window.ExcelJS;
+    if (!ExcelJS?.Workbook) throw new Error('The Excel workbook library is not loaded. Reopen Prime Auto Care and retry.');
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Prime Auto Care';
+    workbook.subject = 'Date-wise Prime Auto Care business report';
+    workbook.title = filename.replace(/\\.xlsx$/i, '');
+    workbook.created = new Date();
+    workbook.modified = new Date();
+    addSheet(workbook, 'Daily Summary', [summary || {}], [
+      { header: 'Report Date', key: 'Report Date', width: 18 },
+      { header: 'Invoice Count', key: 'Invoice Count', width: 16 },
+      { header: 'Sales', key: 'Sales', width: 18 },
+      { header: 'Collections', key: 'Collections', width: 18 },
+      { header: 'Invoice Outstanding', key: 'Invoice Outstanding', width: 22 },
+      { header: 'Purchases', key: 'Purchases', width: 18 },
+      { header: 'Operating Expenses', key: 'Operating Expenses', width: 22 },
+      { header: 'Personal Expenses', key: 'Personal Expenses', width: 21 },
+      { header: 'Staff Payments', key: 'Staff Payments', width: 18 },
+      { header: 'Staff Advances Issued', key: 'Staff Advances Issued', width: 24 }
+    ], ['Sales','Collections','Invoice Outstanding','Purchases','Operating Expenses','Personal Expenses','Staff Payments','Staff Advances Issued']);
+    addSheet(workbook, 'Sales Register', sales || [], [
+      { header: 'Invoice', key: 'Invoice', width: 20 }, { header: 'Customer', key: 'Customer', width: 26 },
+      { header: 'Mobile', key: 'Mobile', width: 16 }, { header: 'Vehicle', key: 'Vehicle', width: 16 },
+      { header: 'Assigned Staff', key: 'Assigned Staff', width: 22 }, { header: 'Grand Total', key: 'Grand Total', width: 18 },
+      { header: 'Paid', key: 'Paid', width: 16 }, { header: 'Balance Due', key: 'Balance Due', width: 18 },
+      { header: 'Payment Mode', key: 'Payment Mode', width: 18 }, { header: 'Notes', key: 'Notes', width: 30 }
+    ], ['Grand Total','Paid','Balance Due']);
+    addSheet(workbook, 'Collections', collections || [], [
+      { header: 'Date', key: 'Date', width: 16 }, { header: 'Invoice', key: 'Invoice', width: 20 },
+      { header: 'Customer', key: 'Customer', width: 26 }, { header: 'Payment Mode', key: 'Payment Mode', width: 18 },
+      { header: 'Amount Received', key: 'Amount Received', width: 20 }, { header: 'Reference', key: 'Reference', width: 22 }
+    ], ['Amount Received']);
+    addSheet(workbook, 'Purchases', purchases || [], [
+      { header: 'Date', key: 'Date', width: 16 }, { header: 'Supplier', key: 'Supplier', width: 26 },
+      { header: 'Item', key: 'Item', width: 26 }, { header: 'Quantity', key: 'Quantity', width: 14 },
+      { header: 'Unit Cost', key: 'Unit Cost', width: 16 }, { header: 'Total', key: 'Total', width: 18 },
+      { header: 'Payment Mode', key: 'Payment Mode', width: 18 }, { header: 'Reference', key: 'Reference', width: 22 }
+    ], ['Unit Cost','Total']);
+    addSheet(workbook, 'Business Expenses', expenses || [], [
+      { header: 'Date', key: 'Date', width: 16 }, { header: 'Category', key: 'Category', width: 24 },
+      { header: 'Paid To', key: 'Paid To', width: 24 }, { header: 'Staff', key: 'Staff', width: 22 },
+      { header: 'Description', key: 'Description', width: 36 }, { header: 'Mode', key: 'Mode', width: 16 },
+      { header: 'Amount', key: 'Amount', width: 18 }, { header: 'Advance Adjustment', key: 'Advance Adjustment', width: 22 }
+    ], ['Amount','Advance Adjustment']);
+    addSheet(workbook, 'Personal & Household', personalExpenses || [], [
+      { header: 'Date', key: 'Date', width: 16 }, { header: 'Account', key: 'Account', width: 24 },
+      { header: 'Expense Head', key: 'Expense Head', width: 30 }, { header: 'Paid To', key: 'Paid To', width: 24 },
+      { header: 'Description', key: 'Description', width: 36 }, { header: 'Mode', key: 'Mode', width: 16 },
+      { header: 'Amount', key: 'Amount', width: 18 }
+    ], ['Amount']);
+    addSheet(workbook, 'Staff Advances', advances || [], [
+      { header: 'Date', key: 'Date', width: 16 }, { header: 'Staff', key: 'Staff', width: 26 },
+      { header: 'Reason', key: 'Reason', width: 30 }, { header: 'Amount Issued', key: 'Amount Issued', width: 18 },
+      { header: 'Adjusted', key: 'Adjusted', width: 18 }, { header: 'Outstanding', key: 'Outstanding', width: 18 },
+      { header: 'Mode', key: 'Mode', width: 16 }, { header: 'Status', key: 'Status', width: 16 }
+    ], ['Amount Issued','Adjusted','Outstanding']);
+    const buffer = await workbook.xlsx.writeBuffer();
+    const base64Data = arrayBufferToBase64(buffer);
+    const contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (window.WashDeskFileSharer?.save) {
+      await window.WashDeskFileSharer.save({ filename, contentType, base64Data, android: { saveDirectory: 'downloads', relativePath: 'Download/Prime Auto Care/Reports' } });
+      return { saved: true, location: 'Downloads/Prime Auto Care/Reports' };
+    }
+    const blob = new Blob([buffer], { type: contentType }), url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = filename; a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return { saved: true, location: 'browser Downloads' };
   }
 };
