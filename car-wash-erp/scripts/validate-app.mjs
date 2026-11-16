@@ -20,6 +20,8 @@ if (!html.includes('Personal / Household · Vehicle Petrol') || !html.includes('
 console.log('PASS: personal and household expense separation');
 if (!html.includes('https://g.page/r/CYMPgw3oQ1hfEBM/review') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
 console.log('PASS: Google review workflow');
+if (!html.includes('invoiceThemeIndex') || !html.includes("{dark:'#10243d',primary:'#1d426d'") || !html.includes("{dark:'#153b31',primary:'#23624f'") || !html.includes("{dark:'#401722',primary:'#8a2635'")) throw new Error('Rotating invoice PDF color themes are missing.');
+console.log('PASS: invoice PDFs rotate through four branded color themes');
 
 if (!html.includes("if(page!=='dashboard')return true;") ||
     !html.includes("if(page!==p)applyPendingRemoteData();") ||
