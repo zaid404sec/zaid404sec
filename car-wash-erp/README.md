@@ -1,3 +1,13 @@
+## Version 2.8.4 — date-wise PDF/workbook, weekly sales and dashboard invoice cards
+
+- The Date-wise business report now has separate **Export PDF** and **Export Excel workbook** actions for the selected date. Both formats use the same daily dataset and totals.
+- The PDF is an A4 landscape business report. The Excel file contains Daily Summary, Sales Register, Collections, Purchases, Business Expenses, Personal & Household and Staff Advances sheets.
+- The date-wise report filters all records to the selected business date and separates personal/household expenses and staff advances from business operating expenses.
+- Replaced the dashboard **Monthly sales trend** with a selectable **Weekly sales trend**. Choose an ISO week to see seven daily bars (Monday–Sunday), daily invoice counts, values and the week total. Selecting a bar opens that date in the dashboard.
+- Reworked dashboard **Recent invoices** from a wide table into responsive, tap-to-open invoice cards showing invoice number, customer, vehicle, date, payment/status, amount and due balance.
+- Added regression tests for selected-date data filtering and totals, required PDF/Excel sheets, ISO week boundaries and the new dashboard components.
+- Updated Android package ID to `com.washdesk.carwash.v21` because CI still builds debug APKs with an ephemeral signing key. It installs beside v20; it does not automatically inherit v20's local-only app data. Keep v20 installed and verify shared-cloud sync or export/restore a JSON backup before switching.
+
 ## Version 2.8.3 — negative payroll recovery and clearer staff statements
 
 - Monthly payroll now subtracts the **full outstanding staff advance** when calculating Net Payable. If advances are greater than salary earned, the row shows the negative amount in red and labels it **Recovery due** instead of showing ₹0.
