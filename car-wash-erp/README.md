@@ -269,3 +269,13 @@ Meta template approval, number/API onboarding, Exotel account activation, DLT re
 - Customer profiles provide a service thank-you SMS action and invoice details provide an invoice SMS action. Both require the customer's service-SMS consent and open the Android SIM SMS composer using the saved phone number and a prefilled message. The operator reviews and presses Send. The app does not hold SMS permissions or silently dispatch messages.
 - SIM SMS has no gateway subscription, but the mobile operator may charge according to the SIM plan / SMS pack. This is not a universally free SMS service. For bulk/business A2P campaigns, check applicable TRAI DLT registration, sender header, content-template and consent requirements before sending.
 - Android package ID is `com.washdesk.carwash.v15` (version 2.6.2), so this release installs separately from v14 until the new app is checked and paired. Offline cache is v18.
+
+
+## Version 2.8.1 reporting and payroll correction
+
+- Negative staff net-payable balances remain visible; salary payments are blocked when no positive salary balance is due.
+- Taxi is included in four-wheelers; commercial vehicles are counted separately.
+- The daily sales trend labels each date with its rupee amount.
+- Invoice PDFs rotate through four Prime Auto Care color themes.
+- Monthly Excel exports include sales, daily summary, purchases, operating expenses, personal/household expenses, personal account totals, staff salary and staff advances.
+- Android application ID remains `com.washdesk.carwash.v18` to support in-place updates.

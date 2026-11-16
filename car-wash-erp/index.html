@@ -435,7 +435,7 @@
     const due=sum(db.invoices.filter(i=>!i.cancelled),invoiceDue),dueToday=sum(todayInv,invoiceDue),todaySales=sum(todayInv,invoiceRevenueAmount),salaryPayable=sum(db.staff,st=>staffSalaryDue(st,m)),advancesOpen=staffAdvancesOutstanding();
     const recent=[...db.invoices].sort((a,b)=>invoiceDateKey(b.date).localeCompare(invoiceDateKey(a.date))||(Number(b.createdAt)||0)-(Number(a.createdAt)||0)).slice(0,6),low=db.products.filter(p=>Number(p.qty)<=Number(p.minQty||0));
     const todayPayments=db.payments.filter(p=>invoiceDateKey(p.date)===t),cashCollected=sum(todayPayments.filter(p=>String(p.mode||'').toLowerCase()==='cash'),p=>p.amount),onlineCollected=sum(todayPayments.filter(p=>['upi','card','bank transfer','online','net banking'].includes(String(p.mode||'').toLowerCase())),p=>p.amount),otherCollected=sum(todayPayments.filter(p=>!['cash','upi','card','bank transfer','online','net banking'].includes(String(p.mode||'').toLowerCase())),p=>p.amount);
-    const commercialBills=todayInv.filter(i=>['Taxi','Commercial Vehicle'].includes(i.vehicleType)).length,twoWheelerBills=todayInv.filter(i=>i.vehicleType==='Two Wheeler').length,fourWheelerBills=todayInv.filter(i=>['Private Car','SUV'].includes(i.vehicleType)).length,otherVehicleBills=todayInv.length-commercialBills-twoWheelerBills-fourWheelerBills;
+    const commercialBills=todayInv.filter(i=>i.vehicleType==='Commercial Vehicle').length,twoWheelerBills=todayInv.filter(i=>i.vehicleType==='Two Wheeler').length,fourWheelerBills=todayInv.filter(i=>['Private Car','Taxi','SUV'].includes(i.vehicleType)).length,otherVehicleBills=todayInv.length-commercialBills-twoWheelerBills-fourWheelerBills;
     const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return {key,label:d.toLocaleDateString('en-IN',{weekday:'short'}),v:sum(db.invoices.filter(x=>!x.cancelled&&invoiceDateKey(x.date)===key),invoiceRevenueAmount)}});
     const max=Math.max(1,...days.map(x=>x.v));
     return `${pageHead('Business overview','Today’s activity, payments and outstanding balances.',`<button class="btn" data-action="export">⬇ Backup</button><button class="btn primary" data-action="new-bill">＋ Create bill</button>`)}
@@ -457,9 +457,9 @@
       ${stat('Salary payable',INR(salaryPayable),'♧','Unpaid salary balance this month')}
       ${stat('Advances outstanding',INR(advancesOpen),'↗','Staff advances to be adjusted')}
     </div>
-    <div class="grid two" style="margin-top:16px"><div class="card"><div class="card-head"><h3>${t===today()?'Today’s':'Selected date’s'} vehicle count</h3><span>${todayInv.length} invoices</span></div><div class="stock-alert"><span>Commercial / Taxi</span><b>${commercialBills}</b></div><div class="stock-alert"><span>Two-wheeler</span><b>${twoWheelerBills}</b></div><div class="stock-alert"><span>Four-wheeler</span><b>${fourWheelerBills}</b></div><div class="stock-alert"><span>Other / not set</span><b>${otherVehicleBills}</b></div></div><div class="card"><div class="card-head"><h3>${t===today()?'Today’s':'Selected date’s'} collections</h3><span>Based on recorded payments</span></div><div class="stock-alert"><span>Cash received</span><b>${INR(cashCollected)}</b></div><div class="stock-alert"><span>Online received (UPI / Card / Bank)</span><b>${INR(onlineCollected)}</b></div><div class="stock-alert"><span>Other / Mixed mode</span><b>${INR(otherCollected)}</b></div></div></div>
+    <div class="grid two" style="margin-top:16px"><div class="card"><div class="card-head"><h3>${t===today()?'Today’s':'Selected date’s'} vehicle count</h3><span>${todayInv.length} invoices</span></div><div class="stock-alert"><span>Commercial vehicles</span><b>${commercialBills}</b></div><div class="stock-alert"><span>Two-wheeler</span><b>${twoWheelerBills}</b></div><div class="stock-alert"><span>Four-wheeler (Private / Taxi / SUV)</span><b>${fourWheelerBills}</b></div><div class="stock-alert"><span>Other / not set</span><b>${otherVehicleBills}</b></div></div><div class="card"><div class="card-head"><h3>${t===today()?'Today’s':'Selected date’s'} collections</h3><span>Based on recorded payments</span></div><div class="stock-alert"><span>Cash received</span><b>${INR(cashCollected)}</b></div><div class="stock-alert"><span>Online received (UPI / Card / Bank)</span><b>${INR(onlineCollected)}</b></div><div class="stock-alert"><span>Other / Mixed mode</span><b>${INR(otherCollected)}</b></div></div></div>
     ${tomorrowMessageCardHtml()}\n    <div class="card"><div class="card-head"><h3>Google Reviews</h3><span>Customer feedback</span></div><p>Invite every customer to share an honest review. Feedback is optional and all opinions are welcome.</p><div class="actions"><button class="btn primary" data-action="google-review-open">★ Review Prime Auto Care</button><button class="btn" data-action="google-review-whatsapp">Share review request</button></div></div>
-    <div class="grid two"><div class="card"><div class="card-head"><h3>Sales trend</h3><span>Last 7 days</span></div>${db.invoices.length?`<div class="chart">${days.map(d=>`<div class="bar-col" title="${esc(d.key)} · ${INR(d.v)}"><div class="bar" style="height:${Math.max(3,d.v/max*100)}%"></div><span class="bar-label">${d.label}</span></div>`).join('')}</div>`:empty('No sales yet','Your sales chart will appear after the first bill.')}</div>
+    <div class="grid two"><div class="card"><div class="card-head"><h3>Sales trend</h3><span>Last 7 days</span></div>${db.invoices.length?`<div class="chart">${days.map(d=>`<div class="bar-col" title="${esc(d.key)} · ${INR(d.v)}"><div class="bar" style="height:${Math.max(3,d.v/max*100)}%"></div><small class="bar-value">${INR(d.v)}</small><span class="bar-label">${d.label}</span></div>`).join('')}</div>`:empty('No sales yet','Your sales chart will appear after the first bill.')}</div>
     <div class="card"><div class="card-head"><h3>Business snapshot</h3><span>${new Date().toLocaleDateString('en-IN',{month:'long',year:'numeric'})}</span></div>
       <div class="stock-alert"><span>Estimated operating surplus*</span><b>${INR(sales-expMonth-cogs)}</b></div>
       <div class="stock-alert"><span>Vehicle visits this month</span><b>${monInv.length}</b></div>
@@ -556,9 +556,9 @@
     const dailyRate=calendarDays?monthlySalary/calendarDays:0,absenceDeduction=Math.min(monthlySalary,Math.round((dailyRate*attendance.absentDays+Number.EPSILON)*100)/100);
     const earnedDays=Math.max(0,accruedDays-attendance.absentDays),earnedSalary=Math.max(0,Math.round((dailyRate*earnedDays+Number.EPSILON)*100)/100);
     const settled=Math.round((staffSalaryPaid(st.id,month)+Number.EPSILON)*100)/100;
-    const balanceBeforeAdvances=Math.max(0,Math.round((earnedSalary-settled+Number.EPSILON)*100)/100);
-    const openAdvances=Math.round((staffAdvancesOutstanding(st.id)+Number.EPSILON)*100)/100,advanceDeduction=Math.min(balanceBeforeAdvances,openAdvances);
-    const netPayable=Math.max(0,Math.round((balanceBeforeAdvances-advanceDeduction+Number.EPSILON)*100)/100);
+    const balanceBeforeAdvances=Math.round((earnedSalary-settled+Number.EPSILON)*100)/100;
+    const openAdvances=Math.round((staffAdvancesOutstanding(st.id)+Number.EPSILON)*100)/100,advanceDeduction=Math.min(Math.max(0,balanceBeforeAdvances),openAdvances);
+    const netPayable=Math.round((balanceBeforeAdvances-advanceDeduction+Number.EPSILON)*100)/100;
     return {monthlySalary,calendarDays,accruedDays,earnedDays,presentDays:attendance.presentDays,absentDays:attendance.absentDays,dailyRate,absenceDeduction,earnedSalary,settled,balanceBeforeAdvances,openAdvances,advanceDeduction,netPayable};
   }
   function staffSalaryDue(st,month=monthKey()){return staffPayrollBreakdown(st,month).balanceBeforeAdvances}
@@ -1109,6 +1109,13 @@
   function invoicePdfName(i){const clean=v=>String(v||'').normalize('NFKD').replace(/[^A-Za-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,32);return `Prime-Auto-Care-${clean(i.number||'Invoice')}.pdf`}
   async function makePdfBlob(i){
     const pdfMake=window.pdfMake;
+    const invoiceThemeIndex=Math.abs(String(i.number||'').split('').reduce((n,ch)=>n+ch.charCodeAt(0),0))%4;
+    const invoiceTheme=[
+      {dark:invoiceTheme.dark,primary:invoiceTheme.primary,header:invoiceTheme.header,border:invoiceTheme.border,paper:invoiceTheme.paper,card:invoiceTheme.card,alt:invoiceTheme.alt,line:invoiceTheme.line,edge:invoiceTheme.edge,lightText:invoiceTheme.lightText},
+      {dark:'#10243d',primary:'#1d426d',header:'#dbe8f7',border:'#315d8a',paper:'#edf3fa',card:'#f7faff',alt:'#eaf1f9',line:'#c7d7e8',edge:'#b9cde2',lightText:'#e5effa'},
+      {dark:'#153b31',primary:'#23624f',header:'#d8eadf',border:'#3d8068',paper:'#edf6f0',card:'#f7fcf8',alt:'#e8f2ec',line:'#c7ddcf',edge:'#b6d1c1',lightText:'#e0f0e6'},
+      {dark:'#401722',primary:'#8a2635',header:'#f0d7dc',border:'#a94a57',paper:'#fff1f2',card:'#fff8f8',alt:'#f8e9eb',line:'#e7c7cc',edge:'#dfb7bf',lightText:'#f8e4e7'}
+    ][invoiceThemeIndex];
     if(!pdfMake||typeof pdfMake.createPdf!=='function')throw new Error('The local invoice PDF engine did not load. Close and reopen Prime Auto Care, then retry.');
     if(!window.__primeAutoCarePdfFontsReady)throw new Error('The invoice PDF font bundle did not initialize. Update Prime Auto Care and reopen it before creating the PDF.');
     const b=i.businessSnapshot||db.business,registered=i.gstRegistered??b.registered;
@@ -1159,7 +1166,7 @@
       <path d="M113 30 L129 24 L145 30 L142 49 L129 61 L116 49 Z" fill="#17130c" stroke="#d7b45f" stroke-width="1.5"/>
     </svg>`;
     const paymentBody=[
-      [{text:'PAYMENT DETAILS',style:'sectionTitleDark',colSpan:2,fillColor:'#17130c',border:[false,false,false,false]},{}],
+      [{text:'PAYMENT DETAILS',style:'sectionTitleDark',colSpan:2,fillColor:invoiceTheme.dark,border:[false,false,false,false]},{}],
       [{text:'Payment mode',style:'smallLabel'},{text:safeText(invoicePaymentModeLabel(i)),style:'smallValue',alignment:'right'}]
     ];
     if(payments.length){
@@ -1187,7 +1194,7 @@
       summaryBody.push([{text:'GST total',style:'smallLabel'},{text:formatAmount(gstTotal),style:'smallValue',alignment:'right'}]);
     }
     summaryBody.push(
-      [{text:'GRAND TOTAL',style:'grandTotalLabel',fillColor:'#d6b15f',border:[true,true,true,true]},{text:formatAmount(i.grandTotal),style:'grandTotalValue',alignment:'right',fillColor:'#d6b15f',border:[true,true,true,true]}],
+      [{text:'GRAND TOTAL',style:'grandTotalLabel',fillColor:invoiceTheme.primary,border:[true,true,true,true]},{text:formatAmount(i.grandTotal),style:'grandTotalValue',alignment:'right',fillColor:invoiceTheme.primary,border:[true,true,true,true]}],
       [{text:i.complimentary?'Complimentary':'Paid',style:'smallLabelBold'},{text:formatAmount(totalPaid),style:'smallValueBold',alignment:'right'}],
       [{text:i.complimentary?'NO PAYMENT DUE':'BALANCE DUE',style:'balanceLabel'},{text:formatAmount(balance),style:'balanceValue',alignment:'right'}]
     );
@@ -1219,7 +1226,7 @@
         metaValue:{fontSize:8,bold:true,color:'#17130b'},
         statusBand:{fontSize:8,bold:true,color:'#f0d99e',characterSpacing:.5},
         sectionTitle:{fontSize:8,bold:true,color:'#8a6528',characterSpacing:1},
-        sectionTitleDark:{fontSize:8,bold:true,color:'#e9cf91',characterSpacing:.8,margin:[7,6,7,6]},
+        sectionTitleDark:{fontSize:8,bold:true,color:invoiceTheme.lightText,characterSpacing:.8,margin:[7,6,7,6]},
         partyName:{fontSize:12,bold:true,color:'#17130b',margin:[0,2,0,3]},
         partyText:{fontSize:8,color:'#40382a',lineHeight:1.3},
         vehicleNumber:{fontSize:15,bold:true,color:'#18130b',characterSpacing:.7,margin:[0,2,0,4]},
@@ -1236,7 +1243,7 @@
         balanceLabel:{fontSize:8,bold:true,color:'#6b4b1b',margin:[6,3,5,3]},
         balanceValue:{fontSize:9,bold:true,color:'#17130b',margin:[6,3,5,3]},
         statusValue:{fontSize:7,bold:true,color:balance>0?'#9a352a':'#236a4f',margin:[3,3,3,3]},
-        footerLabel:{fontSize:8,bold:true,color:'#e9cf91',characterSpacing:.7},
+        footerLabel:{fontSize:8,bold:true,color:invoiceTheme.lightText,characterSpacing:.7},
         footerText:{fontSize:7.5,color:'#5d513a',lineHeight:1.3},
         signatureName:{fontSize:9,bold:true,color:'#241b0d'},
         signatureCaption:{fontSize:7,color:'#766745'},
@@ -1255,7 +1262,7 @@
       content:[
         {
           table:{widths:[70,'*',120],body:[[
-            logoData?{image:logoData,fit:[50,50],alignment:'center',margin:[3,0,3,0],border:[false,false,false,false]}:{text:'PRIME\nAUTO CARE',bold:true,fontSize:10,alignment:'center',color:'#17130c'},
+            logoData?{image:logoData,fit:[50,50],alignment:'center',margin:[3,0,3,0],border:[false,false,false,false]}:{text:'PRIME\nAUTO CARE',bold:true,fontSize:10,alignment:'center',color:invoiceTheme.dark},
             {stack:[
               {text:'PRIME AUTO CARE',style:'brandTitle',alignment:'center'},
               {text:'GOLD & BLACK CAR SERVICES',style:'brandSubtitle',alignment:'center',margin:[0,2,0,0]},
@@ -1265,8 +1272,8 @@
             {stack:[carPhotoData?{image:carPhotoData,fit:[100,54],alignment:'center',margin:[0,0,0,2]}:{svg:carSvg,width:112,alignment:'center'},{text:'CARE  ·  DETAIL  ·  DRIVE',style:'carCaption',alignment:'center',margin:[0,0,0,0]}],border:[false,false,false,false],margin:[0,7,0,0]}
           ]]},
           layout:{
-            fillColor:()=> '#e6c77d',
-            hLineWidth:()=>1.4,vLineWidth:()=>1.4,hLineColor:()=> '#8b672a',vLineColor:()=> '#8b672a',
+            fillColor:()=> invoiceTheme.header,
+            hLineWidth:()=>1.4,vLineWidth:()=>1.4,hLineColor:()=> invoiceTheme.border,vLineColor:()=> invoiceTheme.border,
             paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>7,paddingBottom:()=>7
           }
         },
@@ -1280,12 +1287,12 @@
               {text:'FINANCIAL YEAR  '+safeText(i.financialYear||fy(i.date)),style:'metaLabel',alignment:'right',margin:[0,2,0,0]}
             ],margin:[6,5,6,5],border:[false,false,false,false]}
           ]]},
-          layout:{fillColor:()=> '#fbf4e3',hLineWidth:()=>.6,vLineWidth:()=>0,hLineColor:()=> '#bd9650',paddingLeft:()=>5,paddingRight:()=>5,paddingTop:()=>2,paddingBottom:()=>2}
+          layout:{fillColor:()=> invoiceTheme.paper,hLineWidth:()=>.6,vLineWidth:()=>0,hLineColor:()=> '#bd9650',paddingLeft:()=>5,paddingRight:()=>5,paddingTop:()=>2,paddingBottom:()=>2}
         },
         {
           margin:[0,0,0,9],
           table:{widths:['*'],body:[[{text:status+'     |     Thank you for choosing Prime Auto Care',style:'statusBand',alignment:'center',margin:[6,6,6,6],border:[false,false,false,false]}]]},
-          layout:{fillColor:()=> '#17130c',hLineWidth:()=>0,vLineWidth:()=>0,paddingLeft:()=>3,paddingRight:()=>3,paddingTop:()=>0,paddingBottom:()=>0}
+          layout:{fillColor:()=> invoiceTheme.dark,hLineWidth:()=>0,vLineWidth:()=>0,paddingLeft:()=>3,paddingRight:()=>3,paddingTop:()=>0,paddingBottom:()=>0}
         },
         {
           margin:[0,0,0,9],
@@ -1296,16 +1303,16 @@
               {text:safeText(i.customerAddress||customer?.address||'Address not provided'),style:'partyText'},
               {text:[i.customerCity||customer?.city,i.customerState||customer?.state].filter(Boolean).join(', '),style:'partyText'},
               {text:'Mobile: '+safeText(customer?.phone)+(i.customerGstin?'  |  GSTIN: '+i.customerGstin:''),style:'partyText'}
-            ],fillColor:'#fff9e9',margin:[9,8,9,8],border:[true,true,true,true]},
+            ],fillColor:invoiceTheme.card,margin:[9,8,9,8],border:[true,true,true,true]},
             {stack:[
               {text:'VEHICLE & SERVICE',style:'sectionTitle'},
               {text:safeText(i.vehicleNumber||'WALK-IN'),style:'vehicleNumber'},
               {text:[{text:'Vehicle class: ',bold:false},{text:safeText(i.vehicleType),bold:true}],style:'partyText'},
               {text:'Odometer: '+(i.odometer?safeText(i.odometer)+' km':'—'),style:'partyText'},
               {text:'Service performed by: '+safeText(staffName),style:'partyText'}
-            ],fillColor:'#fff9e9',margin:[9,8,9,8],border:[true,true,true,true]}
+            ],fillColor:invoiceTheme.card,margin:[9,8,9,8],border:[true,true,true,true]}
           ]]},
-          layout:{hLineWidth:()=>.7,vLineWidth:()=>8,hLineColor:()=> '#d9c18a',vLineColor:()=> '#ffffff',paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>0,paddingBottom:()=>0}
+          layout:{hLineWidth:()=>.7,vLineWidth:()=>8,hLineColor:()=> invoiceTheme.edge,vLineColor:()=> '#ffffff',paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>0,paddingBottom:()=>0}
         },
         {
           table:{headerRows:1,keepWithHeaderRows:1,dontBreakRows:true,widths:['*',42,68,82,65],body:[
@@ -1319,8 +1326,8 @@
             ...(lineRows.length?lineRows:[[{text:'No service items recorded.',style:'itemMeta',colSpan:5},{},{},{},{}]])
           ]},
           layout:{
-            fillColor:(row)=>row===0?'#17130c':(row%2?'#fffdf7':'#fbf5e6'),
-            hLineColor:()=> '#d7c7a4',vLineColor:()=> '#d7c7a4',hLineWidth:()=>.55,vLineWidth:()=>.55,
+            fillColor:(row)=>row===0?invoiceTheme.dark:(row%2?'#fffdf7':'#fbf5e6'),
+            hLineColor:()=> invoiceTheme.line,vLineColor:()=> invoiceTheme.line,hLineWidth:()=>.55,vLineWidth:()=>.55,
             paddingLeft:()=>6,paddingRight:()=>6,paddingTop:(row)=>row===0?7:8,paddingBottom:(row)=>row===0?7:8
           }
         },
@@ -1329,14 +1336,14 @@
           table:{widths:['*','*'],body:[[
             {
               stack:[
-                {text:'PAYMENT DETAILS',style:'sectionTitleDark',fillColor:'#17130c',margin:[6,8,6,8]},
+                {text:'PAYMENT DETAILS',style:'sectionTitleDark',fillColor:invoiceTheme.dark,margin:[6,8,6,8]},
                 {text:'Payment method: '+invoicePaymentModeLabel(i),style:'partyText',margin:[3,5,3,4]},
                 ...payments.map(p=>({columns:[{text:(p.mode||'Other')+(p.date?'  ·  '+p.date:''),style:'smallLabel',width:'*'},{text:formatAmount(p.amount),style:'smallValue',alignment:'right',width:'auto'}],margin:[3,2,3,2]})),
                 {columns:[{text:'TOTAL RECEIVED',style:'smallLabelBold',width:'*'},{text:formatAmount(totalPaid),style:'smallValueBold',alignment:'right',width:'auto'}],margin:[3,5,3,3]},
                 {text:status,style:'statusValue',margin:[3,5,3,3]},
                 {text:i.complimentary?'Complimentary service approved. No payment is due.':balance>0?'Payment is pending. Please clear the balance at your convenience.':'No balance is outstanding. Thank you.',style:'itemMeta',margin:[3,3,3,4]}
               ],
-              fillColor:'#fbf5e7',margin:[9,8,9,8],border:[true,true,true,true]
+              fillColor:invoiceTheme.alt,margin:[9,8,9,8],border:[true,true,true,true]
             },
             {
               table:{widths:['*','auto'],body:summaryBody},
@@ -1354,7 +1361,7 @@
           table:{widths:['*','*'],body:[[
             {
               stack:[
-                {text:'TERMS & CONDITIONS',style:'footerLabel',fillColor:'#17130c',margin:[7,7,7,7]},
+                {text:'TERMS & CONDITIONS',style:'footerLabel',fillColor:invoiceTheme.dark,margin:[7,7,7,7]},
                 {text:safeText(i.notes||'Please retain this invoice for your records.'),style:'footerText',margin:[7,7,7,3]},
                 {text:safeText(b.terms||'Thank you for choosing Prime Auto Care. Drive safe!'),style:'footerText',margin:[7,2,7,7]}
               ],
@@ -1362,7 +1369,7 @@
             },
             {
               stack:[
-                {text:'AUTHORISED SIGNATURE',style:'footerLabel',fillColor:'#17130c',margin:[7,7,7,7]},
+                {text:'AUTHORISED SIGNATURE',style:'footerLabel',fillColor:invoiceTheme.dark,margin:[7,7,7,7]},
                 {text:' ',margin:[0,13,0,8],decoration:'underline',decorationColor:'#b89a60'},
                 {text:'For PRIME AUTO CARE',style:'signatureName',alignment:'center',margin:[0,0,0,3]},
                 {text:'Authorised Signatory',style:'signatureCaption',alignment:'center'},
@@ -1371,7 +1378,7 @@
               fillColor:'#fffdf7',border:[true,true,true,true]
             }
           ]]},
-          layout:{hLineColor:()=> '#d9c18a',vLineColor:()=> '#d9c18a',hLineWidth:()=>.7,vLineWidth:()=>8,paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>0,paddingBottom:()=>0}
+          layout:{hLineColor:()=> invoiceTheme.edge,vLineColor:()=> invoiceTheme.edge,hLineWidth:()=>.7,vLineWidth:()=>8,paddingLeft:()=>0,paddingRight:()=>0,paddingTop:()=>0,paddingBottom:()=>0}
         },
         {text:[{text:'Share your honest experience: '},{text:reviewLink,link:reviewLink,color:'#8a6628',decoration:'underline'}],alignment:'center',fontSize:7,margin:[0,8,0,0]},
         {text:'PRIME AUTO CARE  ·  GOLD & BLACK CAR SERVICES  ·  THANK YOU FOR YOUR TRUST',alignment:'center',style:'bottomLine',margin:[0,10,0,0]}
@@ -1585,15 +1592,19 @@
     const m=document.getElementById('report-month')?.value||monthKey(),invoices=db.invoices.filter(i=>!i.cancelled&&monthKey(i.date)===m),expenseRows=db.expenses.filter(e=>monthKey(e.date)===m),personalRows=expenseRows.filter(e=>e.expenseType==='personal'||String(e.category||'').startsWith('Personal / Household · ')),businessRows=expenseRows.filter(e=>!personalRows.includes(e));
     const sales=invoices.map(i=>({Invoice:i.number,Date:i.date,Customer:invoiceCustomerName(i),Mobile:db.customers.find(c=>c.id===i.customerId)?.phone||'',Vehicle:i.vehicleNumber||'',VehicleClass:i.vehicleType||'',Items:(i.lines||[]).map(l=>`${l.name} × ${l.qty}`).join('; '),Subtotal:Number(i.subtotal)||0,'Line Discounts':Number(i.lineDiscount)||0,'Bill Discount':Number(i.discount)||0,'Taxable Value':Number(i.taxable)||0,GST:Number(i.tax)||0,'Grand Total':Number(i.grandTotal)||0,Paid:paid(i),'Balance Due':invoiceDue(i),'Payment Mode':i.paymentMode||'',Staff:db.staff.find(st=>st.id===i.staffId)?.name||'',Notes:i.notes||''}));
     const dailyMap={};
-    invoices.forEach(i=>{const d=i.date;dailyMap[d]??={Date:d,'Bills Count':0,Sales:0,'Payments Received':0,Outstanding:0,Expenses:0,'Personal Expenses':0,'Salary Expenses':0,'Staff Advances Issued':0};dailyMap[d]['Bills Count']++;dailyMap[d].Sales+=Number(i.grandTotal)||0;dailyMap[d]['Payments Received']+=paid(i);dailyMap[d].Outstanding+=invoiceDue(i)});
+    invoices.forEach(i=>{const d=i.date;dailyMap[d]??={Date:d,'Bills Count':0,Sales:0,'Payments Received':0,Outstanding:0,Purchases:0,Expenses:0,'Personal Expenses':0,'Salary Expenses':0,'Staff Advances Issued':0};dailyMap[d]['Bills Count']++;dailyMap[d].Sales+=Number(i.grandTotal)||0;dailyMap[d]['Payments Received']+=paid(i);dailyMap[d].Outstanding+=invoiceDue(i)});
     expenseRows.forEach(e=>{dailyMap[e.date]??={Date:e.date,'Bills Count':0,Sales:0,'Payments Received':0,Outstanding:0,Expenses:0,'Personal Expenses':0,'Salary Expenses':0,'Staff Advances Issued':0};if(e.category==='Staff Advance')dailyMap[e.date]['Staff Advances Issued']+=Number(e.amount)||0;else if(e.expenseType==='personal'||String(e.category||'').startsWith('Personal / Household · '))dailyMap[e.date]['Personal Expenses']+=Number(e.amount)||0;else dailyMap[e.date].Expenses+=Number(e.amount)||0;if(e.category==='Salary')dailyMap[e.date]['Salary Expenses']+=(Number(e.amount)||0)+(Number(e.advanceAdjustment)||0)});
+    db.purchases.filter(p=>monthKey(p.date)===m).forEach(p=>{dailyMap[p.date]??={Date:p.date,'Bills Count':0,Sales:0,'Payments Received':0,Outstanding:0,Purchases:0,Expenses:0,'Personal Expenses':0,'Salary Expenses':0,'Staff Advances Issued':0};dailyMap[p.date].Purchases+=Number(p.total)||0});
     const daily=Object.values(dailyMap).sort((a,b)=>a.Date.localeCompare(b.Date));
+    const purchases=db.purchases.filter(p=>monthKey(p.date)===m).map(p=>({Date:p.date,Supplier:p.supplier||'',Item:productName(p.productId),Quantity:Number(p.qty)||0,'Unit Cost':Number(p.unitCost)||0,Total:Number(p.total)||0,'Payment Mode':p.paymentMode||'',Reference:p.ref||''}));
+    const accountTotals=new Map();personalRows.forEach(e=>{const name=String(e.paidTo||'Unassigned account').trim()||'Unassigned account';accountTotals.set(name,(accountTotals.get(name)||0)+(Number(e.amount)||0))});
+    const accounts=[...accountTotals.entries()].map(([Account,Amount])=>({Account,Amount}));
     const expenses=businessRows.map(e=>({Date:e.date,Category:e.category,'Expense Group':'Business','Account / Person':'','Paid To':e.paidTo||'',Staff:db.staff.find(st=>st.id===e.staffId)?.name||'',Description:e.note||'',Mode:e.mode||'',Amount:Number(e.amount)||0,'Advance Adjustment':Number(e.advanceAdjustment)||0}));const personalExpenses=personalRows.map(e=>({Date:e.date,Account:e.paidTo||'',Category:String(e.category||'').replace('Personal / Household · ',''),'Paid To':e.paidTo||'',Description:e.note||'',Mode:e.mode||'',Amount:Number(e.amount)||0}));
     const staff=db.staff.map(st=>({'Staff Name':st.name,Role:st.role||'',Phone:st.phone||'','Monthly Salary':Number(st.salary)||0,'Salary Paid':staffSalaryPaid(st.id,m),'Salary Balance':staffSalaryDue(st,m),'Days Present':(db.attendance||[]).filter(a=>a.staffId===st.id&&monthKey(a.date)===m&&a.status==='Present').length,'Days Absent':(db.attendance||[]).filter(a=>a.staffId===st.id&&monthKey(a.date)===m&&a.status==='Absent').length}));
     const advances=(db.staffAdvances||[]).filter(a=>monthKey(a.date)===m).map(a=>{const amount=Number(a.amount)||0,adjusted=Math.min(amount,Number(a.recoveredAmount)||0),outstanding=Math.max(0,amount-adjusted);return {Date:a.date||'',Staff:db.staff.find(st=>st.id===a.staffId)?.name||a.staffName||'',Reason:a.reason||'', 'Amount Issued':amount,Adjusted:adjusted,Outstanding:outstanding,Mode:a.mode||'',Status:outstanding>0?'Open':'Adjusted'}});
     const clean=String(db.business.name||'Prime Auto Care').replace(/[^A-Za-z0-9_-]+/g,'-').slice(0,40),filename=`${clean}-Sales-Report-${m}.xlsx`;
     if(!window.WashDeskExcel?.exportWorkbook){notify('Excel report module is not loaded. Please reopen the app and retry.');return}
-    window.WashDeskExcel.exportWorkbook({filename,sales,daily,expenses,personalExpenses,staff,advances}).then(result=>notify(`Excel workbook saved. Check ${result?.location||'Downloads'}.`)).catch(e=>{console.error(e);notify(e?.message||'Excel workbook could not be exported.')})
+    window.WashDeskExcel.exportWorkbook({filename,sales,daily,purchases,expenses,personalExpenses,accounts,staff,advances}).then(result=>notify(`Excel workbook saved. Check ${result?.location||'Downloads'}.`)).catch(e=>{console.error(e);notify(e?.message||'Excel workbook could not be exported.')})
   }
   function mergeWashDeskData(local,remote){const base=Object.assign(blank(),local||{},remote||{}),deleted={...(local?._deletedIds||{})};Object.entries(remote?._deletedIds||{}).forEach(([id,t])=>deleted[id]=Math.max(Number(deleted[id])||0,Number(t)||0));const collections=['customers','vehicles','services','invoices','products','stockMovements','purchases','expenses','staff','staffAdvances','attendance','payments'];collections.forEach(key=>{const map=new Map();[...(local?.[key]||[]),...(remote?.[key]||[])].forEach(record=>{if(!record?.id)return;const old=map.get(record.id),stamp=x=>Number(x?.updatedAt||x?.editedAt||x?.createdAt||0);if(!old||stamp(record)>=stamp(old))map.set(record.id,record)});base[key]=[...map.values()].filter(record=>(Number(deleted[record.id])||0)<=(Number(record.updatedAt||record.editedAt||record.createdAt||0)))});base._deletedIds=deleted;const stamp=x=>Number(x?.updatedAt||0);base.business=stamp(local?.business)>=stamp(remote?.business)?(local?.business||base.business):(remote?.business||base.business);base.settings=stamp(local?.settings)>=stamp(remote?.settings)?(local?.settings||base.settings):(remote?.settings||base.settings);base.meta={...(local?.meta||{}),...(remote?.meta||{}),stockLedgerVersion:1};const remoteProducts=new Map((remote?.products||[]).map(p=>[p.id,p]));base.products.forEach(p=>{const server=remoteProducts.get(p.id);if(server&&server.stockOpeningQty!==undefined&&server.stockOpeningQty!==null)p.stockOpeningQty=Number(server.stockOpeningQty)||0});return reconcileStockLedger(base)}
   function receiveCloudData(remote){

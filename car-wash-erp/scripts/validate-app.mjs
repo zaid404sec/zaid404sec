@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.8.0') throw new Error('The package version must be 2.8.0.');
+if (packageJson.version !== '2.8.1') throw new Error('The package version must be 2.8.1.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v18') {
-  throw new Error('The 2.8.0 update must retain Android app ID v18 to update in place and preserve local data.');
+  throw new Error('The 2.8.1 update must retain Android app ID v18 to update in place and preserve local data.');
 }
-console.log('PASS: Android 2.8.0 retains the existing v18 app ID for an in-place update');
+console.log('PASS: Android 2.8.1 retains the existing v18 app ID for an in-place update');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -20,6 +20,8 @@ if (!html.includes('Personal / Household · Vehicle Petrol') || !html.includes('
 console.log('PASS: personal and household expense separation');
 if (!html.includes('https://g.page/r/CYMPgw3oQ1hfEBM/review') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
 console.log('PASS: Google review workflow');
+if (!html.includes('invoiceThemeIndex') || !html.includes("{dark:'#10243d',primary:'#1d426d'") || !html.includes("{dark:'#153b31',primary:'#23624f'") || !html.includes("{dark:'#401722',primary:'#8a2635'")) throw new Error('Rotating invoice PDF color themes are missing.');
+console.log('PASS: invoice PDFs rotate through four branded color themes');
 
 if (!html.includes("if(page!=='dashboard')return true;") ||
     !html.includes("if(page!==p)applyPendingRemoteData();") ||
@@ -291,6 +293,25 @@ if (februaryPayroll.calendarDays !== 28 || februaryPayroll.absentDays !== 1 ||
   throw new Error('28-day payroll calculation failed: ' + JSON.stringify(februaryPayroll));
 }
 console.log('PASS: 28-day payroll uses the correct calendar-day rate');
+const negativePayroll = vm.runInNewContext(
+  payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:10000},'2026-11')",
+  {
+    db: { staffAdvances:[], attendance:[], expenses:[{category:'Salary',staffId:'staff-1',salaryMonth:'2026-11',amount:7000,advanceAdjustment:0},{category:'Salary',staffId:'staff-1',salaryMonth:'2026-11',amount:4000,advanceAdjustment:0}] },
+    today: () => '2026-11-30',
+    monthKey: date => date ? String(date).slice(0,7) : '2026-11',
+    sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
+  }
+);
+if (negativePayroll.balanceBeforeAdvances !== -1000 || negativePayroll.netPayable !== -1000) {
+  throw new Error('Negative salary balance must remain visible and must not be clamped to zero: ' + JSON.stringify(negativePayroll));
+}
+console.log('PASS: overpaid salary shows a negative net payable instead of zero');
+if (!html.includes("i.vehicleType==='Commercial Vehicle'") || !html.includes("['Private Car','Taxi','SUV'].includes(i.vehicleType)")) {
+  throw new Error('Taxi must be counted under four-wheelers and commercial vehicles separately.');
+}
+console.log('PASS: taxi is classified under four-wheelers; commercial vehicles remain separate');
+if (!html.includes('class="bar-value">${INR(d.v)}')) throw new Error('Sales chart must show rupee amounts on each date bar.');
+console.log('PASS: sales trend displays daily rupee amounts');
 const staffHelpersStart = html.indexOf('function staffAttendanceForDate(');
 const staffHelpersEnd = html.indexOf('function staff(){', staffHelpersStart);
 if (staffHelpersStart < 0 || staffHelpersEnd < 0) throw new Error('Staff attendance and shift helper functions were not found.');
@@ -562,7 +583,7 @@ const reportSource = await readFile(new URL('../src/report-export.js', import.me
 for (const token of ["addSheet(workbook, 'Staff Advances'", "'Staff Advances Issued'", "'Advance Adjustment'", "advances })"]) {
   if (!reportSource.includes(token)) throw new Error('Excel report is missing staff advance support: ' + token);
 }
-if (!html.includes("exportWorkbook({filename,sales,daily,expenses,personalExpenses,staff,advances})")) {
+if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,personalExpenses,accounts,staff,advances})")) {
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
