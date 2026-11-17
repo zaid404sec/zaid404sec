@@ -19,30 +19,30 @@ This is a staged implementation, not a completed live Google integration. The ap
 
 ## Three-level GenAI model
 
-The term “GenAI” is treated as a provider-neutral generative-AI layer. A Gemini-compatible provider can be configured server-side after the owner chooses and supplies the relevant API access.
+The term “GenAI” is treated as a provider-neutral generative-AI layer. A Gemini-compatible provider can be configured server-side after the owner chooses and supplies the relevant API access. The three tiers intentionally progress from a grounded chatbot, to a single task agent, to an orchestrated multi-agent business copilot. This reflects a common maturity path for GenAI systems; the app keeps the owner in control of consequential actions. See the [Microsoft explanation of chatbots, single agents and multi-agent systems](https://techcommunity.microsoft.com/blog/azure-ai-foundry-blog/business-in-a-box-applying-autogen-and-multi-agent-systems-to-an-enterprise-cont/4150736/replies/4199285).
 
-### Level 1 — Review operations and automation
-- Invoice PDF review invitation.
-- One-tap WhatsApp invitation using the customer's saved contact; the employee sends it manually.
-- Physical counter QR invitation using the verified direct review URL.
-- Invitation logs distinguish prepared from manually confirmed sent.
-- Google review inbox, rating distribution, unanswered count, duplicate protection and daily / weekly / monthly reporting.
-- Pub/Sub event notifications plus scheduled catch-up sync.
+### Level 1 — Grounded Review Chatbot
+- Ask natural-language questions about the synced Google review dataset.
+- Summarise review activity by period, star rating and topics.
+- Retrieve relevant review evidence to support each answer.
+- Explain limits when there is insufficient data.
+- Read-only: it cannot post replies or change business records.
 
-### Level 2 — Review intelligence
-- Sentiment classification.
-- Service and experience topic extraction.
-- Complaint detection and prioritisation.
-- Repeated-theme detection across reviews.
-- Context-aware business reply drafts.
-- No generated customer review content.
+### Level 2 — Single Review Management Agent
+- Classify sentiment and recurring service / experience topics.
+- Detect and prioritise complaints or time-sensitive concerns.
+- Generate context-aware owner reply drafts grounded in the original review.
+- Propose follow-up tasks for staff or owner review.
+- Write actions only through validated server tools and permission checks; publishing a Google reply requires explicit owner approval.
 
-### Level 3 — Business-growth copilot
-- Weekly and monthly review trend summaries.
-- Emerging concern / complaint alerts.
-- Practical service-improvement recommendations based on repeated evidence.
-- Natural-language questions about the review dataset.
-- Drafted management actions and owner-approved review responses.
+### Level 3 — Multi-Agent Business Growth Copilot
+- Review Analyst Agent: detects trends, repeated topics and rating movement.
+- Customer Experience Agent: identifies recurring complaints, positive themes and operational risk.
+- Improvement Planner Agent: recommends service/process improvements grounded in the review evidence.
+- Management Reporter Agent: creates weekly/monthly summaries and answers broader business questions using the approved review dataset.
+- A coordinator combines their outputs, shows evidence and confidence/limitations, and returns suggestions for owner decision. No independent refunds, customer contact, review publication or accounting changes.
+
+The three levels share the operational foundation: invoice PDF invitation, one-tap WhatsApp invitation, counter QR, review inbox, rating distribution, unanswered count, duplicate protection, Pub/Sub notifications and scheduled catch-up sync.
 
 **Safety / platform guardrails:** no incentives, no selective positive-review solicitation, no review gating, no pressure at the premises, and no staff review quotas. AI must not invent business facts, promise refunds or compensation, create reviews for customers, or publish a response without explicit owner approval. Invitations and received reviews are reported separately; WashDesk must not attribute an individual Google review to a particular invoice.
 
