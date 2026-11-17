@@ -24,6 +24,8 @@ grant execute on function public.pac_is_workspace_owner(uuid) to authenticated;
 create table if not exists public.pac_google_review_settings (
   workspace_id uuid primary key references public.washdesk_workspaces(id) on delete cascade,
   google_account_email text,
+  google_account_resource_name text,
+  google_location_resource_name text,
   google_business_profile_id text,
   google_business_profile_url text,
   website_url text,
@@ -41,6 +43,41 @@ alter table public.pac_google_review_settings enable row level security;
 revoke all on public.pac_google_review_settings from anon, authenticated;
 grant select, insert, update on public.pac_google_review_settings to authenticated;
 grant all on public.pac_google_review_settings to service_role;
+
+-- Short-lived OAuth state/PKCE records prevent CSRF and replay during consent.
+-- The code verifier is encrypted by the Edge Function before it is persisted.
+create table if not exists public.pac_google_oauth_states (
+  state_hash text primary key,
+  workspace_id uuid not null references public.washdesk_workspaces(id) on delete cascade,
+  initiated_by uuid not null references auth.users(id),
+  encrypted_code_verifier text not null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  consumed_at timestamptz,
+  check (expires_at > created_at)
+);
+create index if not exists pac_google_oauth_states_expiry_idx
+  on public.pac_google_oauth_states(expires_at);
+alter table public.pac_google_oauth_states enable row level security;
+revoke all on public.pac_google_oauth_states from anon, authenticated;
+grant all on public.pac_google_oauth_states to service_role;
+
+-- Tokens are encrypted in the Edge Function using a secret key that is stored
+-- only as a Supabase Function secret; plaintext tokens never reach client code.
+create table if not exists public.pac_google_oauth_credentials (
+  workspace_id uuid primary key references public.washdesk_workspaces(id) on delete cascade,
+  google_user_email text,
+  encrypted_access_token text,
+  encrypted_refresh_token text not null,
+  access_token_expires_at timestamptz,
+  granted_scopes text[] not null default array[]::text[],
+  token_type text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.pac_google_oauth_credentials enable row level security;
+revoke all on public.pac_google_oauth_credentials from anon, authenticated;
+grant all on public.pac_google_oauth_credentials to service_role;
 
 create table if not exists public.pac_google_reviews (
   id uuid primary key default gen_random_uuid(),
