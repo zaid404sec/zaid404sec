@@ -940,4 +940,63 @@ console.log('PASS: staff advances support Edit/Delete with linked cash-ledger sy
 console.log('PASS: WhatsApp group link is persisted, displayed and opened externally without WebView navigation');
 
 console.log('PASS: Excel and Supabase sync dependencies declared');
+
+const googleReviewMigration = await readFile(new URL('../supabase/migrations/20261117000100_google_reviews.sql', import.meta.url), 'utf8');
+const publicBusinessWebsite = await readFile(new URL('../website/index.html', import.meta.url), 'utf8');
+const reviewCenterTokens = [
+  'data-page="google-reviews"',
+  "googleReviews:googleReviews",
+  'function googleReviews()',
+  'LEVEL 1 · GROUNDED CHATBOT',
+  'LEVEL 2 · SINGLE REVIEW AGENT',
+  'LEVEL 3 · MULTI-AGENT COPILOT',
+  '13506481990772076097',
+  'https://share.google/6g3f0aJqTezi6JH5T',
+  'googleBusinessProfileId',
+  'googleBusinessProfileUrl',
+  "f.get('website')"
+];
+for (const token of reviewCenterTokens) {
+  if (!html.includes(token)) throw new Error('Google Review Center is missing required integration token: ' + token);
+}
+if (!html.includes('API access pending') || !html.includes('no sample reviews') && !html.includes('invented')) {
+  throw new Error('Google Review Center must disclose that live API data is pending and must not fabricate review data.');
+}
+for (const table of [
+  'pac_google_review_settings',
+  'pac_google_reviews',
+  'pac_review_invitation_logs',
+  'pac_review_ai_analysis',
+  'pac_review_reply_drafts',
+  'pac_google_review_sync_logs'
+]) {
+  if (!googleReviewMigration.includes('create table if not exists public.' + table)) {
+    throw new Error('Google review schema is missing table: ' + table);
+  }
+}
+for (const token of [
+  'pac_is_workspace_member(workspace_id)',
+  'pac_is_workspace_owner(workspace_id)',
+  'enable row level security',
+  'service_role',
+  'unique (workspace_id, google_review_id)'
+]) {
+  if (!googleReviewMigration.includes(token)) throw new Error('Google review migration is missing security/deduplication control: ' + token);
+}
+if (/GOOGLE_CLIENT_SECRET\s*[:=]\s*['"][^'"]+['"]|GEMINI_API_KEY\s*[:=]\s*['"][^'"]+['"]/i.test(googleReviewMigration)) {
+  throw new Error('A Google or AI provider secret must never be committed in the review migration.');
+}
+for (const token of [
+  'Prime Auto Care',
+  'https://share.google/6g3f0aJqTezi6JH5T',
+  'https://zaid404sec.github.io/zaid404sec/website/',
+  'https://wa.me/917777970261',
+  'Write a Google Review'
+]) {
+  if (!publicBusinessWebsite.includes(token)) throw new Error('Public Prime Auto Care website is missing expected content: ' + token);
+}
+console.log('PASS: Google Review Center navigation and three GenAI tiers are present');
+console.log('PASS: Google review schema is workspace-scoped, RLS-protected and deduplicated');
+console.log('PASS: Prime Auto Care public website contains the supplied business links and mobile-first content');
+
 console.log('Prime Auto Care validation complete.');
