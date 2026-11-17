@@ -954,7 +954,7 @@ const reviewCenterTokens = [
   'https://share.google/6g3f0aJqTezi6JH5T',
   'googleBusinessProfileId',
   'googleBusinessProfileUrl',
-  "f.get('website')"
+  'name="website"'
 ];
 for (const token of reviewCenterTokens) {
   if (!html.includes(token)) throw new Error('Google Review Center is missing required integration token: ' + token);
