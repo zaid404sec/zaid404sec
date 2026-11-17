@@ -300,6 +300,16 @@ Meta template approval, number/API onboarding, Exotel account activation, DLT re
 - Android package ID is `com.washdesk.carwash.v15` (version 2.6.2), so this release installs separately from v14 until the new app is checked and paired. Offline cache is v18.
 
 
+## Version 2.9.0 — Google Review AI Center (staged release candidate)
+
+- Added a mobile-first Prime Auto Care one-page website at `website/`; expected Pages URL: https://zaid404sec.github.io/zaid404sec/website/. The owner must add the published URL to the Google Business Profile after deployment.
+- Added a Google Review Center with synced review metrics/inbox, manual sync, a neutral WhatsApp invitation flow, invoice PDF QR and printable A5 counter QR.
+- Added three server-side Gemini levels: Level 1 grounded review chatbot, Level 2 per-review analysis and reply drafts, Level 3 multi-agent Business Growth Copilot.
+- Public Google replies remain owner-approved; AI cannot publish automatically.
+- Added an additive Supabase migration, encrypted OAuth storage, a Google OAuth callback, authenticated review API and scheduled catch-up worker.
+- Android uses package ID `com.washdesk.carwash.v22` so it can be installed alongside v21 for verification.
+- Live Google review sync and AI are not active until the owner completes Google Basic API Access approval, adds Cloud OAuth credentials and Supabase/Gemini secrets, deploys the backend and connects the owner account. This candidate does not yet include Pub/Sub push notifications; it provides manual sync and a four-hour scheduled catch-up worker after deployment.
+
 ## Version 2.8.1 reporting and payroll correction
 
 - Negative staff net-payable balances remain visible; salary payments are blocked when no positive salary balance is due.
