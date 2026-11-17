@@ -27,6 +27,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Set up Python for generated Prime Auto Care brand assets
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate the app's PWA and Windows icon assets
+        working-directory: car-wash-erp
+        run: |
+          python -m pip install --disable-pip-version-check Pillow
+          python scripts/generate-brand-assets.py
       - name: Install app dependencies
         working-directory: car-wash-erp
         run: npm install --omit=dev
