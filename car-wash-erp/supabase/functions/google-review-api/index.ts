@@ -325,7 +325,7 @@ async function status(ctx: Context) {
   const sent = logs.filter((row: any) => row.status === 'sent_confirmed');
   const prepared = logs.filter((row: any) => row.status === 'prepared');
   return {
-    settings: { google_account_email: settings.google_account_email || null, google_business_profile_id: settings.google_business_profile_id || '13506481990772076097', google_business_profile_url: settings.google_business_profile_url || 'https://share.google/6g3f0aJqTezi6JH5T', website_url: settings.website_url || null, review_link: settings.review_link || null },
+    settings: { google_account_email: settings.google_account_email || null, google_business_profile_id: settings.google_business_profile_id || '13506481990772076097', google_business_profile_url: settings.google_business_profile_url || 'https://share.google/6g3f0aJqTezi6JH5T', website_url: settings.website_url || null, review_link: settings.review_link || null, pubsub_topic_name: settings.pubsub_topic_name || null, notifications_enabled: settings.notifications_enabled === true, notifications_last_event_at: settings.notifications_last_event_at || null, notifications_last_error: settings.notifications_last_error || null },
     connection: {
       status: settings.api_status || 'access_pending',
       oauth_connected: !!credentials.data?.workspace_id,
@@ -349,6 +349,41 @@ async function handle(ctx: Context, body: any) {
   if (action === 'status') return status(ctx);
   if (action === 'save-settings') return ownerSettings(ctx, body.settings || {});
   if (action === 'connect') return startOAuth(ctx);
+  if (action === 'enable-notifications') {
+    requireOwner(ctx);
+    const settings = await getSettings(ctx);
+    const topicName = env('GOOGLE_PUBSUB_TOPIC_NAME') || String(settings.pubsub_topic_name || '');
+    if (!/^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(topicName)) {
+      throw new Error('Set GOOGLE_PUBSUB_TOPIC_NAME in Supabase Function secrets to a topic like projects/PROJECT_ID/topics/prime-auto-care-reviews.');
+    }
+    const token = await googleAccessToken(ctx);
+    const location = await resolveGoogleLocation(ctx, token, settings);
+    const accountId = location.accountName.split('/').pop();
+    if (!accountId) throw new Error('The Google Business Profile account ID could not be resolved.');
+    const resourceName = 'accounts/' + accountId + '/notificationSetting';
+    const query = new URLSearchParams({ updateMask: 'notificationSetting' });
+    const notification = await googleFetch('https://mybusinessnotifications.googleapis.com/v1/' + resourceName + '?' + query.toString(), token, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: resourceName,
+        pubsubTopic: topicName,
+        notificationTypes: ['NEW_REVIEW', 'UPDATED_REVIEW']
+      })
+    });
+    const now = new Date().toISOString();
+    const { error } = await ctx.service.from('pac_google_review_settings').upsert({
+      workspace_id: ctx.workspace.id,
+      google_account_resource_name: location.accountName,
+      google_location_resource_name: location.locationName,
+      pubsub_topic_name: topicName,
+      notifications_enabled: true,
+      notifications_last_error: null,
+      updated_at: now
+    }, { onConflict: 'workspace_id' });
+    if (error) throw error;
+    return { enabled: true, topic_name: topicName, notification_types: notification.notificationTypes || ['NEW_REVIEW','UPDATED_REVIEW'], resource_name: resourceName };
+  }
   if (action === 'sync') return syncReviews(ctx);
   if (action === 'reviews') return { reviews: await getReviewRecords(ctx) };
   if (action === 'log-invitation') {
