@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.google-review-worker]
 verify_jwt = false
+
+[functions.google-review-pubsub-webhook]
+verify_jwt = false
