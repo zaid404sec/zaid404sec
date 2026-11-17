@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.8.4') throw new Error('The package version must be 2.8.4.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v21') {
-  throw new Error('The 2.8.4 debug APK uses v21 to install beside v20 without an update-signature conflict.');
+if (packageJson.version !== '2.9.0') throw new Error('The package version must be 2.9.0.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v22') {
+  throw new Error('The 2.9.0 debug APK must use v22 to install beside the existing v21 app.');
 }
-console.log('PASS: Android 2.8.4 uses v21 for a side-by-side install that keeps v20 data untouched');
+console.log('PASS: Android 2.9.0 uses v22 for a side-by-side install that keeps v21 data untouched');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -694,8 +694,8 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v25')) {
-  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v25 cache version.');
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v27')) {
+  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v27 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
@@ -808,7 +808,7 @@ console.log('PASS: database supports secure shared workspace membership and pair
 if (!packageJson.dependencies['@andreeewill/exceljs'] || !packageJson.dependencies['@supabase/supabase-js'] || !packageJson.dependencies['pdfmake'] || !packageJson.dependencies['@capacitor/local-notifications'] || !packageJson.dependencies['@capacitor/core']) throw new Error('Excel, PDFMake, cloud sync or local notifications runtime dependency missing.');
 
 const electronBuilderAuth = await readFile(new URL('../electron-builder.yml', import.meta.url), 'utf8');
-for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','communications.bundle.js','cloud-sync-setup.sql']) {
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','communications.bundle.js','google-reviews.bundle.js','cloud-sync-setup.sql']) {
   if (!electronBuilderAuth.includes('- ' + asset)) throw new Error('Windows installer is missing a required runtime asset: ' + asset);
 }
 console.log('PASS: Windows installer includes PDFMake, fonts, images, Excel and cloud-sync assets');
@@ -824,6 +824,8 @@ for (const asset of ['communications.bundle.js','native-links.bundle.js']) {
 }
 if (!html.includes('<script src="./communications.bundle.js"></script>') ||
     !sw.includes("'./communications.bundle.js'") ||
+    !html.includes('<script src="./google-reviews.bundle.js"></script>') ||
+    !sw.includes("'./google-reviews.bundle.js'") ||
     !html.includes('<script src="./native-links.bundle.js"></script>') ||
     !sw.includes("'./native-links.bundle.js'") ||
     !html.includes('whatsapp_marketing_image_template') ||
@@ -856,7 +858,10 @@ if (!communicationsClient.includes("functions/v1/communication-api") ||
 const edgeFunctionPaths = [
   '../supabase/functions/communication-api/index.ts',
   '../supabase/functions/communication-worker/index.ts',
-  '../supabase/functions/communication-webhook/index.ts'
+  '../supabase/functions/communication-webhook/index.ts',
+  '../supabase/functions/google-review-api/index.ts',
+  '../supabase/functions/google-review-oauth-callback/index.ts',
+  '../supabase/functions/google-review-worker/index.ts'
 ];
 for (const path of edgeFunctionPaths) {
   const source = await readFile(new URL(path, import.meta.url), 'utf8');
@@ -938,6 +943,59 @@ if (!nativeLinks.includes('async function openWhatsApp') ||
 }
 console.log('PASS: staff advances support Edit/Delete with linked cash-ledger synchronization and salary-adjustment safeguards');
 console.log('PASS: WhatsApp group link is persisted, displayed and opened externally without WebView navigation');
+
+
+const googleReviewClient = await readFile(new URL('../src/google-reviews.js', import.meta.url), 'utf8');
+const googleReviewApi = await readFile(new URL('../supabase/functions/google-review-api/index.ts', import.meta.url), 'utf8');
+const googleReviewCallback = await readFile(new URL('../supabase/functions/google-review-oauth-callback/index.ts', import.meta.url), 'utf8');
+const googleReviewWorker = await readFile(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url), 'utf8');
+const googleReviewMigration = await readFile(new URL('../supabase/migrations/20261117000100_google_reviews.sql', import.meta.url), 'utf8');
+const googleReviewDeploy = await readFile(new URL('../../.github/workflows/deploy-communications.yml', import.meta.url), 'utf8');
+const googleReviewCron = await readFile(new URL('../google-reviews-cron-setup.sql', import.meta.url), 'utf8');
+const prepareAssets = await readFile(new URL('../scripts/prepare-assets.mjs', import.meta.url), 'utf8');
+if (!prepareAssets.includes("src', 'google-reviews.js") || !prepareAssets.includes('google-reviews.bundle.js')) throw new Error('Google Reviews browser source is not bundled.');
+if (!googleReviewClient.includes("functions/v1/google-review-api") || !googleReviewClient.includes('getApiContext') ||
+    googleReviewClient.includes('GOOGLE_OAUTH_CLIENT_SECRET') || googleReviewClient.includes('GEMINI_API_KEY') ||
+    googleReviewClient.includes('GOOGLE_TOKEN_ENCRYPTION_KEY')) {
+  throw new Error('Google Reviews client must call the authenticated Edge Function and contain no server secrets.');
+}
+for (const token of ['google-review-connect','google-review-sync','google-review-chat','google-review-analyze','google-review-copilot','google-review-publish','google-review-qr']) {
+  if (!html.includes(token)) throw new Error('Google Review Center is missing UI action: '+token);
+}
+if (!html.includes('googleAccountEmail') || !html.includes('13506481990772076097') ||
+    !html.includes('https://share.google/6g3f0aJqTezi6JH5T') ||
+    !html.includes('https://zaid404sec.github.io/zaid404sec/website/')) {
+  throw new Error('Prime Auto Care Google owner/profile/website settings were not prefilled.');
+}
+if (!html.includes('qr:reviewProfileLink') || !googleReviewClient.includes('qr: target') ||
+    !html.includes('google-review-log-wa-sent') || !html.includes('google-review-log-pdf-prepared')) {
+  throw new Error('Invoice QR, counter QR, and prepared-versus-sent invitation tracking are incomplete.');
+}
+for (const token of ['pac_google_review_settings','pac_google_oauth_states','pac_google_oauth_credentials',
+  'pac_google_reviews','pac_review_invitation_logs','pac_review_ai_analysis','pac_review_reply_drafts',
+  'pac_google_review_sync_logs','pac_review_copilot_runs','pac_is_workspace_member']) {
+  if (!googleReviewMigration.includes(token)) throw new Error('Google Review migration is missing: '+token);
+}
+for (const token of ['auth.getUser(token)','GOOGLE_TOKEN_ENCRYPTION_KEY','GOOGLE_OAUTH_CLIENT_SECRET',
+  'business.manage','mybusiness.googleapis.com/v4','level1-chat','level2-analyze','level3-copilot',
+  'approved !== true','requireOwner(ctx)','GEMINI_API_KEY']) {
+  if (!googleReviewApi.includes(token)) throw new Error('Google Review API missing authentication/AI/platform safeguard: '+token);
+}
+for (const token of ['oauth2.googleapis.com/token','email_verified','business.manage','encrypted_refresh_token','consumed_at']) {
+  if (!googleReviewCallback.includes(token)) throw new Error('Google OAuth callback missing: '+token);
+}
+for (const token of ['GOOGLE_REVIEW_WORKER_SECRET','api_status','last_successful_sync_at','pac_google_reviews']) {
+  if (!googleReviewWorker.includes(token)) throw new Error('Scheduled Google review worker missing: '+token);
+}
+for (const token of ['google-review-api','google-review-oauth-callback','google-review-worker','supabase db push']) {
+  if (!googleReviewDeploy.includes(token)) throw new Error('Supabase deployment workflow missing Google Review step: '+token);
+}
+if (!googleReviewCron.includes('pg_cron') || !googleReviewCron.includes('pg_net') ||
+    !googleReviewCron.includes('x-google-review-worker-secret') ||
+    !googleReviewCron.includes('prime-auto-care-google-reviews-worker')) {
+  throw new Error('Vault-backed scheduled Google review catch-up sync is incomplete.');
+}
+console.log('PASS: three-level Gemini review features, owner-approved reply publishing, server-only credentials and scheduled sync');
 
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
