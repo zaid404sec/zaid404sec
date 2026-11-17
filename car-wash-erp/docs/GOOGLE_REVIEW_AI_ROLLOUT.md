@@ -1,7 +1,7 @@
 # Google Review Management + three-level GenAI rollout
 
 ## Owner configuration received
-- Google account: `bmumz3909@gmail.com`
+- Google account: owner-supplied; confirmed during OAuth authorization and not hard-coded in the public repository.
 - Business Profile role: Primary owner
 - Business Profile ID supplied by owner: `13506481990772076097`
 - Profile URL: `https://share.google/6g3f0aJqTezi6JH5T`
