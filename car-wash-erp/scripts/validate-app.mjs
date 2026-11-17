@@ -18,7 +18,7 @@ if (!html.includes('Founder') || !html.includes('Owner Operator')) throw new Err
 console.log('PASS: Founder and Owner Operator roles');
 if (!html.includes('Personal / Household · Vehicle Petrol') || !html.includes('Personal / Household · House Light Bill') || !html.includes("expenseType==='personal'")) throw new Error('Personal and household expense classification is missing.');
 console.log('PASS: personal and household expense separation');
-if (!html.includes('https://g.page/r/CYMPgw3oQ1hfEBM/review') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
+if (!html.includes('https://share.google/6g3f0aJqTezi6JH5T') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
 console.log('PASS: Google review workflow');
 if (!html.includes("db.settings?.invoiceTemplate||'classic'") || !html.includes("{dark:'#17130c',primary:'#d6b15f'") || html.includes('{dark:invoiceTheme.dark')) throw new Error('Original default invoice template or safe theme initialisation is missing.');
 if (!html.includes('invoice-template-selector') || !html.includes('Navy Professional') || !html.includes('Forest Green') || !html.includes('Burgundy Professional')) throw new Error('The professional invoice template selector is incomplete.');
