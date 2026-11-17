@@ -247,7 +247,7 @@ async function getReviewRecords(ctx: Context, limit = 200) {
 async function gemini(prompt: string, jsonMode = false) {
   const key = env('GEMINI_API_KEY');
   if (!key) throw new Error('Gemini AI is not configured yet. Add GEMINI_API_KEY as a Supabase Edge Function secret; never put it in the APK.');
-  const model = env('GEMINI_MODEL') || 'gemini-4-hydrogen';
+  const model = env('GEMINI_MODEL') || 'gemini-3.8-flash';
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key), {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -323,7 +323,7 @@ async function status(ctx: Context) {
   const distribution: Record<string, number> = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
   ratings.forEach((rating: number) => distribution[String(rating)]++);
   const sent = logs.filter((row: any) => row.status === 'sent_confirmed');
-  const prepared = logs;
+  const prepared = logs.filter((row: any) => row.status === 'prepared');
   return {
     settings: { google_account_email: settings.google_account_email || null, google_business_profile_id: settings.google_business_profile_id || '13506481990772076097', google_business_profile_url: settings.google_business_profile_url || 'https://share.google/6g3f0aJqTezi6JH5T', website_url: settings.website_url || null, review_link: settings.review_link || null },
     connection: {
@@ -402,7 +402,7 @@ async function handle(ctx: Context, body: any) {
     const { data: review, error } = await ctx.service.from('pac_google_reviews').select('*')
       .eq('workspace_id', ctx.workspace.id).eq('id', reviewId).single();
     if (error || !review) throw new Error('The selected Google review could not be found.');
-    const result = await gemini('You are Prime Auto Care\'s review-management agent. Analyse this genuine customer review. Never invent facts, promise refunds or compensation, argue with the reviewer, or ask the customer to change a rating. Create a polite owner reply draft which acknowledges only facts actually present in the review. Return JSON only with keys sentiment (positive|neutral|negative|mixed), topics (array of short strings), complaintFlag (boolean), priority (low|normal|high|urgent), summary (string), recommendations (array of strings), replyDraft (string).\nREVIEW:\n' + JSON.stringify({ rating: review.star_rating, comment: review.comment, created: review.google_created_at }));
+    const result = await gemini('You are Prime Auto Care\'s review-management agent. Analyse this genuine customer review. Never invent facts, promise refunds or compensation, argue with the reviewer, or ask the customer to change a rating. Create a polite owner reply draft which acknowledges only facts actually present in the review. Return JSON only with keys sentiment (positive|neutral|negative|mixed), topics (array of short strings), complaintFlag (boolean), priority (low|normal|high|urgent), summary (string), recommendations (array of strings), replyDraft (string).\nREVIEW:\n' + JSON.stringify({ rating: review.star_rating, comment: review.comment, created: review.google_created_at }), true);
     const generated = parseJson(result.text);
     const allowedSentiments = ['positive','neutral','negative','mixed'];
     const allowedPriorities = ['low','normal','high','urgent'];
