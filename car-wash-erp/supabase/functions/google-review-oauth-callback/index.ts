@@ -93,7 +93,7 @@ Deno.serve(async req => {
       : existing?.encrypted_refresh_token;
     if (!refreshToken) return html('Google did not issue an offline refresh token. Revoke this app in Google Account security and connect again, selecting the consent prompt.', true);
     const now = new Date().toISOString();
-    const grantedScopes = String(token.scope || '').split(/\s+/).filter(Boolean);
+    const grantedScopes = String(token.scope || 'openid email https://www.googleapis.com/auth/business.manage').split(/\s+/).filter(Boolean);
     if (!grantedScopes.includes('https://www.googleapis.com/auth/business.manage')) {
       return html('Google did not grant the Business Profile management permission required by WashDesk.', true);
     }
