@@ -69,7 +69,7 @@ The owner account must complete the Google OAuth consent step. The Google API ap
 Never place OAuth tokens, service-role keys, AI API keys or Google client secrets in `index.html`, Android assets, the APK, the Windows installer or public Git history.
 
 ## Database migration
-`supabase/migrations/20261117000100_google_reviews.sql` creates additive tables for review settings, synced reviews, invitation logs, AI analysis, reply drafts and sync logs. It uses workspace-scoped RLS and keeps OAuth/AI secrets out of client-readable tables.
+`supabase/migrations/20261117000100_google_reviews.sql` creates additive tables for review settings, OAuth state/PKCE, encrypted Google token storage, synced reviews, invitation logs, AI analysis, reply drafts and sync logs. It uses workspace-scoped RLS; OAuth tokens are application-encrypted and only accessible to service-role Edge Functions. The encryption key remains a Supabase Function secret, never in the APK.
 
 Do not execute it against the live Supabase project until the branch has passed review and the owner is ready to add the new schema. The migration is additive; it does not drop or rewrite business tables.
 
