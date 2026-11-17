@@ -388,6 +388,7 @@ async function handle(ctx: Context, body: any) {
     return { logged: true, status };
   }
   if (action === 'level1-chat') {
+    requireOwner(ctx);
     const question = String(body.question || '').trim();
     if (!question || question.length > 1200) throw new Error('Enter a question of up to 1,200 characters.');
     const reviews = await getReviewRecords(ctx, 100);
@@ -397,6 +398,7 @@ async function handle(ctx: Context, body: any) {
     return { answer: result.text, evidence: evidence.map((r: any) => ({ id: r.id, rating: r.rating, date: r.date })) };
   }
   if (action === 'level2-analyze') {
+    requireOwner(ctx);
     const reviewId = String(body.review_id || '');
     if (!reviewId) throw new Error('Select a synced review first.');
     const { data: review, error } = await ctx.service.from('pac_google_reviews').select('*')
@@ -432,6 +434,7 @@ async function handle(ctx: Context, body: any) {
     return { analysis: parsed, analysis_id: analysis.id, draft };
   }
   if (action === 'level3-copilot') {
+    requireOwner(ctx);
     const reviews = await getReviewRecords(ctx, 120);
     if (reviews.length < 2) return { insufficient_data: true, message: 'The Business Growth Copilot needs at least two genuine synced reviews. No conclusions have been generated from empty or insufficient data.' };
     const evidence = reviews.map((r: any) => ({ id: r.id, rating: r.star_rating, date: r.google_created_at, comment: String(r.comment||'').slice(0,700), reply: String(r.reply_comment||'').slice(0,400) }));
