@@ -24,6 +24,7 @@ async function request(action, body = {}) {
 
 window.PrimeAutoCareGoogleReviews = {
   status: () => request('status'),
+  list: () => request('reviews'),
   saveSettings: settings => request('save-settings', { settings }),
   connect: () => request('connect'),
   sync: () => request('sync'),
