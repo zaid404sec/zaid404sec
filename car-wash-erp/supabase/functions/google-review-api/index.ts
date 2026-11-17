@@ -252,7 +252,7 @@ async function gemini(prompt: string, jsonMode = false) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.25, ...(jsonMode ? { responseMimeType: 'application/json' } : {}) }
+      generationConfig: { ...(jsonMode ? { responseMimeType: 'application/json' } : {}) }
     })
   });
   const body = await response.json().catch(() => ({}));
