@@ -945,7 +945,7 @@ const googleReviewMigration = await readFile(new URL('../supabase/migrations/202
 const publicBusinessWebsite = await readFile(new URL('../website/index.html', import.meta.url), 'utf8');
 const reviewCenterTokens = [
   'data-page="google-reviews"',
-  "googleReviews:googleReviews",
+  "'google-reviews':googleReviews",
   'function googleReviews()',
   'LEVEL 1 · GROUNDED CHATBOT',
   'LEVEL 2 · SINGLE REVIEW AGENT',
