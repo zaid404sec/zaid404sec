@@ -114,7 +114,7 @@ Deno.serve(async req=>{
   if(!secret||req.headers.get('x-google-review-worker-secret')!==secret)return new Response('Unauthorized',{status:401});
   try {
     const service=await serviceClient();
-    const {data:settings,error}=await service.from('pac_google_review_settings').select('*').eq('api_status','connected');
+    const {data:settings,error}=await service.from('pac_google_review_settings').select('*').in('api_status',['connected','error']);
     if(error)throw error;
     const results=[];
     for(const row of settings||[]) {
