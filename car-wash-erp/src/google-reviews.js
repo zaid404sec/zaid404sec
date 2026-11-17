@@ -28,6 +28,7 @@ window.PrimeAutoCareGoogleReviews = {
   saveSettings: settings => request('save-settings', { settings }),
   connect: () => request('connect'),
   sync: () => request('sync'),
+  enableNotifications: () => request('enable-notifications'),
   logInvitation: entry => request('log-invitation', entry),
   chat: question => request('level1-chat', { question }),
   analyze: reviewId => request('level2-analyze', { review_id: reviewId }),
