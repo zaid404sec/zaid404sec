@@ -7,7 +7,7 @@ This mobile-first public website is stored at `car-wash-erp/website/` and is inc
 - Services, business address and normal opening hours.
 - WhatsApp enquiry buttons for +91 77779 70261.
 - Google Business Profile link supplied by the owner.
-- A Google review call-to-action using the review URL already configured in WashDesk. Verify this direct review URL from the owner's Business Profile before using it on printed QR materials.
+- A Google Business Profile & Reviews call-to-action using the exact profile link supplied by the owner.
 - LocalBusiness / AutoWash structured data.
 
 ## Expected public URL
@@ -24,4 +24,4 @@ The repository already has `.github/workflows/pages.yml`, which builds and publi
 6. Confirm the website link appears on the public Business Profile in Google Search / Maps.
 
 ## Owner review before public use
-The business phone number, secondary phone, address and regular hours use the details supplied for Prime Auto Care. Check them before publishing. The supplied `share.google` link opens the Business Profile. The separate direct review URL is the current WashDesk default (`https://g.page/r/CYMPgw3oQ1hfEBM/review`) and may be replaced in Business Settings. Confirm it opens the correct Prime Auto Care review form before generating physical QR material.
+The business phone number, secondary phone, address and regular hours use the details supplied for Prime Auto Care. Check them before publishing. The supplied `share.google` link opens the Business Profile. The separate direct review URL in WashDesk should be tested by the owner before it is placed on invoice PDFs; the printable counter QR currently opens the supplied Business Profile link.

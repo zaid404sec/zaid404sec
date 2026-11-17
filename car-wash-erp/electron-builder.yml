@@ -21,6 +21,7 @@ files:
   - notifications-native.bundle.js
   - native-links.bundle.js
   - communications.bundle.js
+  - google-reviews.bundle.js
   - cloud-sync-setup.sql
   - electron/**
   - package.json
