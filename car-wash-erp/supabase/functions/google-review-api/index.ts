@@ -356,24 +356,34 @@ async function handle(ctx: Context, body: any) {
     const status = String(body.status || 'prepared');
     if (!['invoice_pdf', 'whatsapp', 'counter_qr'].includes(channel)) throw new Error('Invitation channel is invalid.');
     if (!['prepared', 'sent_confirmed'].includes(status)) throw new Error('Invitation status is invalid.');
-    const { error } = await ctx.service.from('pac_review_invitation_logs').insert({
-      workspace_id: ctx.workspace.id, invoice_id: String(body.invoice_id || '') || null,
-      invoice_number: String(body.invoice_number || '') || null, channel, status,
-      prepared_by: ctx.user.id, sent_confirmed_by: status === 'sent_confirmed' ? ctx.user.id : null,
-      sent_confirmed_at: status === 'sent_confirmed' ? new Date().toISOString() : null,
-      idempotency_key: String(body.idempotency_key || '') || null
-    });
-    if (error) throw error;
     if (status === 'sent_confirmed') {
       const { data: pending } = await ctx.service.from('pac_review_invitation_logs').select('id')
         .eq('workspace_id', ctx.workspace.id).eq('channel', channel).eq('status', 'prepared')
         .order('prepared_at', { ascending: false }).limit(1).maybeSingle();
       if (pending?.id) {
-        const { error: updateError } = await ctx.service.from('pac_review_invitation_logs').update({
-          status: 'sent_confirmed', sent_confirmed_by: ctx.user.id, sent_confirmed_at: new Date().toISOString()
+        const { error } = await ctx.service.from('pac_review_invitation_logs').update({
+          status: 'sent_confirmed', sent_confirmed_by: ctx.user.id,
+          sent_confirmed_at: new Date().toISOString()
         }).eq('id', pending.id);
-        if (updateError) throw updateError;
+        if (error) throw error;
+      } else {
+        const { error } = await ctx.service.from('pac_review_invitation_logs').insert({
+          workspace_id: ctx.workspace.id, invoice_id: String(body.invoice_id || '') || null,
+          invoice_number: String(body.invoice_number || '') || null, channel, status,
+          prepared_by: ctx.user.id, sent_confirmed_by: ctx.user.id,
+          sent_confirmed_at: new Date().toISOString(),
+          idempotency_key: String(body.idempotency_key || '') || null
+        });
+        if (error) throw error;
       }
+    } else {
+      const { error } = await ctx.service.from('pac_review_invitation_logs').insert({
+        workspace_id: ctx.workspace.id, invoice_id: String(body.invoice_id || '') || null,
+        invoice_number: String(body.invoice_number || '') || null, channel, status,
+        prepared_by: ctx.user.id,
+        idempotency_key: String(body.idempotency_key || '') || null
+      });
+      if (error) throw error;
     }
     return { logged: true, status };
   }
