@@ -1,4 +1,4 @@
-name: Deploy Prime Auto Care communications backend
+name: Deploy Prime Auto Care Supabase backend
 
 on:
   workflow_dispatch:
