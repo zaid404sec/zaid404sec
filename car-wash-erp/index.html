@@ -1092,8 +1092,8 @@
       <div class="grid two" style="margin-top:16px">
         <div class="card"><div class="card-head"><h3>Google Business Profile connection</h3><span class="help">Owner account</span></div>
           <div class="stock-alert"><span>Google account</span><b>bmumz3909@gmail.com</b></div>
-          <div class="stock-alert"><span>Profile ID</span><b>${esc(b.googleBusinessProfileId||'Not saved')}</b></div>
-          <div class="stock-alert"><span>Profile URL</span><b>${b.googleBusinessProfileUrl?'<a href="'+esc(b.googleBusinessProfileUrl)+'" target="_blank" rel="noopener">Open profile ↗</a>':'Not saved'}</b></div>
+          <div class="stock-alert"><span>Profile ID</span><b>${esc(b.googleBusinessProfileId||'13506481990772076097')}</b></div>
+          <div class="stock-alert"><span>Profile URL</span><b>${'<a href="'+esc(b.googleBusinessProfileUrl||'https://share.google/6g3f0aJqTezi6JH5T')+'" target="_blank" rel="noopener">Open profile ↗</a>'}</b></div>
           <div class="stock-alert"><span>Website</span><b>${b.website?'<a href="'+esc(b.website)+'" target="_blank" rel="noopener">Open website ↗</a>':'Not published / not saved'}</b></div>
           <p class="help">Status changes to Connected only after Google approves the API project and the owner authorises OAuth on the secure backend.</p>
           <div class="actions"><button class="btn" data-nav="settings">Review connection details in settings</button></div>
@@ -1108,9 +1108,9 @@
       </div>
       <div class="card" style="margin-top:16px"><div class="card-head"><h3>Three-level GenAI review engine</h3><span class="help">Provider-neutral · server-side AI</span></div>
         <div class="grid two" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
-          <div class="card" style="background:var(--surface,#f7f7f7);box-shadow:none"><div class="help">LEVEL 1 · AUTOMATION</div><h3>Review operations</h3><p class="help">Invitation activity, review inbox, rating distribution, unanswered-review tracking, duplicate protection and daily / weekly reporting.</p><span class="badge">Foundation · API pending</span></div>
-          <div class="card" style="background:var(--surface,#f7f7f7);box-shadow:none"><div class="help">LEVEL 2 · INTELLIGENCE</div><h3>Review understanding</h3><p class="help">Sentiment, service-topic extraction, complaint detection, recurring issue summaries and context-aware reply drafts.</p><span class="badge">AI provider setup pending</span></div>
-          <div class="card" style="background:var(--surface,#f7f7f7);box-shadow:none"><div class="help">LEVEL 3 · GROWTH COPILOT</div><h3>Business recommendations</h3><p class="help">Weekly and monthly trends, emerging complaint alerts, service-improvement priorities and natural-language questions about feedback.</p><span class="badge">AI provider setup pending</span></div>
+          <div class="card" style="background:var(--surface,#f7f7f7);box-shadow:none"><div class="help">LEVEL 1 · GROUNDED CHATBOT</div><h3>Ask your review data</h3><p class="help">Ask questions in plain language, such as “What do customers mention most?” or “Summarise this week’s feedback.” Answers use only synced reviews and show the evidence they rely on.</p><span class="badge">Chatbot · API and AI pending</span></div>
+          <div class="card" style="background:var(--surface,#f7f7f7);box-shadow:none"><div class="help">LEVEL 2 · SINGLE REVIEW AGENT</div><h3>Review management agent</h3><p class="help">Classify sentiment and service topics, detect complaints, prepare factual reply drafts, and create follow-up tasks for owner review. Publishing remains owner-approved.</p><span class="badge">Agent · API and AI pending</span></div>
+          <div class="card" style="background:var(--surface,#f7f7f7);box-shadow:none"><div class="help">LEVEL 3 · MULTI-AGENT COPILOT</div><h3>Business growth team</h3><p class="help">Specialist agents work together: a review analyst finds patterns, a customer-experience agent flags recurring risks, and a business-improvement agent proposes evidence-based actions and management summaries.</p><span class="badge">Multi-agent · API and AI pending</span></div>
         </div>
         <p class="help" style="margin-top:12px">AI analyses customer reviews only. It must never write customer reviews, invent service facts, promise refunds or publish a business reply without owner approval. Provider credentials stay on the server and never inside the APK.</p>
       </div>
