@@ -144,18 +144,14 @@ create table if not exists public.pac_review_ai_analysis (
     check (priority in ('low','normal','high','urgent')),
   summary text,
   recommendations jsonb not null default '[]'::jsonb,
-  model_provider text,
-  model_name text,
+  model_provider text not null default 'unknown',
+  model_name text not null default 'unknown',
   analysis_payload jsonb not null default '{}'::jsonb,
   generated_at timestamptz not null default now()
 );
-create unique index if not exists pac_review_ai_analysis_model_unique_idx
-  on public.pac_review_ai_analysis (
-    review_row_id,
-    analysis_level,
-    coalesce(model_provider, ''),
-    coalesce(model_name, '')
-  );
+alter table public.pac_review_ai_analysis
+  add constraint pac_review_ai_analysis_model_unique
+  unique (review_row_id, analysis_level, model_provider, model_name);
 create index if not exists pac_review_ai_analysis_recent_idx
   on public.pac_review_ai_analysis(workspace_id, generated_at desc);
 alter table public.pac_review_ai_analysis enable row level security;
@@ -246,3 +242,23 @@ create policy pac_google_review_sync_logs_read
 -- Do not store OAuth refresh tokens, access tokens, Gemini/AI keys, or Google
 -- client secrets in the APK or these browser-readable tables. Keep them in
 -- Supabase Edge Function secrets / a server-side secret store only.
+
+-- Persist Level 3 multi-agent management briefs separately from per-review analysis.
+create table if not exists public.pac_review_copilot_runs (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.washdesk_workspaces(id) on delete cascade,
+  review_count integer not null default 0 check (review_count >= 0),
+  output jsonb not null default '{}'::jsonb,
+  model_provider text not null default 'google',
+  model_name text not null default 'unknown',
+  generated_at timestamptz not null default now()
+);
+create index if not exists pac_review_copilot_runs_recent_idx
+  on public.pac_review_copilot_runs(workspace_id, generated_at desc);
+alter table public.pac_review_copilot_runs enable row level security;
+revoke all on public.pac_review_copilot_runs from anon, authenticated;
+grant select on public.pac_review_copilot_runs to authenticated;
+grant all on public.pac_review_copilot_runs to service_role;
+create policy pac_review_copilot_runs_read
+  on public.pac_review_copilot_runs for select to authenticated
+  using (public.pac_is_workspace_member(workspace_id));
