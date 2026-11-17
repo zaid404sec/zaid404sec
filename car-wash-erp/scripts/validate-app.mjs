@@ -998,7 +998,7 @@ if (!googleReviewCron.includes('pg_cron') || !googleReviewCron.includes('pg_net'
     !googleReviewCron.includes('prime-auto-care-google-reviews-worker')) {
   throw new Error('Vault-backed scheduled Google review catch-up sync is incomplete.');
 }
-for (const token of ['GOOGLE_PUBSUB_AUDIENCE','GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT','tokeninfo?id_token=','NEW_REVIEW','UPDATED_REVIEW','google-review-worker','pac_google_review_events']) {
+for (const token of ['GOOGLE_PUBSUB_AUDIENCE','GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT','tokeninfo?id_token=','NEW_REVIEW','UPDATED_REVIEW','google-review-worker','pac_google_review_events','nested.type','nested.location','nested.review']) {
   if (!googleReviewWebhook.includes(token)) throw new Error('Pub/Sub notification receiver is missing safeguard: '+token);
 }
 for (const token of ['notifications_enabled','notifications_last_event_at','pac_google_review_events','pac_is_workspace_member']) {
