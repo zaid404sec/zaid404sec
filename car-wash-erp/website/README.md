@@ -13,7 +13,7 @@ This mobile-first public website is stored at `car-wash-erp/website/` and is inc
 ## Expected public URL
 `https://zaid404sec.github.io/zaid404sec/website/`
 
-The repository already has `.github/workflows/pages.yml`, which builds and publishes the full `car-wash-erp/` folder. This website is deployed as the `/website/` path within that existing Pages site; do not create a second, competing Pages deployment workflow.
+The repository already has `.github/workflows/pages.yml`, which builds and publishes the full `car-wash-erp/` folder. That workflow now also generates the app's PWA/Windows icon assets before running validation. This website is deployed as the `/website/` path within that existing Pages site; do not create a second, competing Pages deployment workflow.
 
 ## Publish and verify
 1. Merge the website and app changes after the feature pull request passes checks.
