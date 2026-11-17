@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.9.0') throw new Error('The package version must be 2.9.0.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v22') {
+if (packageJson.version !== '2.9.1') throw new Error('The package version must be 2.9.1.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v23') {
   throw new Error('The 2.9.0 debug APK must use v22 to install beside the existing v21 app.');
 }
-console.log('PASS: Android 2.9.0 uses v22 for a side-by-side install that keeps v21 data untouched');
+console.log('PASS: Android 2.9.1 uses v23 for a side-by-side install that keeps v21 data untouched');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -271,7 +271,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v22') throw new Error('Android 2.9.0 side-by-side app ID v22 was not set.');
+if (appId !== 'com.washdesk.carwash.v23') throw new Error('Android 2.9.1 side-by-side app ID v23 was not set.');
 console.log('PASS: app manifest uses the expected v22 Android package ID');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
@@ -950,6 +950,8 @@ const googleReviewClient = await readFile(new URL('../src/google-reviews.js', im
 const googleReviewApi = await readFile(new URL('../supabase/functions/google-review-api/index.ts', import.meta.url), 'utf8');
 const googleReviewCallback = await readFile(new URL('../supabase/functions/google-review-oauth-callback/index.ts', import.meta.url), 'utf8');
 const googleReviewWorker = await readFile(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url), 'utf8');
+const googleReviewWebhook = await readFile(new URL('../supabase/functions/google-review-pubsub-webhook/index.ts', import.meta.url), 'utf8');
+const googleReviewPubSubMigration = await readFile(new URL('../supabase/migrations/20261118000100_google_review_pubsub.sql', import.meta.url), 'utf8');
 const googleReviewMigration = await readFile(new URL('../supabase/migrations/20261117000100_google_reviews.sql', import.meta.url), 'utf8');
 const googleReviewDeploy = await readFile(new URL('../../.github/workflows/deploy-communications.yml', import.meta.url), 'utf8');
 const googleReviewCron = await readFile(new URL('../google-reviews-cron-setup.sql', import.meta.url), 'utf8');
@@ -996,6 +998,19 @@ if (!googleReviewCron.includes('pg_cron') || !googleReviewCron.includes('pg_net'
     !googleReviewCron.includes('prime-auto-care-google-reviews-worker')) {
   throw new Error('Vault-backed scheduled Google review catch-up sync is incomplete.');
 }
+for (const token of ['GOOGLE_PUBSUB_AUDIENCE','GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT','tokeninfo?id_token=','NEW_REVIEW','UPDATED_REVIEW','google-review-worker','pac_google_review_events']) {
+  if (!googleReviewWebhook.includes(token)) throw new Error('Pub/Sub notification receiver is missing safeguard: '+token);
+}
+for (const token of ['notifications_enabled','notifications_last_event_at','pac_google_review_events','pac_google_is_workspace_member']) {
+  if (!googleReviewPubSubMigration.includes(token) && token !== 'pac_google_is_workspace_member') {
+    throw new Error('Pub/Sub migration is missing: '+token);
+  }
+}
+if (!googleReviewApi.includes('enable-notifications') || !googleReviewApi.includes('mybusinessnotifications.googleapis.com/v1/')) {
+  throw new Error('Google Notifications API registration is missing.');
+}
+if (!googleReviewDeploy.includes('google-review-pubsub-webhook')) throw new Error('Pub/Sub webhook is not included in deployment.');
+if (!html.includes('google-review-enable-alerts') || !html.includes('notifications_last_event_at')) throw new Error('The instant review alerts control/status is missing.');
 console.log('PASS: three-level Gemini review features, owner-approved reply publishing, server-only credentials and scheduled sync');
 
 console.log('PASS: Excel and Supabase sync dependencies declared');
