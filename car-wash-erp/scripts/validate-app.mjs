@@ -964,6 +964,8 @@ if (!html.includes('API access pending') || !html.includes('no sample reviews') 
 }
 for (const table of [
   'pac_google_review_settings',
+  'pac_google_oauth_states',
+  'pac_google_oauth_credentials',
   'pac_google_reviews',
   'pac_review_invitation_logs',
   'pac_review_ai_analysis',
