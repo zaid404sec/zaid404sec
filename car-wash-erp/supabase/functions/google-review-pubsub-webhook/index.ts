@@ -57,8 +57,8 @@ function notificationFields(value: any) {
   const nested = value?.notification || value?.event || value || {};
   return {
     notificationType: String(nested.notificationType || nested.notification_type || nested.type || ''),
-    locationName: String(nested.locationName || nested.location_name || ''),
-    reviewName: String(nested.reviewName || nested.review_name || ''),
+    locationName: String(nested.locationName || nested.location_name || nested.location || ''),
+    reviewName: String(nested.reviewName || nested.review_name || nested.review || ''),
     publishTime: String(nested.publishTime || nested.publish_time || '')
   };
 }
