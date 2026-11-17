@@ -272,7 +272,7 @@ console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
 if (appId !== 'com.washdesk.carwash.v23') throw new Error('Android 2.9.1 side-by-side app ID v23 was not set.');
-console.log('PASS: app manifest uses the expected v22 Android package ID');
+console.log('PASS: app manifest uses the expected v23 Android package ID');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -695,8 +695,8 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v27')) {
-  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v27 cache version.');
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v28')) {
+  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v28 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
