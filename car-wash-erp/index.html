@@ -1082,7 +1082,7 @@
     const b=db.business||{};
     const profileStatus='API access pending';
     return `${pageHead('Google Review Center','Monitor genuine customer feedback and use AI to turn it into better service.','<button class="btn" data-action="google-profile-open">Open Google Profile</button><button class="btn primary" data-action="google-review-whatsapp">Prepare WhatsApp request</button>')}
-      <div class="notice" style="margin-bottom:16px"><b>Google connection: ${profileStatus}</b><br/>Your Business Profile details are saved locally in WashDesk, but live review sync is not active yet. Google API access, owner OAuth consent and secure server configuration are still required. No sample reviews or estimated ratings are shown.</div>
+      <div class="notice" style="margin-bottom:16px"><b>Google connection: ${profileStatus}</b><br/>Your owner-provided Business Profile details are prefilled in Business Settings; save them to your shared workspace. Live review sync is not active yet. Google API access, owner OAuth consent and secure server configuration are still required. No sample reviews or estimated ratings are shown.</div>
       <div class="grid stats">
         ${stat('Google reviews synced',records.length?String(records.length):'—','★',records.length?'Imported from Google Business Profile':'Waiting for first verified API sync')}
         ${stat('Average Google rating',average==='—'?'—':average+' / 5','☆',rated.length?'Based on synced reviews':'No verified rating data yet')}
