@@ -293,10 +293,6 @@ async function startOAuth(ctx: Context) {
   if (!clientId || !env('GOOGLE_OAUTH_CLIENT_SECRET') || !redirectUri || !env('GOOGLE_TOKEN_ENCRYPTION_KEY')) {
     throw new Error('Google OAuth is not configured on the server. Basic API access and Google Cloud OAuth credentials must be prepared first.');
   }
-  const settings = await getSettings(ctx);
-  if (settings.google_account_email && settings.google_account_email !== 'bmumz3909@gmail.com') {
-    // The owner can update this saved email in Business Settings before connecting.
-  }
   const state = randomToken(32), verifier = randomToken(48);
   const challenge = await sha256(verifier);
   const now = new Date();
@@ -327,7 +323,7 @@ async function status(ctx: Context) {
   const distribution: Record<string, number> = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
   ratings.forEach((rating: number) => distribution[String(rating)]++);
   const sent = logs.filter((row: any) => row.status === 'sent_confirmed');
-  const prepared = logs.filter((row: any) => row.status === 'prepared');
+  const prepared = logs;
   return {
     settings: { google_account_email: settings.google_account_email || null, google_business_profile_id: settings.google_business_profile_id || '13506481990772076097', google_business_profile_url: settings.google_business_profile_url || 'https://share.google/6g3f0aJqTezi6JH5T', website_url: settings.website_url || null, review_link: settings.review_link || null },
     connection: {
@@ -368,6 +364,17 @@ async function handle(ctx: Context, body: any) {
       idempotency_key: String(body.idempotency_key || '') || null
     });
     if (error) throw error;
+    if (status === 'sent_confirmed') {
+      const { data: pending } = await ctx.service.from('pac_review_invitation_logs').select('id')
+        .eq('workspace_id', ctx.workspace.id).eq('channel', channel).eq('status', 'prepared')
+        .order('prepared_at', { ascending: false }).limit(1).maybeSingle();
+      if (pending?.id) {
+        const { error: updateError } = await ctx.service.from('pac_review_invitation_logs').update({
+          status: 'sent_confirmed', sent_confirmed_by: ctx.user.id, sent_confirmed_at: new Date().toISOString()
+        }).eq('id', pending.id);
+        if (updateError) throw updateError;
+      }
+    }
     return { logged: true, status };
   }
   if (action === 'level1-chat') {
@@ -375,7 +382,7 @@ async function handle(ctx: Context, body: any) {
     if (!question || question.length > 1200) throw new Error('Enter a question of up to 1,200 characters.');
     const reviews = await getReviewRecords(ctx, 100);
     if (!reviews.length) return { answer: 'There are no Google reviews synced yet. Connect the owner account after Google approves Business Profile API access, then sync reviews before asking review-data questions.', evidence: [] };
-    const evidence = reviews.map((r: any) => ({ id: r.id, rating: r.star_rating, date: r.google_created_at, comment: r.comment, reply: r.reply_comment }));
+    const evidence = reviews.map((r: any) => ({ id: r.id, rating: r.star_rating, date: r.google_created_at, comment: String(r.comment||'').slice(0,800), reply: String(r.reply_comment||'').slice(0,500) }));
     const result = await gemini('You are the Prime Auto Care review-data assistant. Answer only from the supplied Google review records. Do not invent customer comments, dates, ratings, service facts or trends. If the records do not support a conclusion, say so. Cite supporting record IDs. Keep the answer concise.\nQUESTION:\n' + question + '\nREVIEW RECORDS:\n' + JSON.stringify(evidence));
     return { answer: result.text, evidence: evidence.map((r: any) => ({ id: r.id, rating: r.rating, date: r.date })) };
   }
@@ -386,26 +393,38 @@ async function handle(ctx: Context, body: any) {
       .eq('workspace_id', ctx.workspace.id).eq('id', reviewId).single();
     if (error || !review) throw new Error('The selected Google review could not be found.');
     const result = await gemini('You are Prime Auto Care\'s review-management agent. Analyse this genuine customer review. Never invent facts, promise refunds or compensation, argue with the reviewer, or ask the customer to change a rating. Create a polite owner reply draft which acknowledges only facts actually present in the review. Return JSON only with keys sentiment (positive|neutral|negative|mixed), topics (array of short strings), complaintFlag (boolean), priority (low|normal|high|urgent), summary (string), recommendations (array of strings), replyDraft (string).\nREVIEW:\n' + JSON.stringify({ rating: review.star_rating, comment: review.comment, created: review.google_created_at }));
-    const parsed = parseJson(result.text);
+    const generated = parseJson(result.text);
+    const allowedSentiments = ['positive','neutral','negative','mixed'];
+    const allowedPriorities = ['low','normal','high','urgent'];
+    const parsed = {
+      sentiment: allowedSentiments.includes(String(generated.sentiment)) ? String(generated.sentiment) : 'mixed',
+      topics: Array.isArray(generated.topics) ? generated.topics.filter((x:any)=>typeof x==='string').slice(0,8) : [],
+      complaintFlag: generated.complaintFlag === true,
+      priority: allowedPriorities.includes(String(generated.priority)) ? String(generated.priority) : 'normal',
+      summary: String(generated.summary || '').slice(0,1200),
+      recommendations: Array.isArray(generated.recommendations) ? generated.recommendations.filter((x:any)=>typeof x==='string').slice(0,8) : [],
+      replyDraft: String(generated.replyDraft || '').trim().slice(0,4000)
+    };
+    if (!parsed.replyDraft) throw new Error('Gemini did not create a usable reply draft. Retry this review.');
     const { data: analysis, error: analysisError } = await ctx.service.from('pac_review_ai_analysis').upsert({
       workspace_id: ctx.workspace.id, review_row_id: review.id, analysis_level: 2,
-      sentiment: parsed.sentiment, topics: parsed.topics || [], complaint_flag: !!parsed.complaintFlag,
-      priority: parsed.priority || 'normal', summary: parsed.summary || '', recommendations: parsed.recommendations || [],
+      sentiment: parsed.sentiment, topics: parsed.topics, complaint_flag: parsed.complaintFlag,
+      priority: parsed.priority, summary: parsed.summary, recommendations: parsed.recommendations,
       model_provider: 'google', model_name: result.model, analysis_payload: parsed
     }, { onConflict: 'review_row_id,analysis_level,model_provider,model_name' }).select('id').single();
     if (analysisError) throw analysisError;
     const { data: draft, error: draftError } = await ctx.service.from('pac_review_reply_drafts').insert({
       workspace_id: ctx.workspace.id, review_row_id: review.id,
-      draft_text: String(parsed.replyDraft || '').slice(0, 4000), status: 'draft',
+      draft_text: parsed.replyDraft, status: 'draft',
       model_provider: 'google', model_name: result.model
     }).select('id,draft_text,status').single();
     if (draftError) throw draftError;
     return { analysis: parsed, analysis_id: analysis.id, draft };
   }
   if (action === 'level3-copilot') {
-    const reviews = await getReviewRecords(ctx, 250);
+    const reviews = await getReviewRecords(ctx, 120);
     if (reviews.length < 2) return { insufficient_data: true, message: 'The Business Growth Copilot needs at least two genuine synced reviews. No conclusions have been generated from empty or insufficient data.' };
-    const evidence = reviews.map((r: any) => ({ id: r.id, rating: r.star_rating, date: r.google_created_at, comment: r.comment, reply: r.reply_comment }));
+    const evidence = reviews.map((r: any) => ({ id: r.id, rating: r.star_rating, date: r.google_created_at, comment: String(r.comment||'').slice(0,700), reply: String(r.reply_comment||'').slice(0,400) }));
     const runAgent = async (role: string, instruction: string) => {
       const output = await gemini('You are the ' + role + ' for Prime Auto Care. Work only from this review dataset. State uncertainty, do not invent facts, and return useful concise findings. ' + instruction + '\nDATA:\n' + JSON.stringify(evidence));
       return output.text;
