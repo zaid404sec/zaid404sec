@@ -79,12 +79,13 @@ Official instructions:
 - OAuth scope required: `https://www.googleapis.com/auth/business.manage`
 
 Once the public website is listed on the Business Profile:
-1. Open Google Cloud Console using `bmumz3909@gmail.com`.
-2. Create or select a project, e.g. **Prime Auto Care WashDesk Reviews**. Record its numeric Project Number.
-3. Submit Google's **Application for Basic API Access** and give the requested business details, use case, Profile information and Project Number.
-4. Wait for Google's approval. Approval cannot be guaranteed by WashDesk.
-5. After approval, enable the required Business Profile APIs in that project and create an OAuth 2.0 Web application client.
-6. Configure the OAuth consent screen with the application name and the privacy/terms links required by Google's review.
+1. Confirm or create a Google Business Profile **Organization account** through the Google Business Profile Help Centre, as listed in Google's API prerequisites.
+2. Open Google Cloud Console using `bmumz3909@gmail.com`.
+3. Create or select a project, e.g. **Prime Auto Care WashDesk Reviews**. Record its numeric Project Number.
+4. Submit Google's **Application for Basic API Access** and give the requested business details, use case, Profile information and Project Number.
+5. Wait for Google's approval. Approval cannot be guaranteed by WashDesk.
+6. After approval, enable the required Business Profile APIs in that project and create an OAuth 2.0 Web application client.
+7. Configure the OAuth consent screen with the application name and the privacy/terms links required by Google's review.
 
 ### OAuth redirect URL
 
