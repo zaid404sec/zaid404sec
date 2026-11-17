@@ -71,7 +71,7 @@ The release has three refresh paths:
 2. **Google Pub/Sub push notifications** for new/updated reviews. The server verifies the push subscription's Google OIDC identity, deduplicates Pub/Sub message IDs, records the event and immediately triggers a review sync.
 3. **Four-hour scheduled reconciliation** as a safety net if a push message is missed.
 
-The app only reports instant alerts as enabled after Google accepts the notification setting. Actual push delivery still requires the Cloud project, topic, subscription and secrets below.
+The app only reports instant alerts as enabled after Google accepts the notification setting. Actual push delivery still requires the Cloud project, topic, subscription and secrets below. The webhook accepts both the documented field names and the commonly observed `type`, `location` and `review` aliases in the Pub/Sub message body.
 
 ## Google API eligibility and application
 
