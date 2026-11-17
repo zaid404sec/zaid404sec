@@ -300,7 +300,15 @@ Meta template approval, number/API onboarding, Exotel account activation, DLT re
 - Android package ID is `com.washdesk.carwash.v15` (version 2.6.2), so this release installs separately from v14 until the new app is checked and paired. Offline cache is v18.
 
 
-## Version 2.9.0 — Google Review AI Center (staged release candidate)
+## Version 2.9.1 — Google Pub/Sub instant review alerts
+
+- Added Google Pub/Sub push notification registration and an OIDC-verified Supabase webhook for new/updated Google reviews.
+- The webhook deduplicates Pub/Sub messages, records each accepted event and triggers a fresh Google review sync. The existing four-hour reconciliation worker remains as a fallback.
+- Added the owner-only **Enable instant review alerts** action and notification status / last-event timestamp in Google Review Center.
+- Added an additive migration for notification status and Pub/Sub event records.
+- Added the webhook to the Supabase deployment workflow.
+- Android uses package ID `com.washdesk.carwash.v23`, so it can be installed alongside v21 and v22 during verification.
+- Pub/Sub delivery is not active until the owner configures Google Basic API access, the Cloud topic/subscription, OIDC identity and Supabase secrets. The website still needs GitHub Pages enabled and its URL added to the Google Business Profile.
 
 - Added a mobile-first Prime Auto Care one-page website at `website/`; expected Pages URL: https://zaid404sec.github.io/zaid404sec/website/. The owner must add the published URL to the Google Business Profile after deployment.
 - Added a Google Review Center with synced review metrics/inbox, manual sync, a neutral WhatsApp invitation flow, invoice PDF QR and printable A5 counter QR.
@@ -308,7 +316,8 @@ Meta template approval, number/API onboarding, Exotel account activation, DLT re
 - Public Google replies remain owner-approved; AI cannot publish automatically.
 - Added an additive Supabase migration, encrypted OAuth storage, a Google OAuth callback, authenticated review API and scheduled catch-up worker.
 - Android uses package ID `com.washdesk.carwash.v22` so it can be installed alongside v21 for verification.
-- Live Google review sync and AI are not active until the owner completes Google Basic API Access approval, adds Cloud OAuth credentials and Supabase/Gemini secrets, deploys the backend and connects the owner account. This candidate does not yet include Pub/Sub push notifications; it provides manual sync and a four-hour scheduled catch-up worker after deployment.
+
+
 
 ## Version 2.8.1 reporting and payroll correction
 
