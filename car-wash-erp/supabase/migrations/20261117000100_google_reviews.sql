@@ -110,9 +110,15 @@ create table if not exists public.pac_review_ai_analysis (
   model_provider text,
   model_name text,
   analysis_payload jsonb not null default '{}'::jsonb,
-  generated_at timestamptz not null default now(),
-  unique (review_row_id, analysis_level, model_provider, model_name)
+  generated_at timestamptz not null default now()
 );
+create unique index if not exists pac_review_ai_analysis_model_unique_idx
+  on public.pac_review_ai_analysis (
+    review_row_id,
+    analysis_level,
+    coalesce(model_provider, ''),
+    coalesce(model_name, '')
+  );
 create index if not exists pac_review_ai_analysis_recent_idx
   on public.pac_review_ai_analysis(workspace_id, generated_at desc);
 alter table public.pac_review_ai_analysis enable row level security;
