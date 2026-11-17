@@ -8,7 +8,7 @@ const packageJson = JSON.parse(await readFile(new URL('../package.json', import.
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
 if (packageJson.version !== '2.9.1') throw new Error('The package version must be 2.9.1.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v23') {
-  throw new Error('The 2.9.0 debug APK must use v22 to install beside the existing v21 app.');
+  throw new Error('The 2.9.1 debug APK must use v23 to install beside the existing v21 and v22 apps.');
 }
 console.log('PASS: Android 2.9.1 uses v23 for a side-by-side install that keeps v21 data untouched');
 
@@ -990,7 +990,7 @@ for (const token of ['oauth2.googleapis.com/token','email_verified','business.ma
 for (const token of ['GOOGLE_REVIEW_WORKER_SECRET','api_status','last_successful_sync_at','pac_google_reviews']) {
   if (!googleReviewWorker.includes(token)) throw new Error('Scheduled Google review worker missing: '+token);
 }
-for (const token of ['google-review-api','google-review-oauth-callback','google-review-worker','supabase db push']) {
+for (const token of ['google-review-api','google-review-oauth-callback','google-review-worker','google-review-pubsub-webhook','supabase db push']) {
   if (!googleReviewDeploy.includes(token)) throw new Error('Supabase deployment workflow missing Google Review step: '+token);
 }
 if (!googleReviewCron.includes('pg_cron') || !googleReviewCron.includes('pg_net') ||
@@ -1001,8 +1001,8 @@ if (!googleReviewCron.includes('pg_cron') || !googleReviewCron.includes('pg_net'
 for (const token of ['GOOGLE_PUBSUB_AUDIENCE','GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT','tokeninfo?id_token=','NEW_REVIEW','UPDATED_REVIEW','google-review-worker','pac_google_review_events']) {
   if (!googleReviewWebhook.includes(token)) throw new Error('Pub/Sub notification receiver is missing safeguard: '+token);
 }
-for (const token of ['notifications_enabled','notifications_last_event_at','pac_google_review_events','pac_google_is_workspace_member']) {
-  if (!googleReviewPubSubMigration.includes(token) && token !== 'pac_google_is_workspace_member') {
+for (const token of ['notifications_enabled','notifications_last_event_at','pac_google_review_events','pac_is_workspace_member']) {
+  if (!googleReviewPubSubMigration.includes(token)) {
     throw new Error('Pub/Sub migration is missing: '+token);
   }
 }
