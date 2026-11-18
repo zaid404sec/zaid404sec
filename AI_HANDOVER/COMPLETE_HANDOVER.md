@@ -8,11 +8,10 @@ Verified on 18 November 2026. This file is the continuity guide for future updat
 - Default branch: main
 - Application folder: car-wash-erp/
 - Android app name: Prime Auto Care
-- Current production baseline at the time of this handover: 2.9.1, package ID com.washdesk.carwash.v23, main commit 2cd193e131d19d170d73d5736c6508c296cb2f08.
-- 2.9.2 feature branch: feature/prime-auto-care-message-groups-2.9.2
-- Feature PR: https://github.com/zaid404sec/zaid404sec/pull/56
-- 2.9.2 changes are a release candidate until PR #56 is merged and a new main-branch build succeeds.
-- 2.9.2 Android package ID is com.washdesk.carwash.v24. It intentionally installs beside v23; it does not inherit v23-only local app storage.
+- Current production release: 2.9.2, package ID com.washdesk.carwash.v24, main commit a8a4fb14f4219cd9fd9f8f1976ff8064c5ce134a.
+- Release PR: https://github.com/zaid404sec/zaid404sec/pull/56 (merged).
+- Main release build: https://github.com/zaid404sec/zaid404sec/actions/runs/44240836622 (Android, Windows and release-package jobs succeeded).
+- The 2.9.2 Android package installs beside v23; it does not inherit v23-only local app storage. Keep v23 installed until the new app is paired with the same cloud workspace or restored from a verified backup.
 
 ## 2. Application architecture
 
@@ -62,8 +61,9 @@ Project jkjudmkqaebrgllemris was ACTIVE_HEALTHY on PostgreSQL 17. The following 
 1. 20261112000100_communications_automation
 2. 20261117000100_google_reviews
 3. 20261118000100_google_review_pubsub
+4. 20261118050000_add_message_recipients_sync_merge
 
-The existing WashDesk core tables remain present, and the newly created pac_communication_* and pac_google_* tables have RLS enabled. The Google review settings, OAuth state/credential, review, AI analysis, reply-draft, sync-log and Pub/Sub event tables were verified in the project after migration.
+The existing WashDesk core tables remain present, and the newly created pac_communication_* and pac_google_* tables have RLS enabled. The Google review settings, OAuth state/credential, review, AI analysis, reply-draft, sync-log and Pub/Sub event tables were verified in the project after migration. The fourth migration extends the existing washdesk_merge_sync(jsonb) function to merge the new messageRecipients collection; the existing workspace and sync snapshot were verified intact.
 
 Important: the Supabase Edge Function list was empty at the same verification point. Database migrations are deployed; application Edge Functions and their secrets are not yet deployed/configured. Do not describe the Google Review system as live until the functions are deployed, secrets are set, owner OAuth succeeds, API access is approved, and a real review sync / push event has been verified.
 
@@ -138,7 +138,7 @@ Recorded owner email: bmumz3909@gmail.com. Confirm this account is actually an O
 The expected website URL is:
 https://zaid404sec.github.io/zaid404sec/website/
 
-As of this handover, the Pages deployment workflow's build job succeeded but deploy job failed repeatedly. The public website URL has not been verified as live. In GitHub repository Settings → Pages, choose GitHub Actions as the build/deployment source, then rerun the Pages workflow. Do not claim deployment succeeded until the deploy job succeeds and the URL opens publicly.
+As of 18 November 2026, Pages run #67 (https://github.com/zaid404sec/zaid404sec/actions/runs/44240836667) completed the build and artifact-upload jobs successfully, but the deploy job failed. The public website URL has not been verified as live. In GitHub repository Settings → Pages, choose GitHub Actions as the build/deployment source, then rerun the Pages workflow. Do not claim deployment succeeded until the deploy job succeeds and the URL opens publicly.
 
 After the website is publicly available, add its full HTTPS URL in the Google Business Profile editor under Edit profile → Contact → Website, and save. Verify the URL is visible on the public listing before requesting API access.
 
