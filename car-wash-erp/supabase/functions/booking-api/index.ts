@@ -236,7 +236,7 @@ async function handle(req: Request, body: any) {
     const { data: settings, error: settingsError } = await ctx.admin.from('pac_booking_settings')
       .select('*').eq('workspace_id', ctx.workspace.id).single();
     if (settingsError) throw settingsError;
-    return { bookings: data || [], settings };
+    return { bookings: data || [], settings, permissions: { is_owner: ctx.isOwner } };
   }
   if (action === 'create-staff') {
     const settingsResult = await ctx.admin.from('pac_booking_settings').select('*').eq('workspace_id', ctx.workspace.id).single();
