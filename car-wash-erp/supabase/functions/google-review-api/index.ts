@@ -280,6 +280,230 @@ function parseJson(text: string) {
   if (start < 0 || end <= start) throw new Error('AI returned an invalid structured response. Retry the analysis.');
   return JSON.parse(cleaned.slice(start, end + 1));
 }
+
+function growthClean(value: unknown, max = 2000) {
+  return String(value ?? '').replace(/\u0000/g, '').trim().slice(0, max);
+}
+function growthHasPhone(value: string) {
+  return /(?:\+?\d[\d\s().-]{8,}\d)/.test(value);
+}
+function growthTrendsUrl(keyword: string, geo = 'IN-GJ') {
+  const query = new URLSearchParams({ date: 'today 12-m', geo, q: keyword });
+  return 'https://trends.google.com/trends/explore?' + query.toString();
+}
+function growthPrompt(task: string, context: any) {
+  const evidence = JSON.stringify(context || {}).slice(0, 10000);
+  if (task === 'connection-test') return {
+    system: 'You are Prime Auto Care WashDesk AI. Respond in one short sentence confirming the free AI connection is active.',
+    user: 'Return exactly: Prime Auto Care AI connection is active.'
+  };
+  if (task === 'review-reply') return {
+    system: 'You write customer review replies for PRIME AUTO CARE, a car and bike wash business in Surat, Gujarat, India. Return JSON only with keys replyDraft, tone and needsOwnerAttention. Write a warm, concise reply in the review language when clear, otherwise English. Acknowledge only facts present in the review. Never invent a service, visit detail, discount, refund, guarantee or operational fact. Never ask the customer to change/remove a rating, never offer an incentive and never expose personal data. For complaints, apologise for the experience without admitting an unverified fact and invite the customer to contact the business privately. Do not keyword-stuff. Keep reply under 75 words.',
+    user: 'Write a reply draft for this public review. Review information only; do not invent additional context.\n' + evidence
+  };
+  if (task === 'keywords') return {
+    system: 'You are a cautious local-search strategist for a car and bike wash business in Surat, Gujarat, India. Return JSON only: {"ideas":[{"keyword":"...","intent":"...","cluster":"...","priority":"high|medium|low","relevanceScore":1,"rationale":"..."}]}. Produce 8 to 12 natural, locally relevant phrases. Prefer phrases customers might actually use, including car wash, car cleaning, foam wash, SUV, four-wheeler, bike wash and detailing only where supported by the supplied services. Do not claim these are the most searched terms, do not invent monthly search volumes or trend percentages, and do not pad phrases with unrelated vehicle models/services. Relevance score is an AI judgement, not measured demand. Avoid keyword stuffing.',
+    user: 'Suggest keyword ideas for this business. Return JSON only.\n' + evidence
+  };
+  if (task === 'daily-posts') return {
+    system: 'You are the local content manager for PRIME AUTO CARE, a car and bike wash business in Surat, Gujarat, India. Return JSON only: {"posts":[{"title":"...","topic":"service|education|behind_the_scenes|customer_care","summary":"...","caption":"...","primaryKeyword":"...","secondaryKeywords":["..."],"imagePrompt":"...","photoChecklist":["..."],"suggestedTime":"10:00 or 17:00"}]}. Create exactly two distinct useful Google Business Profile post drafts for the supplied date. Use only supplied services, hours and business facts. Never invent discounts, prices, service guarantees, customer stories or results. Never include a phone number, email address, hashtags list or fake review. Keep each post summary under 1,200 characters, put the main useful phrase naturally near the beginning, and do not repeat keywords unnaturally. Request real photos from the business: a real vehicle being washed, foam/rinse/detail or a clean finished vehicle. Do not suggest AI-generated before/after claims or fake customer images. Drafts require owner review, not automatic publication.',
+    user: 'Create two daily Google post drafts for this business. Use supplied facts only.\n' + evidence
+  };
+  throw new Error('The requested AI task is not supported.');
+}
+async function runFreeAi(ctx: Context, body: any) {
+  requireGoogleReviewAdmin(ctx);
+  const provider = String(body.provider || 'openrouter');
+  if (provider !== 'openrouter') throw new Error('This build supports the OpenRouter free-model route only.');
+  const apiKey = String(body.api_key || '').trim();
+  if (apiKey.length < 20 || apiKey.length > 512) throw new Error('Enter your OpenRouter API key in AI Settings on this device.');
+  const model = String(body.model || 'openrouter/free').trim();
+  if (model !== 'openrouter/free' && !model.endsWith(':free')) throw new Error('Paid model IDs are blocked. Use openrouter/free or a model whose ID ends in :free.');
+  const task = String(body.task || '');
+  const prompt = growthPrompt(task, body.context || {});
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + apiKey,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://zaid404sec.github.io/zaid404sec/website/',
+      'X-Title': 'Prime Auto Care WashDesk'
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'system', content: prompt.system }, { role: 'user', content: prompt.user }],
+      temperature: 0.45,
+      max_tokens: task === 'daily-posts' ? 1800 : task === 'keywords' ? 1400 : 600
+    }),
+    signal: AbortSignal.timeout(35000)
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) throw new Error('OpenRouter rejected this API key. Check the key and try again.');
+    if (response.status === 429) throw new Error('The free AI request limit has been reached. Try again after the provider quota resets.');
+    throw new Error('OpenRouter AI request failed (' + response.status + '). Try again later.');
+  }
+  const content = result?.choices?.[0]?.message?.content;
+  const text = Array.isArray(content) ? content.map((part: any) => part?.text || '').join('\n').trim() : String(content || '').trim();
+  if (!text) throw new Error('The free AI model returned an empty response. Try again.');
+  return { text, provider: 'openrouter', model: result?.model || model, usage: result?.usage || null };
+}
+async function listGrowthPosts(ctx: Context) {
+  requireGoogleReviewAdmin(ctx);
+  const { data, error } = await ctx.service.from('pac_google_growth_posts')
+    .select('id,title,topic,summary,caption,primary_keyword,secondary_keywords,image_prompt,photo_checklist,image_url,image_object_path,suggested_publish_at,status,google_post_name,model_provider,model_name,published_at,created_at,updated_at')
+    .eq('workspace_id', ctx.workspace.id).neq('status', 'archived')
+    .order('created_at', { ascending: false }).limit(30);
+  if (error) throw error;
+  return { posts: data || [] };
+}
+async function listGrowthKeywords(ctx: Context) {
+  requireGoogleReviewAdmin(ctx);
+  const { data, error } = await ctx.service.from('pac_google_growth_keywords')
+    .select('id,keyword,intent,cluster,priority,relevance_score,rationale,trend_url,evidence_type,created_at')
+    .eq('workspace_id', ctx.workspace.id).order('relevance_score', { ascending: false }).limit(40);
+  if (error) throw error;
+  return { keywords: data || [] };
+}
+async function saveGrowthPost(ctx: Context, input: any) {
+  requireGoogleReviewAdmin(ctx);
+  const title = growthClean(input?.title, 140), summary = growthClean(input?.summary, 1500), caption = growthClean(input?.caption, 2400);
+  if (!title || !summary) throw new Error('A post title and Google post summary are required.');
+  if (growthHasPhone(summary) || growthHasPhone(caption)) throw new Error('Google post copy must not contain phone numbers. Use the verified Call button instead.');
+  const imageUrl = growthClean(input?.image_url, 1000) || null;
+  if (imageUrl && !imageUrl.startsWith(env('SUPABASE_URL') + '/storage/v1/object/public/pac-google-growth-media/')) {
+    throw new Error('Growth post photos must be uploaded through the WashDesk photo uploader.');
+  }
+  const row: Record<string, unknown> = {
+    workspace_id: ctx.workspace.id, created_by: ctx.user.id, title,
+    topic: growthClean(input?.topic, 40) || 'service', summary, caption,
+    primary_keyword: growthClean(input?.primary_keyword, 120) || null,
+    secondary_keywords: Array.isArray(input?.secondary_keywords) ? input.secondary_keywords.filter((x:any)=>typeof x==='string').map((x:string)=>growthClean(x,100)).filter(Boolean).slice(0,8) : [],
+    image_prompt: growthClean(input?.image_prompt, 800) || null,
+    photo_checklist: Array.isArray(input?.photo_checklist) ? input.photo_checklist.filter((x:any)=>typeof x==='string').map((x:string)=>growthClean(x,180)).filter(Boolean).slice(0,6) : [],
+    image_url: imageUrl,
+    suggested_publish_at: input?.suggested_publish_at ? new Date(input.suggested_publish_at).toISOString() : null,
+    status: input?.status === 'ready' ? 'ready' : 'draft',
+    model_provider: 'openrouter', model_name: growthClean(input?.model_name, 120) || 'openrouter/free',
+    updated_at: new Date().toISOString()
+  };
+  const id = String(input?.id || '');
+  if (id) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('The saved post ID is invalid.');
+    const { data, error } = await ctx.service.from('pac_google_growth_posts').update(row)
+      .eq('workspace_id', ctx.workspace.id).eq('id', id)
+      .select('id,title,topic,summary,caption,primary_keyword,secondary_keywords,image_prompt,photo_checklist,image_url,image_object_path,suggested_publish_at,status,created_at,updated_at').single();
+    if (error) throw error;
+    return { post: data };
+  }
+  const { data, error } = await ctx.service.from('pac_google_growth_posts').insert(row)
+    .select('id,title,topic,summary,caption,primary_keyword,secondary_keywords,image_prompt,photo_checklist,image_url,image_object_path,suggested_publish_at,status,created_at,updated_at').single();
+  if (error) throw error;
+  return { post: data };
+}
+async function saveGrowthKeywords(ctx: Context, ideas: any[]) {
+  requireGoogleReviewAdmin(ctx);
+  if (!Array.isArray(ideas) || !ideas.length) return { saved: 0 };
+  const rows = ideas.slice(0, 20).map((idea: any) => ({
+    workspace_id: ctx.workspace.id, created_by: ctx.user.id,
+    keyword: growthClean(idea?.keyword, 140),
+    intent: growthClean(idea?.intent, 100) || 'local service',
+    cluster: growthClean(idea?.cluster, 100) || 'local car wash',
+    priority: ['high','medium','low'].includes(String(idea?.priority)) ? String(idea.priority) : 'medium',
+    relevance_score: Math.max(1, Math.min(100, Math.round(Number(idea?.relevanceScore) || 50))),
+    rationale: growthClean(idea?.rationale, 500),
+    trend_url: 'https://trends.google.com/trends/explore?' + new URLSearchParams({date:'today 12-m',geo:'IN-GJ',q:growthClean(idea?.keyword,140)}).toString(),
+    evidence_type: 'ai_relevance_suggestion'
+  })).filter((row: any) => row.keyword);
+  if (!rows.length) throw new Error('The AI returned no usable keyword ideas. Generate them again.');
+  const { data, error } = await ctx.service.from('pac_google_growth_keywords').upsert(rows, { onConflict: 'workspace_id,keyword' })
+    .select('id,keyword,intent,cluster,priority,relevance_score,rationale,trend_url,evidence_type,created_at');
+  if (error) throw error;
+  return { saved: (data || []).length, keywords: data || [] };
+}
+function growthImageDimensions(bytes: Uint8Array, mime: string) {
+  if (mime === 'image/png') {
+    if (bytes.length < 24) throw new Error('The PNG file is incomplete.');
+    const width = ((bytes[16]<<24)|(bytes[17]<<16)|(bytes[18]<<8)|bytes[19])>>>0;
+    const height = ((bytes[20]<<24)|(bytes[21]<<16)|(bytes[22]<<8)|bytes[23])>>>0;
+    return { width, height };
+  }
+  let offset = 2;
+  while (offset + 4 < bytes.length) {
+    if (bytes[offset] !== 0xff) { offset++; continue; }
+    while (offset < bytes.length && bytes[offset] === 0xff) offset++;
+    if (offset >= bytes.length) break;
+    const marker = bytes[offset++];
+    if (marker === 0xd9 || marker === 0xda) break;
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+    if (offset + 2 > bytes.length) break;
+    const length = (bytes[offset]<<8)|bytes[offset+1];
+    if (length < 2 || offset+length > bytes.length) break;
+    if ([0xc0,0xc1,0xc2,0xc3,0xc5,0xc6,0xc7,0xc9,0xca,0xcb,0xcd,0xce,0xcf].includes(marker)) {
+      if (length < 7) break;
+      return { height:(bytes[offset+3]<<8)|bytes[offset+4], width:(bytes[offset+5]<<8)|bytes[offset+6] };
+    }
+    offset += length;
+  }
+  throw new Error('The JPG dimensions could not be verified. Choose a standard JPG or PNG photo.');
+}
+async function uploadGrowthPhoto(ctx: Context, body: any) {
+  requireGoogleReviewAdmin(ctx);
+  const mime = String(body.mime_type || '').toLowerCase();
+  const extensions: Record<string,string> = {'image/jpeg':'jpg','image/png':'png'};
+  if (!extensions[mime]) throw new Error('Choose a JPG or PNG photo.');
+  const encoded = String(body.image_base64 || '').replace(/^data:image\/[a-z0-9.+-]+;base64,/i,'');
+  if (!encoded || encoded.length > 7000000) throw new Error('The image is empty or exceeds the 5 MB limit.');
+  const binary = atob(encoded);
+  if (binary.length < 10*1024 || binary.length > 5*1024*1024) throw new Error('Photo must be between 10 KB and 5 MB.');
+  const bytes = Uint8Array.from(binary,c=>c.charCodeAt(0));
+  const valid = mime==='image/jpeg'
+    ? bytes[0]===0xff && bytes[1]===0xd8 && bytes[2]===0xff
+    : bytes[0]===0x89 && bytes[1]===0x50 && bytes[2]===0x4e && bytes[3]===0x47;
+  if (!valid) throw new Error('The selected file does not match its image type.');
+  const dimensions = growthImageDimensions(bytes,mime);
+  if (dimensions.width < 250 || dimensions.height < 250) throw new Error('Google Business Profile photos must be at least 250 × 250 pixels.');
+  const path = ctx.workspace.id+'/'+randomToken(12)+'.'+extensions[mime];
+  const { error: uploadError } = await ctx.service.storage.from('pac-google-growth-media').upload(path,bytes,{contentType:mime,cacheControl:'31536000',upsert:false});
+  if (uploadError) throw uploadError;
+  const { data: publicData } = ctx.service.storage.from('pac-google-growth-media').getPublicUrl(path);
+  const postId = String(body.post_id || '');
+  if (postId) {
+    const { error } = await ctx.service.from('pac_google_growth_posts').update({image_url:publicData.publicUrl,image_object_path:path,updated_at:new Date().toISOString()})
+      .eq('workspace_id',ctx.workspace.id).eq('id',postId);
+    if (error) throw error;
+  }
+  return {image_url:publicData.publicUrl,image_object_path:path,mime_type:mime,size_bytes:bytes.length};
+}
+async function publishGrowthPost(ctx: Context, body: any) {
+  requireGoogleReviewAdmin(ctx);
+  if (body.approved !== true) throw new Error('Confirm the final post before publishing it to Google.');
+  const postId=String(body.post_id||'');
+  if (!/^[0-9a-f-]{36}$/i.test(postId)) throw new Error('Select a saved post first.');
+  const {data:post,error:postError}=await ctx.service.from('pac_google_growth_posts').select('*')
+    .eq('workspace_id',ctx.workspace.id).eq('id',postId).single();
+  if (postError || !post) throw new Error('The selected growth post was not found.');
+  if (post.status==='published' || post.status==='scheduled') throw new Error('This post has already been submitted to Google.');
+  if (!post.image_url) throw new Error('Attach a real business photo before publishing this Google post.');
+  if (growthHasPhone(String(post.summary||''))) throw new Error('Remove phone numbers from Google post text before publishing.');
+  const settings=await getSettings(ctx),token=await googleAccessToken(ctx),location=await resolveGoogleLocation(ctx,token,settings);
+  const parent=location.accountName+'/locations/'+location.locationName.split('/').pop();
+  const scheduled=!!(post.suggested_publish_at && Date.parse(post.suggested_publish_at)>Date.now()+60000);
+  const payload:Record<string,unknown>={languageCode:'en',summary:post.summary,topicType:'STANDARD',media:[{mediaFormat:'PHOTO',sourceUrl:post.image_url}]};
+  const website=String(settings.website_url||'').trim();
+  if(scheduled)payload.scheduledTime=post.suggested_publish_at;
+  if(website && /^https:\/\//i.test(website))payload.callToAction={actionType:'LEARN_MORE',url:website};
+  const created=await googleFetch('https://mybusiness.googleapis.com/v4/'+parent+'/localPosts',token,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+  });
+  const now=new Date().toISOString(),status=scheduled?'scheduled':'published';
+  const {error}=await ctx.service.from('pac_google_growth_posts').update({
+    status,google_post_name:String(created.name||''),published_at:scheduled?null:now,last_error:null,updated_at:now
+  }).eq('workspace_id',ctx.workspace.id).eq('id',postId);
+  if(error)throw error;
+  return {published:!scheduled,scheduled,status,post_name:created.name||null,published_at:scheduled?null:now,scheduled_for:scheduled?post.suggested_publish_at:null};
+}
+
 async function ownerSettings(ctx: Context, settings: any) {
   requireGoogleReviewAdmin(ctx);
   const safe = {
@@ -365,6 +589,22 @@ async function status(ctx: Context) {
 async function handle(ctx: Context, body: any) {
   const action = String(body.action || '');
   if (action === 'status') return status(ctx);
+  if (action === 'ai-generate') return runFreeAi(ctx, body);
+  if (action === 'list-growth-posts') return listGrowthPosts(ctx);
+  if (action === 'list-growth-keywords') return listGrowthKeywords(ctx);
+  if (action === 'save-growth-post') return saveGrowthPost(ctx, body.post || {});
+  if (action === 'save-growth-keywords') return saveGrowthKeywords(ctx, body.ideas || []);
+  if (action === 'upload-growth-photo') return uploadGrowthPhoto(ctx, body);
+  if (action === 'publish-growth-post') return publishGrowthPost(ctx, body);
+  if (action === 'delete-growth-post') {
+    requireGoogleReviewAdmin(ctx);
+    const postId=String(body.post_id||'');
+    if(!/^[0-9a-f-]{36}$/i.test(postId))throw new Error('The selected post ID is invalid.');
+    const {error}=await ctx.service.from('pac_google_growth_posts').update({status:'archived',updated_at:new Date().toISOString()})
+      .eq('workspace_id',ctx.workspace.id).eq('id',postId);
+    if(error)throw error;
+    return {archived:true};
+  }
   if (action === 'save-settings') return ownerSettings(ctx, body.settings || {});
   if (action === 'connect') return startOAuth(ctx);
   if (action === 'enable-notifications') {
