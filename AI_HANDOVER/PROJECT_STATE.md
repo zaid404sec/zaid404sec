@@ -8,7 +8,7 @@ _Last verified: 18 November 2026_
 |---|---|
 | GitHub repository | https://github.com/zaid404sec/zaid404sec |
 | Default branch | `main` |
-| Current main commit | `a8a4fb14f4219cd9fd9f8f1976ff8064c5ce134a` |
+| Current main commit | `6dbd32b5f9cda306f2e09218c0786b82b18a3d4c` (2.9.2 baseline) |
 | Application folder | `car-wash-erp/` |
 | App name | Prime Auto Care |
 | App version | **2.9.2** |
@@ -16,12 +16,12 @@ _Last verified: 18 November 2026_
 | Capacitor | 8.x |
 | Build environment | Node 22, Python 3.12, Java 21 |
 | Feature PR | [#56 — merged](https://github.com/zaid404sec/zaid404sec/pull/56) |
-| Main release build | [Run #220 — Android, Windows and package jobs succeeded](https://github.com/zaid404sec/zaid404sec/actions/runs/44240836622) |
-| Website deployment | [Pages run #67 — build passed, deploy failed](https://github.com/zaid404sec/zaid404sec/actions/runs/44240836667) |
+| Main release build | [Run #223 — Android, Windows and package jobs succeeded (2.9.2 baseline)](https://github.com/zaid404sec/zaid404sec/actions/runs/44242078227) |
+| Website deployment | [Pages run #68 — deployment failed](https://github.com/zaid404sec/zaid404sec/actions/runs/44242078236) |
 | Supabase project | `jkjudmkqaebrgllemris` |
 | Supabase project URL | https://jkjudmkqaebrgllemris.supabase.co |
 
-The 2.9.2 Android APK uses a new package ID v24 so it installs beside v23. It does not inherit v23-only local app storage. Keep v23 installed until v24 is paired with the same workspace or restored from a verified JSON backup and all records are checked.
+The 2.9.2 Android APK uses package ID `com.washdesk.carwash.v24`. Package-ID continuity does not guarantee signature continuity: the GitHub build currently emits a debug APK using an ephemeral runner signing key. Do not uninstall either installed app or replace the working v24 until the new APK's signing/install compatibility and shared-cloud data continuity are checked.
 
 ## Version 2.9.2 release summary
 
@@ -55,12 +55,16 @@ The existing project is ACTIVE_HEALTHY on PostgreSQL 17. The following additive 
 2. `20261117000100_google_reviews`
 3. `20261118000100_google_review_pubsub`
 4. `20261118050000_add_message_recipients_sync_merge`
+5. `prime_auto_care_communications_automation_20261112`
 
 Verified after deployment:
 - Existing `washdesk_sync` snapshot row still present.
 - Existing Prime Auto Care workspace still present.
 - 24 existing workspace-member records still present.
 - New `pac_communication_*` and `pac_google_*` tables exist with RLS enabled.
+- All seven deployed Edge Functions were active in the 18 November 2026 check.
+- Google review tables currently contain zero OAuth credential rows, synced review rows, Pub/Sub event rows and sync-log rows; no notification setting is enabled.
+- A v24-specific Google Reviews admin change is under PR #58. Its additive migration and scoped grant are not yet applied to production.
 - The server merge function contains `messageRecipients`.
 
 Do not run setup SQL again as an update shortcut. Do not reset, drop, truncate or reseed production business tables.
@@ -72,9 +76,9 @@ Do not run setup SQL again as an update shortcut. Do not reset, drop, truncate o
 | Public website | Not live yet. Latest Pages run #67 built and uploaded the site, but its deploy job failed. | Repository Settings → Pages → Build and deployment → Source = GitHub Actions, then rerun the Pages workflow. Confirm the URL opens publicly. |
 | Add website to Google Business Profile | Not verified / not done. | After the website is live, add https://zaid404sec.github.io/zaid404sec/website/ under Edit profile → Contact → Website. |
 | Google Basic API Access | Approval not verified; no approved Cloud project/quota was seen. | Complete Google’s Basic API Access request using the Cloud project number and a GBP owner/manager account. Google approval is external. |
-| Supabase Edge Functions | No deployed functions were returned at last check. | Configure the secrets in `GOOGLE_REVIEW_DEPLOYMENT.md`, then run the backend deployment workflow. |
-| Google OAuth | No OAuth credentials or connected-owner account are stored yet. | After API access and function deployment, connect the primary GBP owner from WashDesk Review Center. |
-| Live review sync / alerts | Not live yet. Review, OAuth, sync-log and Pub/Sub event tables currently have no review data. | Run manual sync, register Google Pub/Sub notifications, test a push event and configure the four-hour fallback. |
+| Supabase Edge Functions | Seven functions were returned as ACTIVE on 18 November 2026. | The Google Review API and OAuth callback require the 2.9.3 scoped-permission update after PR checks pass. |
+| Google OAuth | No OAuth credential rows are stored. | Configure the server secrets, then connect the primary GBP owner after Google API access is approved. |
+| Live review sync / alerts | No synced reviews, sync logs, Pub/Sub events or enabled notification settings. | Complete Google API access/OAuth and Pub/Sub configuration, then test sync and push delivery. |
 
 Google's current prerequisites include managing a verified Business Profile that has been active for more than 60 days and having the business website listed on that profile. The applicant also needs the Google Cloud project number and must submit the Basic API Access application using an email listed as a Business Profile owner/manager. See https://developers.google.com/my-business/content/prereqs.
 
@@ -87,22 +91,22 @@ Google's current prerequisites include managing a verified Business Profile that
 - Keep v23 installed while checking v24. Confirm same workspace pairing or restore a verified backup before moving business operations to v24.
 - CI success is not manual Android handset testing. Verify PDFs/WhatsApp handoff, notification permissions, cloud sync after offline/online transitions and backup restoration on a real device.
 
-## Release artifacts from main run #220
+## Release artifacts from main run #223 (historical 2.9.2 baseline)
 
-Workflow: https://github.com/zaid404sec/zaid404sec/actions/runs/44240836622
+Workflow: https://github.com/zaid404sec/zaid404sec/actions/runs/44242078227
 
 | Artifact | GitHub Actions artifact ID |
 |---|---:|
-| Android APK | `14399920220` |
-| Windows installer | `14399551693` |
-| Application source ZIP | `14399681390` |
-| Complete repository / AI handover ZIP | `14398979658` |
-| Combined APK + EXE + source + handover package | `14399885975` |
+| Android APK | `14400536100` |
+| Windows installer | `14400172286` |
+| Application source ZIP | `14400257156` |
+| Complete repository / AI handover ZIP | `14399404475` |
+| Combined APK + EXE + source + handover package | `14400695730` |
 
 Artifact archives expire under GitHub's retention policy; download and keep a local copy. SHA-256 files are included inside the combined release package.
 
 ## Safe release process
 
-Read `AI_HANDOVER/SAFE_CHANGE_RULES.md` before modifying anything. Work from current `main` on a feature branch, make a narrow diff, add regression coverage, pass PR validation, merge only after checks pass, then verify the main build and retrieve its actual artifacts. Update this document, `RELEASE_2.9.2.md` and the handover ZIP after every production release.
+Read `AI_HANDOVER/SAFE_CHANGE_RULES.md` before modifying anything. Work from current `main` on a feature branch, make a narrow diff, add regression coverage, pass PR validation, merge only after checks pass, then verify the main build and retrieve its actual artifacts. Update this document, `RELEASE_2.9.3.md` and the handover ZIP after every production release.
 
 Historical 2.8.4 and earlier release notes remain in the repository for traceability; they are not the current app version.
