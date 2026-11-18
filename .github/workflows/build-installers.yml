@@ -277,10 +277,10 @@ jobs:
           Windows: Windows/Prime-Auto-Care-Setup-2.11.0-x64.exe
           App source: Source/WashDesk-Prime-Auto-Care-2.11.0-Project-Source.zip
           Complete repository + AI handover: Source/WashDesk-Prime-Auto-Care-2.11.0-Complete-Handover.zip
-          Android package ID: com.washdesk.carwash.v25
+          Android package ID: com.washdesk.carwash.v24
           GitHub commit: $GITHUB_SHA
           Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-          Keep your existing installation until v25 has been paired with the same cloud workspace or a verified backup is restored.
+          Install this APK as an update to the existing v24 app; it keeps the same Android package ID and advances the version code.
           This package excludes passwords, API tokens, OAuth secrets, private SSH keys and workspace pairing codes.
           EOF
           (cd release-package && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
