@@ -43,7 +43,7 @@ async function autoReplyForReview(service:any,settings:any,token:string,accountN
   if(!rating||rating<minimum)return {status:'held_for_owner',reason:'rating_below_threshold'};
   if(item.reviewReply?.comment||reviewRow.reply_comment)return {status:'already_replied'};
   const comment=String(item.comment||'').trim();
-  const complaintPattern=/\b(?:bad|poor|worst|refund|complaint|damage|scratch|rude|late|delay|dirty|unclean|problem|issue|unhappy|disappoint|not satisfied|never again|fraud|scam|careless|broken|missed|overcharged|unsafe|wrong)\b/i;
+  const complaintPattern=/\b(?:bad|poor|worst|terrible|awful|hate|refund|complaint|damage|damaged|scratch|scratched|rude|late|delay|dirty|unclean|problem|issue|unhappy|disappoint(?:ed|ing)?|not satisfied|not good|never again|fraud|scam|careless|broken|missed|overcharged|unsafe|wrong|unacceptable|unprofessional|waste|regret|long wait|no response)\b/i;
   if(complaintPattern.test(comment))return {status:'held_for_owner',reason:'complaint_or_negative_language'};
   if(comment.length>1800)return {status:'held_for_owner',reason:'review_too_long_for_auto_reply'};
   const openRouterKey=env('OPENROUTER_API_KEY');
@@ -88,7 +88,7 @@ async function autoReplyForReview(service:any,settings:any,token:string,accountN
       reply=Array.isArray(content)?content.map((part:any)=>part?.text||'').join('\\n').trim():String(content||'').trim();
       modelName=String(body?.model||'openrouter/free');
     } else {
-      reply='Thank you for choosing Prime Auto Care and for your 5-star rating. We truly appreciate your support!';
+      reply='Thank you for choosing Prime Auto Care and for sharing your rating. We truly appreciate your support!';
     }
     if(!reply||reply.length>650)throw new Error('AI reply was empty or exceeded the safe length.');
     const reviewId=googleReviewId.split('/').pop();
