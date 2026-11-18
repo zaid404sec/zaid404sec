@@ -1,3 +1,12 @@
+## Version 2.9.2 — number and notification group manager
+
+- Added a Number & notification group manager under Offers & WhatsApp. Add, edit and remove named mobile contacts; validate Indian mobile numbers; prevent duplicates; assign one or more groups: Attendance, Expenses, Staff & payroll, Operations, Sales & bills, Inventory and Offers. All contacts is an automatic view of every saved number.
+- Added date-scoped Attendance and Business Expense message templates. Personal/household expenses, Salary and Staff Advance entries are excluded from the expense template.
+- Recipient data uses the existing local database and cloud-sync collection merge. A matching server migration adds the new collection to the merge function; it does not create, delete or reset business tables.
+- WhatsApp remains manual and one-to-one. Select each recipient, review the prepared message, then press Send in WhatsApp. No automatic WhatsApp group posting or silent broadcast is performed.
+- Assign only authorised recipients to Attendance or Expenses because those summaries may contain staff names or financial totals. No sample numbers are preloaded; add named contacts in the app.
+- Android app ID is com.washdesk.carwash.v24 so this debug build installs alongside v23. It does not migrate v23-only local storage; keep v23 installed and verify cloud pairing or backup restore before switching.
+
 ## Version 2.8.4 — date-wise PDF/workbook, weekly sales and dashboard invoice cards
 
 - The Date-wise business report now has separate **Export PDF** and **Export Excel workbook** actions for the selected date. Both formats use the same daily dataset and totals.
