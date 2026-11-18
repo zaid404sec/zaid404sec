@@ -144,8 +144,8 @@ jobs:
           version_code = major * 10000 + minor * 100 + patch
           gradle = Path('android/app/build.gradle')
           source = gradle.read_text()
-          source, code_count = re.subn(r'(?m)^\\s*versionCode\\s+\\d+', f'        versionCode {version_code}', source, count=1)
-          source, name_count = re.subn(r'(?m)^\\s*versionName\\s+["\\'][^"\\']+["\\']', f'        versionName "{version}"', source, count=1)
+          source, code_count = re.subn(r"(?m)^\s*versionCode\s+\d+", f'        versionCode {version_code}', source, count=1)
+          source, name_count = re.subn(r"(?m)^\s*versionName\s+['\"][^'\"]+['\"]", f'        versionName "{version}"', source, count=1)
           if code_count != 1 or name_count != 1:
               raise SystemExit('Could not set Android versionCode/versionName in app/build.gradle')
           gradle.write_text(source)
