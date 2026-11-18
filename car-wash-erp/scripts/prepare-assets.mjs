@@ -17,6 +17,7 @@ const notificationsBundleTarget = path.join(root, 'notifications-native.bundle.j
 const communicationsBundleTarget = path.join(root, 'communications.bundle.js');
 const nativeLinksBundleTarget = path.join(root, 'native-links.bundle.js');
 const googleReviewBundleTarget = path.join(root, 'google-reviews.bundle.js');
+const bookingsBundleTarget = path.join(root, 'bookings.bundle.js');
 
 await copyFile(pdfMakeSource, pdfMakeTarget);
 const pdfMakeFonts = await readFile(pdfMakeFontsSource, 'utf8');
@@ -49,4 +50,5 @@ await build({ entryPoints: [path.join(root, 'src', 'local-notifications.js')], o
 await build({ entryPoints: [path.join(root, 'src', 'communications.js')], outfile: communicationsBundleTarget, bundle: true, platform: 'browser', format: 'iife', target: ['es2020'], minify: true, legalComments: 'none' });
 await build({ entryPoints: [path.join(root, 'src', 'native-links.js')], outfile: nativeLinksBundleTarget, bundle: true, platform: 'browser', format: 'iife', target: ['es2020'], minify: true, legalComments: 'none' });
 await build({ entryPoints: [path.join(root, 'src', 'google-reviews.js')], outfile: googleReviewBundleTarget, bundle: true, platform: 'browser', format: 'iife', target: ['es2020'], minify: true, legalComments: 'none' });
-console.log('Prepared native PDFMake invoices, native file sharing, local notifications, secure Excel export, cloud sync and queued communications native SMS composer and Google Review bundles.');
+await build({ entryPoints: [path.join(root, 'src', 'bookings.js')], outfile: bookingsBundleTarget, bundle: true, platform: 'browser', format: 'iife', target: ['es2020'], minify: true, legalComments: 'none' });
+console.log('Prepared native PDFMake invoices, native file sharing, local notifications, secure Excel export, cloud sync and queued communications native SMS composer and Google Review and Bookings bundles.');
