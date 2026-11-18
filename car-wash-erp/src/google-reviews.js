@@ -35,6 +35,7 @@ window.PrimeAutoCareGoogleReviews = {
   copilot: () => request('level3-copilot'),
   publish: (draftId, approved) => request('publish-reply', { draft_id: draftId, approved: approved === true }),
   aiGenerate: payload => request('ai-generate', payload),
+  ensureDailyGrowthPosts: payload => request('ensure-daily-growth-posts', payload),
   listGrowthPosts: () => request('list-growth-posts'),
   listGrowthKeywords: () => request('list-growth-keywords'),
   saveGrowthPost: post => request('save-growth-post', { post }),

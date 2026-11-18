@@ -1,3 +1,16 @@
+## Version 2.10.0 — AI Growth Studio and warm liquid-glass UI
+
+- Builds on 2.9.5 without replacing existing ERP modules, the shared cloud workspace or business records.
+- Adds a workspace-wide daily AI post run. The first authorised Review Center open each Asia/Kolkata day checks the shared post library and creates only the missing drafts, up to two. A service-only daily-run table prevents paired devices creating duplicate posts.
+- Uses the OpenRouter free-model route. The key is stored on the device only and sent for an AI request; it is not copied into shared cloud records or backup files. Free-model availability and daily quotas are provider-controlled.
+- AI supports public review reply drafts, Surat/Gujarat keyword suggestions and two distinct daily Google post drafts. Keyword scores are AI relevance estimates, not Google search-volume numbers.
+- Adds a 1080 × 1350 branded poster creator that overlays Prime Auto Care branding and the selected keyword on a real photo uploaded by the owner. It does not fabricate customers, vehicles, wash outcomes or before/after photos.
+- Daily generation runs only when an authorised device opens the Review Center with a free AI key saved. It does not run while the app is closed. Drafts are not published automatically.
+- Google Business Profile post/reply API publishing still depends on Google's API access approval and OAuth. Manual copying and publishing in Google remains available without that approval.
+- Adds a warm neutral/gold liquid-glass style to the ERP shell, controls, cards and Growth Studio while retaining the Prime Auto Care black-and-gold identity and existing invoice PDF templates.
+- Refreshes the offline app-shell cache to v31 and extends validation for daily run idempotency, AI routes, photo creation and website SEO/enquiry markup.
+- Refreshes the public /website/ page. Its WhatsApp enquiry form only prepares a message; it does not reserve a slot or take an advance deposit.
+
 ## Version 2.9.2 — number and notification group manager
 
 - Released on 18 November 2026. PR #56 is merged into main; Android and Windows builds plus the source/handover/full-release package passed in [main workflow run #220](https://github.com/zaid404sec/zaid404sec/actions/runs/44240836622).
