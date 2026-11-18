@@ -7,10 +7,10 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
 if (packageJson.version !== '2.11.0') throw new Error('The package version must be 2.11.0.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v25') {
-  throw new Error('The 2.11.0 debug APK must use v25 to install beside the existing v21, v22, v23 and v24 apps.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
+  throw new Error('The 2.11.0 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
 }
-console.log('PASS: Android 2.11.0 uses v25 for a side-by-side install that preserves v23 data');
+console.log('PASS: Android 2.11.0 retains the existing v24 application ID for an in-place upgrade.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -318,8 +318,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v25') throw new Error('Android 2.11.0 side-by-side app ID v25 was not set.');
-console.log('PASS: app manifest uses the expected v25 Android package ID');
+if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.11.0 application ID v24 was not set.');
+console.log('PASS: app manifest retains the existing v24 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
