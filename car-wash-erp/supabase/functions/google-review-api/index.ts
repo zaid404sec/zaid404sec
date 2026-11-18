@@ -152,7 +152,7 @@ function ratingNumber(value: unknown) {
 function normalizedTitle(value: unknown) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
-async function resolveGoogleLocation(ctx: Context, token: string, settings: any) {
+async function resolveGoogleLocation(ctx: Context, token: string, settings: any): Promise<{ accountName: string; locationName: string; title?: string }> {
   if (settings.google_account_resource_name && settings.google_location_resource_name) {
     return { accountName: settings.google_account_resource_name, locationName: settings.google_location_resource_name };
   }
