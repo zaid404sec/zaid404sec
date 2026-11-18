@@ -104,6 +104,26 @@ async function saveAutoReplySettings(ctx: Context, settings: any) {
   const enabled = settings?.enabled === true;
   const minRating = Number(settings?.min_rating ?? 5);
   if (![4, 5].includes(minRating)) throw new Error('Automatic replies can be limited to 4-star or 5-star reviews only.');
+  if (enabled) {
+    const { data: readiness, error: readinessError } = await ctx.service
+      .from('pac_google_review_settings')
+      .select('api_status,notifications_enabled')
+      .eq('workspace_id', ctx.workspace.id)
+      .maybeSingle();
+    if (readinessError) throw readinessError;
+    if (readiness?.api_status !== 'connected') {
+      throw new Error('Connect the verified Google Business Profile first. Automatic replies cannot be enabled before owner OAuth and API access are working.');
+    }
+    if (readiness.notifications_enabled !== true) {
+      throw new Error('Enable Google Pub/Sub review notifications and confirm the notification setting before enabling automatic replies.');
+    }
+    if (!Deno.env.get('OPENROUTER_API_KEY')?.trim()) {
+      throw new Error('Add the replacement OPENROUTER_API_KEY to Supabase Edge Function Secrets before enabling automatic replies.');
+    }
+    if (!Deno.env.get('GOOGLE_REVIEW_WORKER_SECRET')?.trim()) {
+      throw new Error('Configure GOOGLE_REVIEW_WORKER_SECRET in Supabase before enabling automatic replies.');
+    }
+  }
   const { error } = await ctx.service.from('pac_google_review_settings').upsert({
     workspace_id: ctx.workspace.id,
     auto_reply_enabled: enabled,
