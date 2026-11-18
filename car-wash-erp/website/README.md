@@ -5,7 +5,8 @@ This mobile-first public website is stored at `car-wash-erp/website/` and is inc
 ## Included
 - Responsive black-and-gold Prime Auto Care identity.
 - Services, business address and normal opening hours.
-- WhatsApp call-to-action and a vehicle/service enquiry form for +91 77779 70261. The form only prepares a message; it does not book a slot or collect an advance.
+- Customer booking portal at `/website/booking/`, connected to the WashDesk booking API. Requests remain pending until Prime Auto Care confirms them.
+- WhatsApp enquiry form for general questions, in addition to the appointment request flow.
 - Google Business Profile link supplied by the owner.
 - A Google Business Profile & Reviews call-to-action using the exact profile link supplied by the owner.
 - LocalBusiness / AutoWash structured data.
@@ -25,7 +26,7 @@ The repository already has `.github/workflows/pages.yml`, which builds and publi
 
 ## Booking and advance-payment boundary
 
-The page contains a WhatsApp enquiry form only. It does not confirm a booking, reserve a washing slot, accept a deposit or process a payment. The WashDesk appointment and advance-payment feature is a separate future phase and will require a payment provider/merchant setup before deposits can be collected.
+The booking portal collects the customer's name, phone number, vehicle registration and category, service, preferred date/time and optional notes. WashDesk validates the requested time against opening hours and configured bay capacity, then stores it as **Pending**. Staff must confirm the appointment in WashDesk before the customer travels to the station. Customers can submit a request without an account; the staff dashboard is limited to paired workspace users. No payment, deposit, refund or cancellation fee is processed. A payment provider and merchant account would be a separate future integration.
 
 ## Owner review before public use
 The business phone number, secondary phone, address and regular hours use the details supplied for Prime Auto Care. Check them before publishing. The supplied `share.google` link opens the Business Profile. The separate direct review URL in WashDesk should be tested by the owner before it is placed on invoice PDFs; the printable counter QR currently opens the supplied Business Profile link.
