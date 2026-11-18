@@ -26,6 +26,7 @@ window.PrimeAutoCareGoogleReviews = {
   status: () => request('status'),
   list: () => request('reviews'),
   saveSettings: settings => request('save-settings', { settings }),
+  saveAutoReplySettings: settings => request('save-auto-reply-settings', { settings }),
   connect: () => request('connect'),
   sync: () => request('sync'),
   enableNotifications: () => request('enable-notifications'),

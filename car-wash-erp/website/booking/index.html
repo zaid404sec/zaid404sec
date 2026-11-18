@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17130c">
+<meta name="description" content="Request a Prime Auto Care car wash appointment in Surat. Choose your vehicle, service, date and available time slot.">
+<title>Book a Wash | Prime Auto Care</title>
+<style>
+:root{color-scheme:light;--ink:#211a10;--muted:#786d5d;--gold:#b58b43;--gold2:#e8cb8e;--line:rgba(169,132,65,.2);--paper:#f5f0e5;--glass:rgba(255,253,247,.83)}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 12% 0%,#fff9eb 0,transparent 36%),linear-gradient(140deg,#f7f2e9,#eae0cf);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+button,input,select,textarea{font:inherit}a{color:inherit}.shell{max-width:1080px;margin:0 auto;padding:18px 18px 52px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 4px 18px}.brand{display:flex;align-items:center;gap:12px;font-weight:850;letter-spacing:.09em;font-size:13px}.brand-mark{width:44px;height:44px;border-radius:14px;background:#17130c;display:grid;place-items:center;overflow:hidden;box-shadow:0 8px 20px #30220d2a}.brand-mark img{width:100%;height:100%;object-fit:cover}.brand small{display:block;font-size:9px;letter-spacing:.16em;color:var(--muted);margin-top:4px}.top-actions{display:flex;gap:8px}.pill{display:inline-flex;align-items:center;justify-content:center;padding:10px 15px;border:1px solid var(--line);border-radius:999px;background:#fff9edb8;text-decoration:none;font-size:12px;font-weight:700}.hero{position:relative;overflow:hidden;background:radial-gradient(circle at 85% 5%,#94733e,transparent 30%),linear-gradient(130deg,#17130c,#332717 70%,#5d4826);color:white;border-radius:28px;padding:clamp(25px,5vw,54px);box-shadow:0 28px 65px #2c210f2a;border:1px solid #fff4d322}.eyebrow{display:inline-block;color:#edcf91;letter-spacing:.18em;font-size:10px;font-weight:800;text-transform:uppercase}.hero h1{font-size:clamp(32px,6vw,54px);letter-spacing:-.045em;line-height:1.03;margin:15px 0 12px;max-width:620px}.hero p{max-width:590px;color:#eee3d1;font-size:14px;line-height:1.7;margin:0}.hero-note{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}.hero-note span{padding:8px 11px;border-radius:999px;border:1px solid #ffffff30;background:#ffffff10;font-size:10px;color:#f4e7d2}.main-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(255px,.65fr);gap:18px;margin-top:19px;align-items:start}.glass{background:var(--glass);border:1px solid #fff;box-shadow:0 18px 45px #49371912,inset 0 1px #ffffffd9;backdrop-filter:blur(22px) saturate(145%);-webkit-backdrop-filter:blur(22px) saturate(145%);border-radius:22px;padding:22px}.card-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 17px}.card-title h2{font-size:18px;letter-spacing:-.025em;margin:0}.step{font-size:10px;letter-spacing:.12em;font-weight:850;color:#93703a;background:#f4e8d0;padding:7px 10px;border-radius:999px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}.field label{font-size:11px;font-weight:750;color:#574a35}.field input,.field select,.field textarea{width:100%;border:1px solid rgba(174,148,104,.34);background:#fffdf8dc;border-radius:12px;padding:12px 13px;min-height:44px;color:var(--ink);outline:none;transition:.16s}.field input:focus,.field select:focus,.field textarea:focus{border-color:#ba914b;box-shadow:0 0 0 3px #c19a5021}.field textarea{resize:vertical;min-height:76px}.hint{font-size:10px;line-height:1.5;color:var(--muted)}.slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}.slot{border:1px solid var(--line);border-radius:11px;padding:10px 5px;background:#fffdf7b8;color:#4f4028;font-size:11px;font-weight:750;cursor:pointer}.slot[aria-pressed=true]{background:linear-gradient(130deg,#e8cb8e,#b58b43);border-color:#b58b43;color:#21180b;box-shadow:0 7px 18px #a87d351f}.slot:disabled{opacity:.35;cursor:not-allowed}.empty-slots{grid-column:1/-1;padding:14px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:12px;text-align:center}.submit{width:100%;border:0;border-radius:14px;padding:14px 18px;background:linear-gradient(130deg,#e8cb8e,#b58b43);color:#21180b;font-size:13px;font-weight:850;cursor:pointer;box-shadow:0 11px 25px #aa7c342d}.submit:disabled{opacity:.6;cursor:wait}.side{display:grid;gap:14px}.side h3{font-size:14px;margin:0 0 10px}.side p{font-size:12px;line-height:1.65;color:var(--muted);margin:0}.side-row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #d7c8ac70;font-size:11px}.side-row:last-child{border:0}.side-row b{text-align:right}.trust{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:14px;background:#f4ead8a3;border:1px solid #c5a15d2e;font-size:11px;line-height:1.55;color:#64543b}.notice{display:none;margin-top:13px;padding:13px 14px;border-radius:13px;background:#edf6ed;border:1px solid #a4caa5;color:#265b2b;font-size:12px;line-height:1.6}.notice.error{background:#fff0eb;border-color:#dfa894;color:#843c28}.notice.show{display:block}.fine{font-size:10px;line-height:1.6;color:var(--muted);margin:14px 0 0}.footer{text-align:center;color:#847864;font-size:10px;padding:25px 6px 0}.hp{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+@media(max-width:760px){.shell{padding:10px 12px 36px}.top{padding:8px 2px 14px}.main-grid{grid-template-columns:1fr}.glass{padding:18px}.hero{border-radius:22px}.slots{grid-template-columns:repeat(3,minmax(0,1fr))}.side{grid-template-columns:1fr 1fr}}
+@media(max-width:440px){.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.side{grid-template-columns:1fr}.top-actions .pill:first-child{display:none}.brand{font-size:11px}.hero h1{font-size:34px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="top">
+  <a class="brand" href="../" aria-label="Prime Auto Care home" style="text-decoration:none">
+    <span class="brand-mark"><img src="../../prime-auto-care-logo.jpg" alt=""></span>
+    <span>PRIME AUTO CARE<small>PROFESSIONAL CARE · PREMIUM SHINE</small></span>
+  </a>
+  <div class="top-actions"><a class="pill" href="../">Home</a><a class="pill" href="tel:+917777970261">Call us</a></div>
+</header>
+<section class="hero">
+  <span class="eyebrow">Online appointment request</span>
+  <h1>Book your next<br>perfect shine.</h1>
+  <p>Choose your vehicle, wash service and a time that suits you. Your request is sent straight to the Prime Auto Care booking desk.</p>
+  <div class="hero-note"><span>Surat, Gujarat</span><span>08:00 AM – 07:00 PM</span><span>Quick appointment request</span></div>
+</section>
+<div class="main-grid">
+  <main class="glass">
+    <div class="card-title"><h2>Appointment details</h2><span class="step">STEP 01 / 02</span></div>
+    <form id="booking-form">
+      <div class="form-grid">
+        <div class="field"><label for="customer_name">Customer name *</label><input id="customer_name" name="customer_name" autocomplete="name" maxlength="80" required placeholder="Your full name"></div>
+        <div class="field"><label for="customer_phone">Mobile number *</label><input id="customer_phone" name="customer_phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="16" required placeholder="10-digit mobile number"></div>
+        <div class="field"><label for="vehicle_number">Vehicle registration *</label><input id="vehicle_number" name="vehicle_number" maxlength="20" autocapitalize="characters" required placeholder="GJ05AB1234"></div>
+        <div class="field"><label for="vehicle_type">Vehicle category *</label><select id="vehicle_type" name="vehicle_type" required><option value="">Choose vehicle</option></select></div>
+        <div class="field"><label for="service_type">Wash service *</label><select id="service_type" name="service_type" required><option value="">Choose service</option></select></div>
+        <div class="field"><label for="booking_date">Preferred date *</label><input id="booking_date" name="booking_date" type="date" required></div>
+        <div class="field full">
+          <label>Available start times *</label>
+          <div class="slots" id="time-slots"><div class="empty-slots">Choose a service and date to see available times.</div></div>
+          <input type="hidden" id="start_time" name="start_time" required>
+          <div class="hint" id="slot-hint">Availability is checked live. A slot is reserved only after the request is accepted by the server and then confirmed by our team.</div>
+        </div>
+        <div class="field full"><label for="notes">Notes (optional)</label><textarea id="notes" name="notes" maxlength="600" placeholder="Anything we should know about your vehicle?"></textarea></div>
+        <div class="hp" aria-hidden="true"><label for="website">Leave this field empty</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+        <div class="field full"><button class="submit" id="submit-btn" type="submit">Send booking request</button></div>
+      </div>
+    </form>
+    <div class="notice" id="booking-message" role="status" aria-live="polite"></div>
+    <p class="fine">Submitting this form creates a pending appointment request. It is not a confirmed booking until Prime Auto Care contacts you and confirms the date and time. No online payment or advance is collected.</p>
+  </main>
+  <aside class="side">
+    <section class="glass"><h3>Your booking summary</h3><div class="side-row"><span>Vehicle</span><b id="summary-vehicle">Not selected</b></div><div class="side-row"><span>Service</span><b id="summary-service">Not selected</b></div><div class="side-row"><span>Date</span><b id="summary-date">Not selected</b></div><div class="side-row"><span>Time</span><b id="summary-time">Not selected</b></div></section>
+    <section class="glass"><h3>Prime Auto Care</h3><div class="side-row"><span>Hours</span><b id="business-hours">08:00 – 19:00</b></div><div class="side-row"><span>Location</span><b>Fulwadi, Surat</b></div><div class="side-row"><span>Call / WhatsApp</span><b>+91 77779 70261</b></div><p style="margin-top:12px">Our team will review your request and contact you to confirm availability.</p></section>
+    <section class="trust"><span aria-hidden="true">✓</span><span><b>Private booking details.</b><br>Your name, mobile number and vehicle registration are sent securely to the Prime Auto Care booking system.</span></section>
+  </aside>
+</div>
+<footer class="footer">PRIME AUTO CARE · PROFESSIONAL CARE · PREMIUM SHINE<br>Surat, Gujarat, India</footer>
+</div>
+<script>
+(() => {
+  'use strict';
+  const API='https://jkjudmkqaebrgllemris.supabase.co/functions/v1/booking-api';
+  const PUBLIC_KEY='sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw';
+  const form=document.getElementById('booking-form');
+  const $=id=>document.getElementById(id);
+  let config=null,selectedSlot='';
+  async function request(action,payload={}){
+    const response=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:PUBLIC_KEY},body:JSON.stringify({action,slug:'prime-auto-care',...payload})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'Booking service is temporarily unavailable.');
+    return data;
+  }
+  function localDate(){
+    const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const values={};parts.forEach(p=>values[p.type]=p.value);return values.year+'-'+values.month+'-'+values.day;
+  }
+  function shiftDate(value,days){
+    const d=new Date(value+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10);
+  }
+  function showMessage(text,isError=false){
+    const el=$('booking-message');el.textContent=text;el.classList.toggle('error',isError);el.classList.add('show');
+  }
+  function setSlots(slots){
+    const root=$('time-slots');selectedSlot='';$('start_time').value='';$('summary-time').textContent='Not selected';
+    root.innerHTML='';
+    if(!slots.length){root.innerHTML='<div class="empty-slots">No time slots are currently available for this date and service. Choose another date.</div>';return}
+    slots.forEach(slot=>{
+      const button=document.createElement('button');button.type='button';button.className='slot';button.textContent=slot;button.setAttribute('aria-pressed','false');
+      button.addEventListener('click',()=>{
+        selectedSlot=slot;$('start_time').value=slot;$('summary-time').textContent=slot;
+        root.querySelectorAll('.slot').forEach(x=>x.setAttribute('aria-pressed',String(x===button)));
+      });
+      root.appendChild(button);
+    });
+  }
+  async function refreshSlots(){
+    const date=$('booking_date').value,service=$('service_type').value;
+    if(!date||!service){setSlots([]);$('time-slots').innerHTML='<div class="empty-slots">Choose a service and date to see available times.</div>';return}
+    $('slot-hint').textContent='Checking live availability…';
+    try{
+      const result=await request('availability',{date,service_type:service});
+      setSlots(result.available_slots||[]);
+      $('slot-hint').textContent='Choose a time. The slot is checked again when you submit to prevent double booking.';
+    }catch(error){setSlots([]);showMessage(error.message,true);$('slot-hint').textContent='Could not load availability. Please try again.'}
+  }
+  function updateSummary(){
+    $('summary-vehicle').textContent=$('vehicle_type').value||'Not selected';
+    $('summary-service').textContent=$('service_type').value||'Not selected';
+    $('summary-date').textContent=$('booking_date').value||'Not selected';
+  }
+  async function init(){
+    try{
+      config=await request('public-config');
+      $('vehicle_type').innerHTML='<option value="">Choose vehicle</option>'+config.vehicle_types.map(x=>'<option value="'+x+'">'+x+'</option>').join('');
+      $('service_type').innerHTML='<option value="">Choose service</option>'+config.services.map(x=>'<option value="'+x.name+'">'+x.name+'</option>').join('');
+      const today=localDate();$('booking_date').min=today;$('booking_date').max=shiftDate(today,Number(config.settings.horizon_days||14));$('booking_date').value=today;
+      $('business-hours').textContent=config.settings.opening_time+' – '+config.settings.closing_time;
+      document.title='Book a Wash | '+(config.business_name||'Prime Auto Care');
+      updateSummary();
+    }catch(error){showMessage(error.message||'Online booking is temporarily unavailable. Call Prime Auto Care.',true);$('submit-btn').disabled=true}
+  }
+  $('vehicle_type').addEventListener('change',updateSummary);
+  $('service_type').addEventListener('change',()=>{updateSummary();void refreshSlots()});
+  $('booking_date').addEventListener('change',()=>{updateSummary();void refreshSlots()});
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();if(!config)return;
+    const data=Object.fromEntries(new FormData(form).entries());
+    if(!selectedSlot){showMessage('Choose one of the available start times.',true);return}
+    if(String(data.website||'').trim()){showMessage('The request could not be submitted.',true);return}
+    const submit=$('submit-btn');submit.disabled=true;submit.textContent='Sending request…';
+    try{
+      const result=await request('create-public',{booking:{
+        customer_name:data.customer_name,customer_phone:data.customer_phone,vehicle_number:data.vehicle_number,
+        vehicle_type:data.vehicle_type,service_type:data.service_type,booking_date:data.booking_date,
+        start_time:selectedSlot,notes:data.notes,website:data.website
+      }});
+      const b=result.booking||{};
+      form.reset();selectedSlot='';$('start_time').value='';$('booking_date').min=localDate();$('booking_date').value=localDate();
+      $('summary-vehicle').textContent='Not selected';$('summary-service').textContent='Not selected';$('summary-date').textContent='Not selected';$('summary-time').textContent='Not selected';
+      setSlots([]);
+      showMessage('Request received. Your reference is '+(b.booking_code||'saved')+'. Your appointment is PENDING until Prime Auto Care confirms it by phone or WhatsApp. Please do not travel to the station until confirmation.');
+    }catch(error){showMessage(error.message||'Could not submit your booking. Refresh the available times and try again.',true)}
+    finally{submit.disabled=false;submit.textContent='Send booking request'}
+  });
+  void init();
+})();
+</script>
+</body>
+</html>
