@@ -723,7 +723,7 @@ console.log('PASS: invoice PDFs and full backups use the Prime Auto Care Downloa
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
 if (!html.includes('function reconcileStockLedger(data)') ||
     !html.includes('function recordStockMovement(productId,delta,reason,sourceId,movementId)') ||
-    !html.includes("collections=['customers','vehicles','services','invoices','products','stockMovements','purchases','expenses','staff','staffAdvances','attendance','payments']") ||
+    !html.includes("collections=['customers','vehicles','services','invoices','products','stockMovements','purchases','expenses','staff','staffAdvances','attendance','payments','messageRecipients']") ||
     !html.includes("recordStockMovement(productId,-qty,'invoice',invoiceId") ||
     !html.includes("recordStockMovement(productId,qty,'invoice-cancellation',i.id") ||
     !html.includes("recordStockMovement(p.id,q,'purchase',purchaseId") ||
