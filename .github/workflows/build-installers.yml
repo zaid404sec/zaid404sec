@@ -192,19 +192,29 @@ jobs:
 
 
   source:
-    name: WashDesk project source ZIP
+    name: WashDesk source and complete handover ZIPs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Package complete application source (exclude credentials and generated builds)
+      - name: Package application source (exclude credentials and generated builds)
         run: |
           cd car-wash-erp
-          zip -r ../WashDesk-Prime-Auto-Care-2.9.1-Project-Source.zip . \
+          zip -r ../WashDesk-Prime-Auto-Care-2.9.2-Project-Source.zip . \
             -x 'node_modules/*' 'android/.gradle/*' 'android/app/build/*' 'release/*' 'www/*' '.env*' '**/.env*'
           cd ..
-          sha256sum WashDesk-Prime-Auto-Care-2.9.1-Project-Source.zip
+          sha256sum WashDesk-Prime-Auto-Care-2.9.2-Project-Source.zip
       - uses: actions/upload-artifact@v4
         with:
           name: WashDesk-Project-Source
-          path: WashDesk-Prime-Auto-Care-2.9.1-Project-Source.zip
+          path: WashDesk-Prime-Auto-Care-2.9.2-Project-Source.zip
+          if-no-files-found: error
+      - name: Package the complete repository and AI handover (exclude secrets and generated files)
+        run: |
+          zip -r WashDesk-Prime-Auto-Care-2.9.2-Complete-Handover.zip . \
+            -x '.git/*' '**/.git/*' '**/node_modules/*' '**/.env*' '**/release/*' '**/www/*' '**/android/.gradle/*' '**/android/app/build/*' '**/dist/*' '**/build/*'
+          sha256sum WashDesk-Prime-Auto-Care-2.9.2-Complete-Handover.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WashDesk-Complete-Project-Handover
+          path: WashDesk-Prime-Auto-Care-2.9.2-Complete-Handover.zip
           if-no-files-found: error
