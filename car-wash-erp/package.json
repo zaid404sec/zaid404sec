@@ -1,6 +1,6 @@
 {
   "name": "prime-auto-care-manager",
-  "version": "2.10.0",
+  "version": "2.10.1",
   "private": true,
   "description": "Prime Auto Care Business Manager",
   "main": "electron/main.cjs",
@@ -20,7 +20,7 @@
     "@capgo/capacitor-file-sharer": "^8.1.16",
     "@capacitor/app-launcher": "^8.0.1",
     "@capacitor/share": "^8.0.3",
-    "@supabase/supabase-js": "^2.119.0",
+    "@supabase/supabase-js": "2.119.0",
     "@andreeewill/exceljs": "5.0.3",
     "pdfmake": "0.2.23",
     "esbuild": "^0.25.0",
