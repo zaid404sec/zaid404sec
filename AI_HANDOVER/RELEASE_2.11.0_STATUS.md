@@ -36,6 +36,7 @@ The source changes are additive. Do not reset or reseed the production database.
 - Auto-publishing only considers the exact review resource named by a verified Pub/Sub NEW_REVIEW or UPDATED_REVIEW event. Routine/manual/scheduled full syncs do not auto-reply to historical reviews.
 - Existing Google replies are not overwritten. The configured minimum rating is 5 stars by default; the original Workspace Owner may choose 4 or 5 stars.
 - Reviews with complaint/negative-language indicators are held for human review.
+- The API refuses to enable auto-replies unless Google API status is connected, the account's review notifications are enabled, and both `OPENROUTER_API_KEY` and `GOOGLE_REVIEW_WORKER_SECRET` are available to Edge Functions.
 - Reply claims are keyed by workspace and Google review resource to prevent duplicate publication on concurrent or redelivered events.
 - OpenRouter is called only from the Supabase worker, using the server-side secret \`OPENROUTER_API_KEY\`. Never embed it in the APK, EXE, website JavaScript, GitHub source or this handover.
 - AI-generated public replies are best-effort and are not guaranteed within one second. Google Pub/Sub delivery, AI inference and Google reply publication all introduce variable latency.
