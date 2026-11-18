@@ -961,6 +961,7 @@ const googleReviewWorker = await readFile(new URL('../supabase/functions/google-
 const googleReviewWebhook = await readFile(new URL('../supabase/functions/google-review-pubsub-webhook/index.ts', import.meta.url), 'utf8');
 const googleReviewPubSubMigration = await readFile(new URL('../supabase/migrations/20261118000100_google_review_pubsub.sql', import.meta.url), 'utf8');
 const googleReviewMigration = await readFile(new URL('../supabase/migrations/20261117000100_google_reviews.sql', import.meta.url), 'utf8');
+const googleReviewAdminMigration = await readFile(new URL('../supabase/migrations/20261118082000_google_review_admins.sql', import.meta.url), 'utf8');
 const googleReviewDeploy = await readFile(new URL('../../.github/workflows/deploy-communications.yml', import.meta.url), 'utf8');
 const googleReviewCron = await readFile(new URL('../google-reviews-cron-setup.sql', import.meta.url), 'utf8');
 const prepareAssets = await readFile(new URL('../scripts/prepare-assets.mjs', import.meta.url), 'utf8');
@@ -987,12 +988,15 @@ for (const token of ['pac_google_review_settings','pac_google_oauth_states','pac
   'pac_google_review_sync_logs','pac_review_copilot_runs','pac_is_workspace_member']) {
   if (!googleReviewMigration.includes(token)) throw new Error('Google Review migration is missing: '+token);
 }
+for (const token of ['pac_google_review_admins','google_reviews_admin','workspace_id','auth_user_id','revoked_at','revoke all on public.pac_google_review_admins from anon, authenticated']) {
+  if (!googleReviewAdminMigration.includes(token)) throw new Error('Scoped Google Reviews admin migration is missing: '+token);
+}
 for (const token of ['auth.getUser(token)','GOOGLE_TOKEN_ENCRYPTION_KEY','GOOGLE_OAUTH_CLIENT_SECRET',
   'business.manage','mybusiness.googleapis.com/v4','level1-chat','level2-analyze','level3-copilot',
-  'approved !== true','requireOwner(ctx)','GEMINI_API_KEY']) {
+  'approved !== true','requireGoogleReviewAdmin(ctx)','pac_google_review_admins','GEMINI_API_KEY']) {
   if (!googleReviewApi.includes(token)) throw new Error('Google Review API missing authentication/AI/platform safeguard: '+token);
 }
-for (const token of ['oauth2.googleapis.com/token','email_verified','business.manage','encrypted_refresh_token','consumed_at']) {
+for (const token of ['oauth2.googleapis.com/token','email_verified','business.manage','encrypted_refresh_token','consumed_at','pac_google_review_admins','initiated_by']) {
   if (!googleReviewCallback.includes(token)) throw new Error('Google OAuth callback missing: '+token);
 }
 for (const token of ['GOOGLE_REVIEW_WORKER_SECRET','api_status','last_successful_sync_at','pac_google_reviews']) {
