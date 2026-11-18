@@ -366,7 +366,7 @@ async function ensureDailyGrowthPosts(ctx: Context, body: any) {
     .order('created_at', { ascending: false }).limit(10);
   if (postsError) throw postsError;
   const existingPosts = todayRows || [];
-  const existingCount = existingPosts.length;
+  const existingCount = Math.min(2, existingPosts.length);
   const { data: priorRun, error: runReadError } = await ctx.service.from('pac_google_growth_daily_runs')
     .select('id,state,updated_at,generated_posts,model_name')
     .eq('workspace_id', ctx.workspace.id).eq('run_date', dateKey).maybeSingle();
@@ -425,7 +425,7 @@ async function ensureDailyGrowthPosts(ctx: Context, body: any) {
       const caption = growthClean(idea?.caption, 2400);
       if (!title || !summary) throw new Error('One AI post draft was missing its title or summary.');
       if (growthHasPhone(summary) || growthHasPhone(caption)) throw new Error('AI post text contained a phone number. No unsafe post was saved.');
-      const time = String(idea?.suggestedTime || '').match(/^(\\d{1,2}:\\d{2})$/);
+      const time = String(idea?.suggestedTime || '').match(/^(\d{1,2}:\d{2})$/);
       const planned = time ? new Date(dateKey + 'T' + time[1] + ':00+05:30') : null;
       const suggested = planned && planned.getTime() > Date.now() + 5 * 60 * 1000 ? planned.toISOString() : null;
       const row = {
@@ -447,7 +447,7 @@ async function ensureDailyGrowthPosts(ctx: Context, body: any) {
     }
     const allPosts = [...saved, ...existingPosts];
     await ctx.service.from('pac_google_growth_daily_runs').update({
-      state: 'completed', generated_posts: allPosts.length, model_name: growthClean(ai.model,120),
+      state: 'completed', generated_posts: Math.min(2, allPosts.length), model_name: growthClean(ai.model,120),
       last_error: null, updated_at: new Date().toISOString()
     }).eq('id', runId);
     return { date: dateKey, generated: true, generated_count: saved.length, posts: allPosts };
