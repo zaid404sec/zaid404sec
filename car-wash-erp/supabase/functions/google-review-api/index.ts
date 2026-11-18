@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
-type Context = { service: any; workspace: any; member: any; user: any };
+type Context = { service: any; workspace: any; member: any; user: any; googleReviewAdmin: boolean };
 function env(name: string) { return Deno.env.get(name)?.trim() || ''; }
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -74,11 +74,24 @@ async function authenticate(req: Request): Promise<Context> {
   const { data: workspace, error: workspaceError } = await service.from('washdesk_workspaces')
     .select('id,owner_auth_user_id,business_name').eq('id', member.workspace_id).single();
   if (workspaceError || !workspace?.owner_auth_user_id) throw new Error('The Prime Auto Care workspace owner could not be found.');
-  return { service, workspace, member, user: auth.user };
+  const isWorkspaceOwner = member.role === 'owner' && workspace.owner_auth_user_id === auth.user.id;
+  let googleReviewAdmin = isWorkspaceOwner;
+  if (!googleReviewAdmin) {
+    const { data: grant, error: grantError } = await service.from('pac_google_review_admins')
+      .select('auth_user_id')
+      .eq('workspace_id', workspace.id)
+      .eq('auth_user_id', auth.user.id)
+      .eq('permission', 'google_reviews_admin')
+      .is('revoked_at', null)
+      .maybeSingle();
+    if (grantError) throw new Error('Google Reviews access could not be verified. Contact the workspace owner.');
+    googleReviewAdmin = !!grant;
+  }
+  return { service, workspace, member, user: auth.user, googleReviewAdmin };
 }
-function requireOwner(ctx: Context) {
-  if (ctx.member.role !== 'owner' || ctx.workspace.owner_auth_user_id !== ctx.user.id) {
-    throw new Error('Only the Prime Auto Care workspace owner can connect Google or publish a business reply.');
+function requireGoogleReviewAdmin(ctx: Context) {
+  if (!ctx.googleReviewAdmin) {
+    throw new Error('This device is not authorised to administer Google Reviews. Ask the Prime Auto Care workspace owner to grant Google Reviews access.');
   }
 }
 async function getSettings(ctx: Context) {
@@ -268,7 +281,7 @@ function parseJson(text: string) {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 async function ownerSettings(ctx: Context, settings: any) {
-  requireOwner(ctx);
+  requireGoogleReviewAdmin(ctx);
   const safe = {
     workspace_id: ctx.workspace.id,
     google_account_email: String(settings?.google_account_email || '').trim().toLowerCase() || null,
@@ -288,7 +301,7 @@ async function ownerSettings(ctx: Context, settings: any) {
   return { saved: true };
 }
 async function startOAuth(ctx: Context) {
-  requireOwner(ctx);
+  requireGoogleReviewAdmin(ctx);
   const clientId = env('GOOGLE_OAUTH_CLIENT_ID'), redirectUri = env('GOOGLE_OAUTH_REDIRECT_URI');
   if (!clientId || !env('GOOGLE_OAUTH_CLIENT_SECRET') || !redirectUri || !env('GOOGLE_TOKEN_ENCRYPTION_KEY')) {
     throw new Error('Google OAuth is not configured on the server. Basic API access and Google Cloud OAuth credentials must be prepared first.');
@@ -350,7 +363,7 @@ async function handle(ctx: Context, body: any) {
   if (action === 'save-settings') return ownerSettings(ctx, body.settings || {});
   if (action === 'connect') return startOAuth(ctx);
   if (action === 'enable-notifications') {
-    requireOwner(ctx);
+    requireGoogleReviewAdmin(ctx);
     const settings = await getSettings(ctx);
     const topicName = env('GOOGLE_PUBSUB_TOPIC_NAME') || String(settings.pubsub_topic_name || '');
     if (!/^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(topicName)) {
@@ -423,7 +436,7 @@ async function handle(ctx: Context, body: any) {
     return { logged: true, status };
   }
   if (action === 'level1-chat') {
-    requireOwner(ctx);
+    requireGoogleReviewAdmin(ctx);
     const question = String(body.question || '').trim();
     if (!question || question.length > 1200) throw new Error('Enter a question of up to 1,200 characters.');
     const reviews = await getReviewRecords(ctx, 100);
@@ -433,7 +446,7 @@ async function handle(ctx: Context, body: any) {
     return { answer: result.text, evidence: evidence.map((r: any) => ({ id: r.id, rating: r.rating, date: r.date })) };
   }
   if (action === 'level2-analyze') {
-    requireOwner(ctx);
+    requireGoogleReviewAdmin(ctx);
     const reviewId = String(body.review_id || '');
     if (!reviewId) throw new Error('Select a synced review first.');
     const { data: review, error } = await ctx.service.from('pac_google_reviews').select('*')
@@ -469,7 +482,7 @@ async function handle(ctx: Context, body: any) {
     return { analysis: parsed, analysis_id: analysis.id, draft };
   }
   if (action === 'level3-copilot') {
-    requireOwner(ctx);
+    requireGoogleReviewAdmin(ctx);
     const reviews = await getReviewRecords(ctx, 120);
     if (reviews.length < 2) return { insufficient_data: true, message: 'The Business Growth Copilot needs at least two genuine synced reviews. No conclusions have been generated from empty or insufficient data.' };
     const evidence = reviews.map((r: any) => ({ id: r.id, rating: r.star_rating, date: r.google_created_at, comment: String(r.comment||'').slice(0,700), reply: String(r.reply_comment||'').slice(0,400) }));
@@ -495,7 +508,7 @@ async function handle(ctx: Context, body: any) {
     return result;
   }
   if (action === 'publish-reply') {
-    requireOwner(ctx);
+    requireGoogleReviewAdmin(ctx);
     if (body.approved !== true) throw new Error('Explicit owner approval is required before publishing a Google reply.');
     const draftId = String(body.draft_id || '');
     const { data: draft, error: draftError } = await ctx.service.from('pac_review_reply_drafts')
