@@ -33,7 +33,22 @@ window.PrimeAutoCareGoogleReviews = {
   chat: question => request('level1-chat', { question }),
   analyze: reviewId => request('level2-analyze', { review_id: reviewId }),
   copilot: () => request('level3-copilot'),
-  publish: (draftId, approved) => request('publish-reply', { draft_id: draftId, approved: approved === true })
+  publish: (draftId, approved) => request('publish-reply', { draft_id: draftId, approved: approved === true }),
+  aiGenerate: payload => request('ai-generate', payload),
+  listGrowthPosts: () => request('list-growth-posts'),
+  listGrowthKeywords: () => request('list-growth-keywords'),
+  saveGrowthPost: post => request('save-growth-post', { post }),
+  saveGrowthKeywords: ideas => request('save-growth-keywords', { ideas }),
+  uploadGrowthPhoto: async (postId, file) => {
+    if (!(file instanceof File) || !['image/jpeg','image/png'].includes(file.type)) throw new Error('Choose a JPG or PNG photo.');
+    if (file.size < 10 * 1024 || file.size > 5 * 1024 * 1024) throw new Error('Photo must be between 10 KB and 5 MB.');
+    if (typeof createImageBitmap === 'function') { const bitmap = await createImageBitmap(file); const width = bitmap.width, height = bitmap.height; bitmap.close?.(); if (width < 250 || height < 250) throw new Error('Google photos must be at least 250 × 250 pixels.'); }
+    const bytes = new Uint8Array(await file.arrayBuffer()); let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return request('upload-growth-photo', { post_id: postId, mime_type: file.type, image_base64: btoa(binary) });
+  },
+  publishGrowthPost: (postId, approved) => request('publish-growth-post', { post_id: postId, approved: approved === true }),
+  deleteGrowthPost: postId => request('delete-growth-post', { post_id: postId })
 };
 
 window.PrimeAutoCareGoogleReviewQr = {
