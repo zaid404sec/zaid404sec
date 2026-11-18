@@ -305,10 +305,13 @@ function growthPrompt(task: string, context: any) {
     system: 'You are a cautious local-search strategist for a car and bike wash business in Surat, Gujarat, India. Return JSON only: {"ideas":[{"keyword":"...","intent":"...","cluster":"...","priority":"high|medium|low","relevanceScore":1,"rationale":"..."}]}. Produce 8 to 12 natural, locally relevant phrases. Prefer phrases customers might actually use, including car wash, car cleaning, foam wash, SUV, four-wheeler, bike wash and detailing only where supported by the supplied services. Do not claim these are the most searched terms, do not invent monthly search volumes or trend percentages, and do not pad phrases with unrelated vehicle models/services. Relevance score is an AI judgement, not measured demand. Avoid keyword stuffing.',
     user: 'Suggest keyword ideas for this business. Return JSON only.\n' + evidence
   };
-  if (task === 'daily-posts') return {
-    system: 'You are the local content manager for PRIME AUTO CARE, a car and bike wash business in Surat, Gujarat, India. Return JSON only: {"posts":[{"title":"...","topic":"service|education|behind_the_scenes|customer_care","summary":"...","caption":"...","primaryKeyword":"...","secondaryKeywords":["..."],"imagePrompt":"...","photoChecklist":["..."],"suggestedTime":"10:00 or 17:00"}]}. Create exactly two distinct useful Google Business Profile post drafts for the supplied date. Use only supplied services, hours and business facts. Never invent discounts, prices, service guarantees, customer stories or results. Never include a phone number, email address, hashtags list or fake review. Keep each post summary under 1,200 characters, put the main useful phrase naturally near the beginning, and do not repeat keywords unnaturally. Request real photos from the business: a real vehicle being washed, foam/rinse/detail or a clean finished vehicle. Do not suggest AI-generated before/after claims or fake customer images. Drafts require owner review, not automatic publication.',
-    user: 'Create two daily Google post drafts for this business. Use supplied facts only.\n' + evidence
-  };
+  if (task === 'daily-posts') {
+    const postCount = Math.max(1, Math.min(2, Number(context?.posts_needed) || 2));
+    return {
+      system: 'You are the local content manager for PRIME AUTO CARE, a car and bike wash business in Surat, Gujarat, India. Return JSON only: {"posts":[{"title":"...","topic":"service|education|behind_the_scenes|customer_care","summary":"...","caption":"...","primaryKeyword":"...","secondaryKeywords":["..."],"imagePrompt":"...","photoChecklist":["..."],"suggestedTime":"10:00 or 17:00"}]}. Create exactly ' + postCount + ' distinct useful Google Business Profile post draft(s) for the supplied date. Use only supplied services, hours and business facts. Mention Ertiga/MPV/SUV wording only when relevant to the actual supplied services. Never invent discounts, prices, service guarantees, customer stories or results. Never include a phone number, email address, hashtags list or fake review. Keep each post summary under 1,200 characters, put the main useful phrase naturally near the beginning, and do not repeat keywords unnaturally. Request real photos from the business: a real vehicle being washed, foam/rinse/detail or a clean finished vehicle. Do not suggest AI-generated before/after claims or fake customer images. Drafts require owner review, not automatic publication.',
+      user: 'Create exactly ' + postCount + ' daily Google post draft(s) for this business. Use supplied facts only.\\n' + evidence
+    };
+  }
   throw new Error('The requested AI task is not supported.');
 }
 async function runFreeAi(ctx: Context, body: any) {
@@ -348,6 +351,116 @@ async function runFreeAi(ctx: Context, body: any) {
   if (!text) throw new Error('The free AI model returned an empty response. Try again.');
   return { text, provider: 'openrouter', model: result?.model || model, usage: result?.usage || null };
 }
+async function ensureDailyGrowthPosts(ctx: Context, body: any) {
+  requireGoogleReviewAdmin(ctx);
+  const dateKey = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+  const startAt = new Date(dateKey + 'T00:00:00+05:30');
+  const endAt = new Date(startAt.getTime() + 24 * 60 * 60 * 1000);
+  const startIso = startAt.toISOString(), endIso = endAt.toISOString();
+  const { data: todayRows, error: postsError } = await ctx.service.from('pac_google_growth_posts')
+    .select('id,title,topic,summary,caption,primary_keyword,secondary_keywords,image_prompt,photo_checklist,image_url,image_object_path,suggested_publish_at,status,google_post_name,model_provider,model_name,published_at,created_at,updated_at')
+    .eq('workspace_id', ctx.workspace.id).neq('status', 'archived')
+    .gte('created_at', startIso).lt('created_at', endIso)
+    .order('created_at', { ascending: false }).limit(10);
+  if (postsError) throw postsError;
+  const existingPosts = todayRows || [];
+  const existingCount = existingPosts.length;
+  const { data: priorRun, error: runReadError } = await ctx.service.from('pac_google_growth_daily_runs')
+    .select('id,state,updated_at,generated_posts,model_name')
+    .eq('workspace_id', ctx.workspace.id).eq('run_date', dateKey).maybeSingle();
+  if (runReadError) throw runReadError;
+  if (priorRun?.state === 'completed') {
+    return { date: dateKey, generated: false, already_generated: true, generated_count: 0, posts: existingPosts };
+  }
+  const now = new Date();
+  const staleBefore = new Date(now.getTime() - 12 * 60 * 1000).toISOString();
+  let runId = priorRun?.id || '';
+  if (!priorRun) {
+    const { data: inserted, error: insertError } = await ctx.service.from('pac_google_growth_daily_runs')
+      .insert({
+        workspace_id: ctx.workspace.id, run_date: dateKey, state: 'generating',
+        requested_posts: 2, generated_posts: existingCount, created_by: ctx.user.id,
+        updated_at: now.toISOString()
+      }).select('id').single();
+    if (insertError) {
+      if (insertError.code === '23505') return { date: dateKey, generated: false, in_progress: true, generated_count: 0, posts: existingPosts };
+      throw insertError;
+    }
+    runId = inserted.id;
+  } else if (priorRun.state === 'generating' && Date.parse(priorRun.updated_at) > Date.parse(staleBefore)) {
+    return { date: dateKey, generated: false, in_progress: true, generated_count: 0, posts: existingPosts };
+  } else {
+    const { data: claimed, error: claimError } = await ctx.service.from('pac_google_growth_daily_runs')
+      .update({ state: 'generating', last_error: null, updated_at: now.toISOString(), created_by: ctx.user.id })
+      .eq('id', priorRun.id).eq('state', priorRun.state).eq('updated_at', priorRun.updated_at)
+      .select('id').maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimed) return { date: dateKey, generated: false, in_progress: true, generated_count: 0, posts: existingPosts };
+    runId = claimed.id;
+  }
+  try {
+    const remaining = Math.max(0, 2 - existingCount);
+    if (!remaining) {
+      await ctx.service.from('pac_google_growth_daily_runs').update({
+        state: 'completed', generated_posts: existingCount, updated_at: new Date().toISOString()
+      }).eq('id', runId);
+      return { date: dateKey, generated: false, already_generated: true, generated_count: 0, posts: existingPosts };
+    }
+    const ai = await runFreeAi(ctx, {
+      provider: body.provider || 'openrouter',
+      model: body.model || 'openrouter/free',
+      api_key: body.api_key,
+      task: 'daily-posts',
+      context: { ...(body.context || {}), date: dateKey, posts_needed: remaining }
+    });
+    const parsed = parseJson(ai.text);
+    const ideas = Array.isArray(parsed.posts) ? parsed.posts.slice(0, remaining) : [];
+    if (ideas.length !== remaining) throw new Error('The AI did not return the required number of daily post drafts. Retry from the Review Center.');
+    const saved = [];
+    for (const idea of ideas) {
+      const title = growthClean(idea?.title, 140);
+      const summary = growthClean(idea?.summary, 1500);
+      const caption = growthClean(idea?.caption, 2400);
+      if (!title || !summary) throw new Error('One AI post draft was missing its title or summary.');
+      if (growthHasPhone(summary) || growthHasPhone(caption)) throw new Error('AI post text contained a phone number. No unsafe post was saved.');
+      const time = String(idea?.suggestedTime || '').match(/^(\\d{1,2}:\\d{2})$/);
+      const planned = time ? new Date(dateKey + 'T' + time[1] + ':00+05:30') : null;
+      const suggested = planned && planned.getTime() > Date.now() + 5 * 60 * 1000 ? planned.toISOString() : null;
+      const row = {
+        workspace_id: ctx.workspace.id, created_by: ctx.user.id, title,
+        topic: growthClean(idea?.topic, 40) || 'service',
+        summary, caption,
+        primary_keyword: growthClean(idea?.primaryKeyword, 120) || null,
+        secondary_keywords: Array.isArray(idea?.secondaryKeywords) ? idea.secondaryKeywords.filter((x:any)=>typeof x==='string').map((x:string)=>growthClean(x,100)).filter(Boolean).slice(0,8) : [],
+        image_prompt: growthClean(idea?.imagePrompt, 800) || null,
+        photo_checklist: Array.isArray(idea?.photoChecklist) ? idea.photoChecklist.filter((x:any)=>typeof x==='string').map((x:string)=>growthClean(x,180)).filter(Boolean).slice(0,6) : [],
+        suggested_publish_at: suggested, status: 'draft',
+        model_provider: 'openrouter', model_name: growthClean(ai.model,120) || 'openrouter/free',
+        updated_at: new Date().toISOString()
+      };
+      const { data: item, error: saveError } = await ctx.service.from('pac_google_growth_posts').insert(row)
+        .select('id,title,topic,summary,caption,primary_keyword,secondary_keywords,image_prompt,photo_checklist,image_url,image_object_path,suggested_publish_at,status,created_at,updated_at').single();
+      if (saveError) throw saveError;
+      saved.push(item);
+    }
+    const allPosts = [...saved, ...existingPosts];
+    await ctx.service.from('pac_google_growth_daily_runs').update({
+      state: 'completed', generated_posts: allPosts.length, model_name: growthClean(ai.model,120),
+      last_error: null, updated_at: new Date().toISOString()
+    }).eq('id', runId);
+    return { date: dateKey, generated: true, generated_count: saved.length, posts: allPosts };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Daily post generation failed.';
+    await ctx.service.from('pac_google_growth_daily_runs').update({
+      state: 'failed', generated_posts: existingCount, last_error: message.slice(0,500),
+      updated_at: new Date().toISOString()
+    }).eq('id', runId);
+    throw error;
+  }
+}
+
 async function listGrowthPosts(ctx: Context) {
   requireGoogleReviewAdmin(ctx);
   const { data, error } = await ctx.service.from('pac_google_growth_posts')
@@ -590,6 +703,7 @@ async function handle(ctx: Context, body: any) {
   const action = String(body.action || '');
   if (action === 'status') return status(ctx);
   if (action === 'ai-generate') return runFreeAi(ctx, body);
+  if (action === 'ensure-daily-growth-posts') return ensureDailyGrowthPosts(ctx, body);
   if (action === 'list-growth-posts') return listGrowthPosts(ctx);
   if (action === 'list-growth-keywords') return listGrowthKeywords(ctx);
   if (action === 'save-growth-post') return saveGrowthPost(ctx, body.post || {});
