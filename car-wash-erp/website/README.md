@@ -5,7 +5,7 @@ This mobile-first public website is stored at `car-wash-erp/website/` and is inc
 ## Included
 - Responsive black-and-gold Prime Auto Care identity.
 - Services, business address and normal opening hours.
-- WhatsApp enquiry buttons for +91 77779 70261.
+- WhatsApp call-to-action and a vehicle/service enquiry form for +91 77779 70261. The form only prepares a message; it does not book a slot or collect an advance.
 - Google Business Profile link supplied by the owner.
 - A Google Business Profile & Reviews call-to-action using the exact profile link supplied by the owner.
 - LocalBusiness / AutoWash structured data.
@@ -17,11 +17,15 @@ The repository already has `.github/workflows/pages.yml`, which builds and publi
 
 ## Publish and verify
 1. Merge the website and app changes after the feature pull request passes checks.
-2. In GitHub, open repository **Settings → Pages** and confirm the source is **GitHub Actions**. The existing WashDesk Pages workflow should already use this source.
+2. In GitHub, open repository **Settings → Pages** and set **Build and deployment → Source** to **GitHub Actions**. GitHub requires this for a custom Actions publishing workflow. See the [GitHub Pages publishing-source instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 3. Wait for the existing **Deploy WashDesk to GitHub Pages** workflow to complete successfully.
 4. Open the expected public URL on a phone. Check that the images, telephone links, WhatsApp button and Google Profile button work.
 5. Sign in to the Google account that owns Prime Auto Care. Open the Business Profile and choose **Edit profile → Contact → Website**. Add the live public URL and save it.
 6. Confirm the website link appears on the public Business Profile in Google Search / Maps.
+
+## Booking and advance-payment boundary
+
+The page contains a WhatsApp enquiry form only. It does not confirm a booking, reserve a washing slot, accept a deposit or process a payment. The WashDesk appointment and advance-payment feature is a separate future phase and will require a payment provider/merchant setup before deposits can be collected.
 
 ## Owner review before public use
 The business phone number, secondary phone, address and regular hours use the details supplied for Prime Auto Care. Check them before publishing. The supplied `share.google` link opens the Business Profile. The separate direct review URL in WashDesk should be tested by the owner before it is placed on invoice PDFs; the printable counter QR currently opens the supplied Business Profile link.
