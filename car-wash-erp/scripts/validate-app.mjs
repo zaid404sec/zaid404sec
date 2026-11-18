@@ -1067,17 +1067,18 @@ for (const token of ['pac_google_growth_posts','pac_google_growth_keywords','ena
 for (const token of ['pac_google_growth_daily_runs','unique (workspace_id, run_date)','revoke all on public.pac_google_growth_daily_runs from public, anon, authenticated','grant all on public.pac_google_growth_daily_runs to service_role']) {
   if (!dailyGrowthMigration.includes(token)) throw new Error('Daily AI Growth migration is missing its workspace idempotency or service-only security safeguard: '+token);
 }
-for (const token of ['google-ai-api-key','AI GROWTH STUDIO','Generate 2 additional drafts','AI relevance estimates','data-growth-photo','openrouter.ai/keys','googleGrowthMarkup','Daily post autopilot','Create gold-glass poster','ensureDailyGrowthPosts']) {
+for (const token of ['google-ai-api-key','AI GROWTH STUDIO','Generate 2 additional drafts','AI relevance estimates','data-growth-photo','openrouter.ai/keys','googleGrowthMarkup','Daily post autopilot','Create gold-glass poster','ensureDailyGrowthPosts','[vehicle number removed]']) {
   if (!html.includes(token)) throw new Error('Google AI Growth Studio UI is missing: '+token);
 }
-for (const token of ['ai-generate','ensure-daily-growth-posts','list-growth-posts','save-growth-post','save-growth-keywords','upload-growth-photo','publish-growth-post','openrouter/free','Paid model IDs are blocked','Photo must be between 10 KB and 5 MB','250 × 250 pixels','pac_google_growth_posts','pac_google_growth_daily_runs']) {
+for (const token of ['ai-generate','ensure-daily-growth-posts','Asia/Kolkata','list-growth-posts','save-growth-post','save-growth-keywords','upload-growth-photo','publish-growth-post','openrouter/free','Paid model IDs are blocked','Photo must be between 10 KB and 5 MB','250 × 250 pixels','pac_google_growth_posts','pac_google_growth_daily_runs']) {
   if (!growthApi.includes(token)) throw new Error('Google AI Growth backend is missing: '+token);
 }
-if (!growthClient.includes('ensureDailyGrowthPosts') || growthClient.includes('GOOGLE_OAUTH_CLIENT_SECRET')) throw new Error('The browser API client must expose the daily draft action and must not contain server-side secrets.');
-for (const token of ['canonical','og:title','twitter:card','AutoWash','openingHoursSpecification','Prime Auto Care','WhatsApp']) {
+if (!growthClient.includes('ensureDailyGrowthPosts') || growthClient.includes('GOOGLE_OAUTH_CLIENT_SECRET')) throw new Error('The browser API client must expose daily draft automation and contain no server-side secrets.');
+for (const token of ['canonical','og:title','twitter:card','AutoWash','openingHoursSpecification','Prime Auto Care','booking-enquiry-form','WhatsApp']) {
   if (!website.includes(token)) throw new Error('Public website SEO or enquiry markup is missing: '+token);
 }
-console.log('PASS: AI Growth Studio, daily workspace lock, real-photo poster, server-side photo validation, private workspace records and website local SEO metadata');
+if (!html.includes('--bg:#f3efe6') || !html.includes('backdrop-filter:blur(22px)')) throw new Error('The warm liquid-glass interface styles are missing.');
+console.log('PASS: AI Growth Studio, daily workspace idempotency, privacy redaction, real-photo poster, warm glass UI and website SEO/enquiry checks');
 
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
