@@ -191,9 +191,22 @@ jobs:
           if-no-files-found: error
 
 
+  backend-check:
+    name: Google Reviews Edge Function type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check the Google Reviews API and OAuth callback
+        run: |
+          deno check car-wash-erp/supabase/functions/google-review-api/index.ts
+          deno check car-wash-erp/supabase/functions/google-review-oauth-callback/index.ts
+
   source:
     name: WashDesk source, handover and full release package
-    needs: [windows, android]
+    needs: [windows, android, backend-check]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
