@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.9.3') throw new Error('The package version must be 2.9.3.');
+if (packageJson.version !== '2.9.4') throw new Error('The package version must be 2.9.4.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.9.3 debug APK must use v24 to install beside the existing v21, v22 and v23 apps.');
+  throw new Error('The 2.9.4 debug APK must use v24 to install beside the existing v21, v22 and v23 apps.');
 }
-console.log('PASS: Android 2.9.3 uses v24 for a side-by-side install that preserves v23 data');
+console.log('PASS: Android 2.9.4 uses v24 for a side-by-side install that preserves v23 data');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -20,6 +20,32 @@ if (!html.includes('Personal / Household · Vehicle Petrol') || !html.includes('
 console.log('PASS: personal and household expense separation');
 if (!html.includes('https://share.google/6g3f0aJqTezi6JH5T') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
 console.log('PASS: Google review workflow');
+const googleReviewPageStart=html.indexOf('function googleReviews(){');
+const googleReviewPageEnd=html.indexOf('async function loadGoogleReviewCenter(',googleReviewPageStart);
+const googleReviewPage=html.slice(googleReviewPageStart,googleReviewPageEnd);
+if(!googleReviewPage.includes('id="google-manual-review"') ||
+   !googleReviewPage.includes('id="google-manual-reply"') ||
+   !googleReviewPage.includes('data-action="google-review-copy-manual-reply"') ||
+   !googleReviewPage.includes('data-action="google-review-open-manager"') ||
+   googleReviewPage.includes('data-action="google-review-connect"')) {
+  throw new Error('Google Review Center must expose a manual reply workflow without making OAuth a prerequisite.');
+}
+if(!html.includes("async function googleReviewOpenManager()") ||
+   !html.includes("https://business.google.com/") ||
+   !html.includes("document.addEventListener('input',e=>{if(e.target?.id==='google-manual-review')") ) {
+  throw new Error('Manual Google reply copy and Business Profile manager actions are incomplete.');
+}
+console.log('PASS: manual Google review composer can copy replies and open Google Business Profile without OAuth');
+if(!html.includes('id="sidebar-backdrop"') ||
+   !html.includes('sidebar-backdrop.active') ||
+   !html.includes('overscroll-behavior-y:contain') ||
+   !html.includes('body.sidebar-open') ||
+   !html.includes("function setSidebarOpen(open)") ||
+   !html.includes("event.key==='Escape'")) {
+  throw new Error('Mobile navigation drawer must scroll independently, block background scrolling and close via backdrop/Escape.');
+}
+console.log('PASS: mobile navigation drawer has independent scrolling, backdrop, scroll lock and close controls');
+
 if (!html.includes("db.settings?.invoiceTemplate||'classic'") || !html.includes("{dark:'#17130c',primary:'#d6b15f'") || html.includes('{dark:invoiceTheme.dark')) throw new Error('Original default invoice template or safe theme initialisation is missing.');
 if (!html.includes('invoice-template-selector') || !html.includes('Navy Professional') || !html.includes('Forest Green') || !html.includes('Burgundy Professional')) throw new Error('The professional invoice template selector is incomplete.');
 console.log('PASS: original invoice is the default; alternative professional PDF templates are selectable');
@@ -279,7 +305,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.9.3 side-by-side app ID v24 was not set.');
+if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.9.4 side-by-side app ID v24 was not set.');
 console.log('PASS: app manifest uses the expected v24 Android package ID');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
