@@ -4,21 +4,29 @@ Last verified: 18 November 2026.
 
 ## Current state
 
-The Supabase project jkjudmkqaebrgllemris is active. The communications schema, Google Review schema, Pub/Sub event schema and recipient sync migrations are applied. On 18 November 2026, all seven deployed Edge Functions were returned as ACTIVE: google-review-api, google-review-oauth-callback, google-review-worker, google-review-pubsub-webhook, communication-api, communication-worker and communication-webhook.
+The Supabase project jkjudmkqaebrgllemris is active. All six recorded migrations are applied, including `20261118082000_google_review_admins`. All seven deployed Edge Functions are ACTIVE. The Google Review API and OAuth callback are at version 2 after the 2.9.3 release deployment.
 
-The live review data check returned zero OAuth credentials, zero synced reviews, zero Pub/Sub events, zero sync logs and zero notification settings enabled. Function deployment alone does not mean Google OAuth or review sync is operational. PR #58 contains the proposed 2.9.3 scoped v24 permission update; its migration and v24 grant are not yet applied to production.
+The production `pac_google_review_admins` table is server-only (RLS enabled, no authenticated policies, no anon/authenticated grants; service_role only). The v24 device has an active `google_reviews_admin` permission while its ordinary workspace role remains `member`. The original Workspace Owner identity remains unchanged.
+
+The live review data check returned zero OAuth credential rows, zero synced reviews, zero Pub/Sub events, zero sync logs and zero notification settings enabled. Function deployment and device permission do not mean Google OAuth or review sync is operational. Google API access and OAuth secrets still need to be configured and verified.
 
 ## Function sources and endpoints
 
 | Function folder | Endpoint suffix | Purpose |
 | --- | --- | --- |
-| google-review-api | /functions/v1/google-review-api | Workspace-owner or explicitly scoped Google Reviews administrator API and Gemini review workflows |
-| google-review-oauth-callback | /functions/v1/google-review-oauth-callback | Google OAuth callback and encrypted token storage |
+| google-review-api | /functions/v1/google-review-api | Workspace owner or explicitly scoped Google Reviews administrator API and Gemini review workflows (version 2) |
+| google-review-oauth-callback | /functions/v1/google-review-oauth-callback | OAuth callback with a fresh scoped-permission check and encrypted token storage (version 2) |
 | google-review-worker | /functions/v1/google-review-worker | Secret-authenticated review sync worker |
 | google-review-pubsub-webhook | /functions/v1/google-review-pubsub-webhook | OIDC-authenticated Pub/Sub push endpoint |
 
 Full function URL base:
 https://jkjudmkqaebrgllemris.supabase.co
+
+## v24 Google Reviews-only permission
+
+The v24 member has been granted the single server-side permission `google_reviews_admin` in the existing Prime Auto Care workspace. This does not change the member's workspace role and does not grant access to billing, invoices, inventory, customers, staff or general workspace settings. The original Workspace Owner remains the same.
+
+The permission migration is additive. Do not promote v24 to owner. To revoke this access, set `revoked_at` on the exact v24 row in `pac_google_review_admins`; do not delete the Workspace Owner or change workspace membership.
 
 ## Supabase secrets
 
@@ -62,9 +70,9 @@ Google's requirements currently include a verified Business Profile that has bee
 
 1. Set GitHub Actions secrets SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF and SUPABASE_DB_PASSWORD for the repository communications workflow.
 2. Configure the Edge Function secrets listed above in Supabase.
-3. Deploy google-review-api, google-review-oauth-callback, google-review-worker and google-review-pubsub-webhook using the Supabase CLI / deployment workflow.
-4. Confirm all four functions appear in Supabase Dashboard → Edge Functions.
-5. Connect the primary owner account from WashDesk Review Center.
+3. Confirm google-review-api and google-review-oauth-callback are version 2; the other five functions remain deployed and active.
+4. Configure the external Google Cloud/API, OAuth and required Supabase secrets listed above.
+5. Connect the primary owner account from WashDesk Review Center using the already-authorised v24 device.
 6. Run a manual review sync. Verify Google reviews are inserted/updated and a success sync-log row is recorded.
 7. Register notifications for the mapped location; configure the Pub/Sub topic/subscription and run a test push.
 8. Confirm the webhook creates a deduplicated event row and invokes the worker.
