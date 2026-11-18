@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.10.0') throw new Error('The package version must be 2.10.0.');
+if (packageJson.version !== '2.10.1') throw new Error('The package version must be 2.10.1.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.10.0 debug APK must use v24 to install beside the existing v21, v22 and v23 apps.');
+  throw new Error('The 2.10.1 debug APK must use v24 to install beside the existing v21, v22 and v23 apps.');
 }
-console.log('PASS: Android 2.10.0 uses v24 for a side-by-side install that preserves v23 data');
+console.log('PASS: Android 2.10.1 uses v24 for a side-by-side install that preserves v23 data');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -305,7 +305,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.10.0 side-by-side app ID v24 was not set.');
+if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.10.1 side-by-side app ID v24 was not set.');
 console.log('PASS: app manifest uses the expected v24 Android package ID');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
@@ -729,8 +729,8 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v31')) {
-  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v31 cache version.');
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v32')) {
+  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v32 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
