@@ -220,6 +220,8 @@ jobs:
         run: |
           deno check car-wash-erp/supabase/functions/google-review-api/index.ts
           deno check car-wash-erp/supabase/functions/google-review-oauth-callback/index.ts
+          deno check car-wash-erp/supabase/functions/google-review-worker/index.ts
+          deno check car-wash-erp/supabase/functions/google-review-pubsub-webhook/index.ts
           deno check car-wash-erp/supabase/functions/booking-api/index.ts
 
   source:
