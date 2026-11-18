@@ -33,6 +33,22 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
   throw new Error('One or more booking source, migration, API or public website files are missing.');
 }
 console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
+const bookingWebsite = await readFile(new URL('../website/booking/index.html', import.meta.url), 'utf8');
+if (!bookingWebsite.includes('id="booking-form"') ||
+    !bookingWebsite.includes('function request(action') ||
+    !bookingWebsite.includes("'public-config'") ||
+    !bookingWebsite.includes("'availability'") ||
+    !bookingWebsite.includes("'create-public'") ||
+    !bookingWebsite.includes('PENDING until Prime Auto Care confirms')) {
+  throw new Error('Customer booking page is missing its public API flow or pending-confirmation safeguard.');
+}
+const bookingInlineScripts = [...bookingWebsite.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+if (!bookingInlineScripts.length) throw new Error('Customer booking page has no inline application script.');
+for (const match of bookingInlineScripts) {
+  await transform(match[1], { loader: 'js', target: 'es2020', logLevel: 'silent' });
+}
+console.log('PASS: public customer booking HTML and JavaScript syntax');
+
 if (!html.includes('google-auto-reply-enabled') || !html.includes('google-review-save-auto-reply') ||
     !html.includes('Only the original Workspace Owner') ||
     !existsSync(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url))) {
