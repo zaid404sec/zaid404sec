@@ -64,7 +64,7 @@ function adminClient() {
 function parseDate(value: unknown) {
   const date = String(value || '');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Choose a valid booking date.');
-  const parsed = new Date(date + 'T00:00:00+05:30');
+  const parsed = new Date(date + 'T00:00:00Z');
   if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) throw new Error('Choose a valid booking date.');
   return date;
 }
@@ -165,8 +165,8 @@ async function slotsFor(admin: any, settings: any, dateValue: unknown, serviceVa
     timeZone: settings.timezone || 'Asia/Kolkata',
     year: 'numeric', month: '2-digit', day: '2-digit'
   }).format(new Date());
-  const maxDate = new Date(localToday + 'T00:00:00+05:30');
-  maxDate.setDate(maxDate.getDate() + Number(settings.horizon_days || 14));
+  const maxDate = new Date(localToday + 'T00:00:00Z');
+  maxDate.setUTCDate(maxDate.getUTCDate() + Number(settings.horizon_days || 14));
   const maxKey = maxDate.toISOString().slice(0, 10);
   if (date < localToday || date > maxKey) return { date, available_slots: [] };
   const { data: rows, error } = await admin.from('pac_bookings')
@@ -233,7 +233,10 @@ async function handle(req: Request, body: any) {
     if (body.to_date) query = query.lte('booking_date', parseDate(body.to_date));
     const { data, error } = await query;
     if (error) throw error;
-    return { bookings: data || [] };
+    const { data: settings, error: settingsError } = await ctx.admin.from('pac_booking_settings')
+      .select('*').eq('workspace_id', ctx.workspace.id).single();
+    if (settingsError) throw settingsError;
+    return { bookings: data || [], settings };
   }
   if (action === 'create-staff') {
     const settingsResult = await ctx.admin.from('pac_booking_settings').select('*').eq('workspace_id', ctx.workspace.id).single();
