@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
 function env(name: string) { return Deno.env.get(name)?.trim() || ''; }
 function base64Url(bytes: Uint8Array) {
