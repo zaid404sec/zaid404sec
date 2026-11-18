@@ -1,64 +1,95 @@
-# WashDesk 2.9.3 — Release candidate notes
+# WashDesk 2.9.3 — Production release notes
 
-Last checked: 18 November 2026 (Asia/Kolkata).
+Release date: 18 November 2026.
 
-## Release status
+## Release identity and build proof
 
-This is a release-candidate handover, not a claim that 2.9.3 has shipped. The change is in pull request #58 and must pass CI before merge. No 2.9.3 APK, EXE or ZIP is considered valid until it is produced by the successful workflow for the merged commit.
+- GitHub repository: https://github.com/zaid404sec/zaid404sec
+- Pull request: https://github.com/zaid404sec/zaid404sec/pull/58 (merged)
+- Main commit: `f006415568af5960e25bd52ee562bccac02fa627`
+- Main build: [GitHub Actions run #233](https://github.com/zaid404sec/zaid404sec/actions/runs/44269802537) — **success**
+- Application version: `2.9.3`
+- Android package ID: `com.washdesk.carwash.v24` (unchanged)
+- CI checks: app validation passed; Google Reviews API/OAuth callback Deno checks passed; Android APK job passed; Windows EXE installer job passed; source and full-release packaging passed.
 
-- Repository: https://github.com/zaid404sec/zaid404sec
-- Candidate branch: `fix/google-review-admin-v24-2.9.3`
-- Pull request: https://github.com/zaid404sec/zaid404sec/pull/58
-- Baseline main release: 2.9.2, Android package ID `com.washdesk.carwash.v24`
-- Candidate Android package ID: unchanged, `com.washdesk.carwash.v24`
+The deliverables were downloaded from the successful main-branch run #233 and verified locally. APK, EXE, project source ZIP, complete handover ZIP and combined release ZIP are included in that run's artifact set.
 
-## Changes in this candidate
+## Changes shipped
 
-1. Adds a server-only `pac_google_review_admins` allowlist for the single permission `google_reviews_admin`.
-2. Google Review API permits the original workspace owner or a member with that specific allowlist permission.
-3. OAuth callback rechecks the initiating session's permission before completing the callback.
-4. Review Center displays whether this device has Google Reviews administration permission and its ordinary workspace role.
-5. The v24 member is not promoted to workspace owner. No billing, invoices, inventory, customer, payroll or general workspace administration permissions are added.
-6. Adds a Deno type-check job to release CI, updates the app version and artifact names to 2.9.3, and refreshes the offline shell cache.
+1. Added `pac_google_review_admins`, a server-only allowlist for the single permission `google_reviews_admin`.
+2. Google Review API sensitive actions now allow either the existing workspace owner or a member with that exact active permission.
+3. OAuth callback revalidates the initiating device's permission before it finishes the OAuth flow.
+4. Review Center status includes scoped permission information.
+5. The Android app remains on the existing v24 package ID; no new install identity was introduced.
+6. Added a Deno type-check step for the Google Review API and OAuth callback to CI.
+7. Updated version metadata and the offline cache validation for 2.9.3.
 
-## Production change gate
+## Live Supabase deployment verification
 
-The new migration is additive and server-only. At the time of this check it has **not** been applied to production, and the v24 allowlist grant has **not** been inserted. No production permissions or workspace owner identity have been changed by this candidate branch.
+The additive migration `20261118082000_google_review_admins` is applied to the existing project. The exact v24 session has one active `google_reviews_admin` permission.
 
-After the migration has been applied, the grant must be limited to the exact v24 device identity confirmed from live API logs and the existing Prime Auto Care workspace membership. Keep its membership role as `member`. Never copy a pairing code into the source or release archives.
+- v24's ordinary workspace role remains `member`.
+- The original Workspace Owner remains unchanged.
+- No permission was added for billing, invoices, inventory, customer management, purchases, payroll or general workspace administration.
+- The new permission table has RLS enabled, no authenticated policies and no grants to `anon` or `authenticated`; only `service_role` has table access.
+- `google-review-api` and `google-review-oauth-callback` are deployed and ACTIVE at version 2.
+- The other five existing communications/Google review functions remain ACTIVE.
 
-## Google integration status
+This fixes the WashDesk permission blocker for the existing v24 session. It does not itself complete Google OAuth or make Google API access available.
 
-Production Supabase reported all seven deployed Edge Functions as ACTIVE on 18 November 2026. However, a database check showed:
+## Google integration still awaiting external activation
 
-- OAuth credentials: 0
-- Synced Google reviews: 0
-- Pub/Sub events: 0
-- Review sync logs: 0
-- Enabled notification settings: 0
+The latest live database check showed:
 
-Therefore Google OAuth has not been completed, live review sync has not been demonstrated, and Pub/Sub alerts have not been verified. Google Basic API Access approval and the required OAuth, encryption, Gemini and Pub/Sub secrets are separate prerequisites. They must be configured securely in Google Cloud and Supabase; no secrets belong in the app, repository or ZIP.
+| Item | Current verified result |
+|---|---:|
+| Stored Google OAuth credentials | 0 |
+| Synced Google reviews | 0 |
+| Pub/Sub review events | 0 |
+| Review sync logs | 0 |
+| Enabled notification settings | 0 |
 
-## AI feature boundary
+Remaining prerequisites:
+- Google Business Profile API Basic Access approval must be confirmed in the Google Cloud project.
+- The Google OAuth Client ID/Secret and redirect URI, plus the 32-byte Base64 encryption key, must be configured as Supabase Edge Function secrets.
+- Connect the primary Business Profile owner through Google's official OAuth consent flow from WashDesk.
+- Configure `GEMINI_API_KEY` to enable Gemini review analysis and reply drafting.
+- Configure Pub/Sub topic, authenticated push subscription, OIDC identity and worker secrets before enabling instant alerts.
+- GitHub Pages run #69 built the site but the deploy step failed; the website's public availability and GBP website listing are not confirmed.
 
-The current application can request Gemini review analysis and reply drafts, and an authorised Google Reviews administrator can explicitly approve and publish a draft. This candidate does **not** make Gemini publish replies automatically in the background. The worker currently syncs review data; it does not perform the automatic public-reply policy.
+Do not put service keys, OAuth secrets, Gemini keys, pairing codes or access tokens in the APK, source ZIP, repository or chat.
 
-The requested AI thank-you video creator and automated Google Business Profile/local-SEO optimisation assistant are not included in this candidate. Do not describe these as shipped features.
+## AI behaviour boundary
 
-## Installer and data safety
+The shipped app can analyse a synced review and produce a Gemini reply draft; an authorised Google Reviews administrator must explicitly approve and publish it. The background review worker currently syncs review data; it does not automatically create and publish Gemini replies.
 
-The release workflow currently builds a debug Android APK with a runner-generated signing identity. A new APK using the same package ID may still fail to install as an update over an existing v24 build if its signing identity differs. Do not uninstall v23 or v24. Export a full JSON backup, confirm the app is paired to the same Prime Auto Care cloud workspace, and verify customer, invoice, inventory and payment records before switching daily operations.
+The AI thank-you video creator and automated Google Business Profile/local-SEO optimisation assistant are **not included** in 2.9.3. They must not be described as live features.
 
-A successful CI build is not a substitute for physical-phone acceptance tests: installation/signature compatibility, PDF viewing/sharing, notifications, offline/online cloud sync, and backup restore must be checked on the actual device.
+## Android signing and installation warning
 
-## Required completion sequence
+The GitHub Actions workflow produced a debug APK using the CI runner's generated signing key. The package ID remains v24, but this does not prove that the signing certificate matches the APK already installed on the owner's phone. Android can reject an APK update when the signing certificates differ.
 
-1. Pass the 2.9.3 pull-request checks.
-2. Merge the candidate and confirm the merged commit.
-3. Apply the additive permission migration to the existing Supabase project.
-4. Grant Google Reviews-only access to the exact v24 member session; leave its workspace role and original owner unchanged.
-5. Deploy the updated Google Review API and OAuth callback; verify the function versions.
-6. Retrieve artifacts only from the successful post-merge 2.9.3 run.
-7. Deliver the APK, Windows installer, app source ZIP, complete repository ZIP, combined release ZIP and this DOCX guide with verified hashes.
-8. Complete Google API approval/OAuth/Gemini/PubSub configuration and live acceptance tests.
+**Do not uninstall v23 or the existing v24 app.** The production permission update is server-side and already applies to the existing paired v24 session. Use that existing installation for the Google Reviews permission test first. Do not attempt to overwrite the working v24 until certificate continuity has been confirmed. A persistent signing key from the original v24 release is needed to guarantee an in-place APK update.
 
+## Artifact names and SHA-256
+
+The following SHA-256 values were calculated from the extracted files in the verified release package:
+
+| File | SHA-256 |
+|---|---|
+| `Prime-Auto-Care-2.9.3.apk` | `23514e3fd715b17ad3fe42ad5f464584e277af52d3d238d6ace310cf95b74841` |
+| `Prime-Auto-Care-Setup-2.9.3-x64.exe` | `8f94c0e67640b7a83fc1ba017498945ea0dc8fbaa8306095d1ee2d9ceee9f376` |
+| `WashDesk-Prime-Auto-Care-2.9.3-Project-Source.zip` | `721aebcd5610ed6a2763b966ae0beeef92f869720ece34a1b835c2c951f8436c` |
+| `WashDesk-Prime-Auto-Care-2.9.3-Complete-Handover.zip` | `5739b755c483a174f8bdda0d18695dbb8ad967c0983cac5c90a89133b3f01549` |
+| `WashDesk-Prime-Auto-Care-2.9.3-Full-Release-Package.zip` | `3396a52acddb4dab3e715120c63831119cd1e4cd8c9b39a900ad16794bde5af5` |
+
+GitHub Actions artifact IDs from run #233:
+- APK: `14412485729`
+- Windows installer: `14411937193`
+- Application source ZIP: `14411384233`
+- Complete project handover ZIP: `14412151974`
+- Combined full release package: `14412600584`
+
+## Manual phone acceptance tests still required
+
+CI verifies syntax, business regression tests, Deno types and the creation/integrity of release files. It does not prove installation over the current v24 package, WhatsApp handoff, notifications after reboot, offline/online sync or real backup restore. Keep the current app and a fresh JSON backup until those tests have passed.
