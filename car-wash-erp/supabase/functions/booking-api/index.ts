@@ -179,8 +179,14 @@ async function slotsFor(admin: any, settings: any, dateValue: unknown, serviceVa
   const close = minutes(String(settings.closing_time || '19:00'));
   const step = Number(settings.slot_minutes || 30);
   const capacity = Number(settings.slot_capacity || 1);
+  const timeParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: settings.timezone || 'Asia/Kolkata',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).format(new Date());
+  const currentMinute = minutes(timeParts);
   const available: string[] = [];
   for (let start = open; start + duration <= close; start += step) {
+    if (date === localToday && start <= currentMinute) continue;
     const overlaps = active.filter((row: any) => {
       const oldStart = minutes(String(row.start_time || ''));
       const oldEnd = oldStart + Number(row.duration_minutes || 30);
