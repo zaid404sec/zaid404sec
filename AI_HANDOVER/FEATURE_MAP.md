@@ -54,3 +54,27 @@ For a proposed feature such as appointment booking:
 8. Verify build artifacts and perform real-device tests for notifications, navigation, offline use and shared-device syncing where relevant.
 
 Booking examples are guidance only; do not implement them unless the user requests them.
+
+
+## AI Growth Studio and local visibility (2.10.0)
+
+| Area | Primary files / paths | Notes |
+|---|---|---|
+| Google Review Center and Growth Studio UI | car-wash-erp/index.html | Manual review composer, AI reply draft, free-model key management, keyword planner, daily post library, upload controls and owner-reviewed publish flow. |
+| Free AI request client | car-wash-erp/src/google-reviews.js | Sends authenticated actions to the Google Review API. Exposes aiGenerate, ensureDailyGrowthPosts, growth post/keyword reads/writes, photo upload and optional Google publishing. Never put server secrets here. |
+| Growth AI prompts and free provider path | car-wash-erp/supabase/functions/google-review-api/index.ts | Only OpenRouter free model route / :free IDs are allowed by ai-generate. The browser key is passed for a single request and is not stored server-side. Drafts are owner-reviewed. |
+| Shared daily draft guard | car-wash-erp/supabase/migrations/20261118143000_google_growth_daily_runs.sql | Unique workspace/date row prevents duplicate daily generation from paired devices. RLS and grants restrict access to service_role. |
+| Growth post/keyword data | car-wash-erp/supabase/migrations/20261118110000_google_ai_growth_studio.sql | Workspace-scoped posts and keyword suggestions; RLS enabled; no direct authenticated-table read/write grants. |
+| Business photo storage | Supabase bucket pac-google-growth-media | Public read for Google media fetch; service-side upload only; JPG/PNG, 5 MB max. Browser file checks require 250 × 250 px minimum. |
+| Branded poster output | car-wash-erp/index.html | Creates a 1080 × 1350 gold-glass text overlay using the owner-uploaded photo. It must not invent a wash outcome, customer or fake vehicle image. |
+| Keyword evidence | car-wash-erp/index.html and google-review-api/index.ts | AI relevance is an editorial score, not measured search volume. Each suggestion links to Google Trends for owner comparison. Do not add invented volume values. |
+| Website and WhatsApp enquiry | car-wash-erp/website/index.html | Local business content/structured data, canonical/social metadata, location, hours, Google link and a WhatsApp enquiry form. It does not confirm bookings or accept deposits. |
+| Website publishing | .github/workflows/pages.yml | GitHub Pages must be set to Source = GitHub Actions in repository Settings → Pages. Confirm a successful deploy job and open the public website URL before calling it live. |
+
+## 2.10.0 operational boundaries
+
+- Daily post drafts are attempted when an authorised device opens Google Review Center with a free OpenRouter key saved locally. This is not a background worker while the app is closed.
+- The free key is local to each device and must not be added to shared cloud data, source files, backup files, screenshots or handover ZIPs.
+- Google review import, direct API replies, Google post/photo publishing and Pub/Sub notifications remain gated by Google Basic API Access and OAuth configuration.
+- Until those Google prerequisites pass, publish replies and posts manually in Google after reviewing copied drafts.
+- Future online booking and advance payment must use an additive booking model, slot-capacity rules, refund/cancellation policy and a configured payment-provider merchant account with verified webhooks. The 2.10.0 website is enquiry-only.
