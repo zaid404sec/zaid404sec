@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.9.4') throw new Error('The package version must be 2.9.4.');
+if (packageJson.version !== '2.9.5') throw new Error('The package version must be 2.9.5.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.9.4 debug APK must use v24 to install beside the existing v21, v22 and v23 apps.');
+  throw new Error('The 2.9.5 debug APK must use v24 to install beside the existing v21, v22 and v23 apps.');
 }
-console.log('PASS: Android 2.9.4 uses v24 for a side-by-side install that preserves v23 data');
+console.log('PASS: Android 2.9.5 uses v24 for a side-by-side install that preserves v23 data');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -305,7 +305,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.9.4 side-by-side app ID v24 was not set.');
+if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.9.5 side-by-side app ID v24 was not set.');
 console.log('PASS: app manifest uses the expected v24 Android package ID');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
@@ -1054,6 +1054,26 @@ if (!googleReviewPage.includes('API sync') || !googleReviewPage.includes('option
   throw new Error('Google API automation must remain an optional backend capability while manual replies work without it.');
 }
 console.log('PASS: manual replies are the default; OAuth, scheduled sync, Gemini and instant alerts remain optional API capabilities');
+
+
+const growthMigration = await readFile(new URL('../supabase/migrations/20261118110000_google_ai_growth_studio.sql', import.meta.url), 'utf8');
+const growthClient = await readFile(new URL('../src/google-reviews.js', import.meta.url), 'utf8');
+const growthApi = await readFile(new URL('../supabase/functions/google-review-api/index.ts', import.meta.url), 'utf8');
+const website = await readFile(new URL('../website/index.html', import.meta.url), 'utf8');
+for (const token of ['pac_google_growth_posts','pac_google_growth_keywords','enable row level security','revoke all on public.pac_google_growth_posts from anon, authenticated','pac-google-growth-media','5242880','image/jpeg','image/png']) {
+  if (!growthMigration.includes(token)) throw new Error('Google AI Growth migration is missing a security or storage safeguard: '+token);
+}
+for (const token of ['google-ai-api-key','AI GROWTH STUDIO','Generate today’s 2 posts','AI relevance estimates','data-growth-photo','openrouter.ai/keys','googleGrowthMarkup']) {
+  if (!html.includes(token)) throw new Error('Google AI Growth Studio UI is missing: '+token);
+}
+for (const token of ['ai-generate','list-growth-posts','save-growth-post','save-growth-keywords','upload-growth-photo','publish-growth-post','openrouter/free','Paid model IDs are blocked','Photo must be between 10 KB and 5 MB','250 × 250 pixels','pac_google_growth_posts']) {
+  if (!growthApi.includes(token)) throw new Error('Google AI Growth backend is missing: '+token);
+}
+if (growthClient.includes('localStorage') || growthClient.includes('GOOGLE_OAUTH_CLIENT_SECRET')) throw new Error('The browser API client must not store the AI key or contain server-side secrets.');
+for (const token of ['canonical','og:title','twitter:card','AutoWash','openingHoursSpecification','Prime Auto Care']) {
+  if (!website.includes(token)) throw new Error('Public website SEO markup is missing: '+token);
+}
+console.log('PASS: AI Growth Studio free-model-only routes, server-side photo validation, private workspace records and website local SEO metadata');
 
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
