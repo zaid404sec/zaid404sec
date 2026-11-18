@@ -103,6 +103,7 @@ declare
   v_open_min integer;
   v_close_min integer;
   v_start_min integer;
+  v_now_min integer;
   v_overlap_count integer;
   v_recent_count integer;
   v_expected_duration integer;
@@ -150,6 +151,14 @@ begin
      or v_start_min + p_duration_minutes > v_close_min
      or mod(v_start_min - v_open_min, v_settings.slot_minutes) <> 0 then
     raise exception 'booking_time_out_of_range';
+  end if;
+
+  if p_booking_date = v_local_today then
+    v_now_min := extract(hour from (now() at time zone v_settings.timezone)::time)::integer * 60
+               + extract(minute from (now() at time zone v_settings.timezone)::time)::integer;
+    if v_start_min <= v_now_min then
+      raise exception 'booking_time_in_past';
+    end if;
   end if;
 
   perform pg_advisory_xact_lock(
