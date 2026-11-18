@@ -1,3 +1,12 @@
+## Version 2.10.1 — Supabase SDK supply-chain pin
+
+- Patch release for 2.10.0 with no new business-table or data migration.
+- Pins the application SDK to the exact published @supabase/supabase-js 2.119.0 version rather than a floating caret range. This avoids resolving the unavailable @supabase/storage-js 2.119.1 tarball that caused the 2.10.0 post-merge Android and Windows CI jobs to fail.
+- Pins both Google Review Edge Function imports to npm:@supabase/supabase-js@2.49.1, the version successfully bundled and deployed to the production Google Review API. The currently deployed API already runs this version.
+- Refreshes the offline shell cache to v32, bumps app version to 2.10.1, and generates Android versionCode 21001.
+- All 2.10.0 AI Growth Studio, daily shared draft, real-photo poster, manual Google publishing, warm-glass UI, website enquiry and privacy boundaries are retained.
+- No production customer, invoice, inventory, staff, payment, cloud-sync or Workspace Owner data is modified by this release patch.
+
 ## Version 2.10.0 — AI Growth Studio and warm liquid-glass UI
 
 - Builds on 2.9.5 without replacing existing ERP modules, the shared cloud workspace or business records.
