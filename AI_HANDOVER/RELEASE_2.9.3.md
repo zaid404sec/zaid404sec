@@ -77,7 +77,7 @@ The following SHA-256 values were calculated from the extracted files in the ver
 
 | File | SHA-256 |
 |---|---|
-| `Prime-Auto-Care-2.9.3.apk` | `23514e3fd715b17ad3fe42ad5f464584e277af52d3d238d6ace310cf95b74841` |
+| `Prime-Auto-Care-2.9.3.apk` | `23514e3fd715b17ad3fe429d47f1578b9a0e01fa29b78b91d1d110d1e9486b73` |
 | `Prime-Auto-Care-Setup-2.9.3-x64.exe` | `8f94c0e67640b7a83fc1ba017498945ea0dc8fbaa8306095d1ee2d9ceee9f376` |
 | `WashDesk-Prime-Auto-Care-2.9.3-Project-Source.zip` | `721aebcd5610ed6a2763b966ae0beeef92f869720ece34a1b835c2c951f8436c` |
 | `WashDesk-Prime-Auto-Care-2.9.3-Complete-Handover.zip` | `5739b755c483a174f8bdda0d18695dbb8ad967c0983cac5c90a89133b3f01549` |
