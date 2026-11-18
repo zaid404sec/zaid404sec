@@ -42,7 +42,7 @@ if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes('PENDING until Prime Auto Care confirms')) {
   throw new Error('Customer booking page is missing its public API flow or pending-confirmation safeguard.');
 }
-const bookingInlineScripts = [...bookingWebsite.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+const bookingInlineScripts = [...bookingWebsite.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
 if (!bookingInlineScripts.length) throw new Error('Customer booking page has no inline application script.');
 for (const match of bookingInlineScripts) {
   await transform(match[1], { loader: 'js', target: 'es2020', logLevel: 'silent' });
