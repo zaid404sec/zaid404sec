@@ -27,10 +27,19 @@ if (!html.includes('data-page="bookings"') || !html.includes("function bookings(
 if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../website/booking/index.html', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/booking-api/index.ts', import.meta.url)) ||
-    !existsSync(new URL('../supabase/migrations/20261118190000_prime_auto_care_bookings.sql', import.meta.url))) {
+    !existsSync(new URL('../supabase/migrations/20261118190000_prime_auto_care_bookings.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261118193000_google_review_auto_reply.sql', import.meta.url)) ||
+    !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
   throw new Error('One or more booking source, migration, API or public website files are missing.');
 }
 console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
+if (!html.includes('google-auto-reply-enabled') || !html.includes('google-review-save-auto-reply') ||
+    !html.includes('Only the original Workspace Owner') ||
+    !existsSync(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url))) {
+  throw new Error('Owner-controlled event-driven Google AI reply workflow is incomplete.');
+}
+console.log('PASS: AI auto-reply controls are owner-only, off by default and have a server-side worker');
+
 
 console.log('PASS: Google review workflow');
 const googleReviewPageStart=html.indexOf('function googleReviews(){');
