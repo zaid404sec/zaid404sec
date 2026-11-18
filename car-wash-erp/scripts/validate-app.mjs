@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.9.1') throw new Error('The package version must be 2.9.1.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v23') {
-  throw new Error('The 2.9.1 debug APK must use v23 to install beside the existing v21 and v22 apps.');
+if (packageJson.version !== '2.9.2') throw new Error('The package version must be 2.9.2.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
+  throw new Error('The 2.9.2 debug APK must use v24 to install beside the existing v21, v22 and v23 apps.');
 }
-console.log('PASS: Android 2.9.1 uses v23 for a side-by-side install that keeps v21 data untouched');
+console.log('PASS: Android 2.9.2 uses v24 for a side-by-side install that preserves v23 data');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -77,6 +77,14 @@ if (!html.includes("Opening announcement prepared in the offer message box.") ||
   throw new Error('Daily 7:50 AM IST reminder controls, status and test action are incomplete.');
 }
 console.log('PASS: offers share to the existing WhatsApp group through the Android share menu');
+if (!html.includes('messageRecipients:[]') || !html.includes("'payments','messageRecipients'].forEach(k=>") || !html.includes("'payments','messageRecipients'];collections.forEach(key=>") || !html.includes('function normalizeMessageRecipientPhone(') || !html.includes('function messageGroupManagerHtml(') || !html.includes('function openMessageRecipientForm(') || !html.includes('function prepareRecipientGroupMessage(') || !html.includes('function openMessageRecipientWhatsApp(')) throw new Error('The Number & notification group manager must persist contacts and include them in cloud merge.');
+for (const group of ['attendance','expenses','staff','operations','sales','inventory','offers']) if (!html.includes("key:'"+group+"'")) throw new Error('Missing notification group: '+group);
+if (!html.includes('data-action="add-message-recipient"') || !html.includes('data-edit-message-recipient=') || !html.includes('data-delete-message-recipient=') || !html.includes('data-message-recipient-whatsapp=') || !html.includes("markRecordDeleted('messageRecipients',recipient.id)")) throw new Error('Recipient add/edit/remove actions and deletion tombstones are incomplete.');
+if (!html.includes('staffAttendanceForDate(date)') || !html.includes("e.category!=='Staff Advance'") || !html.includes("e.category!=='Salary'") || !html.includes("e.expenseType==='personal'")) throw new Error('Attendance and expense message templates must be date-scoped and exclude personal expenses and salary.');
+const cloudSetup = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
+if (!cloudSetup.includes("'payments', 'messageRecipients'")) throw new Error('Cloud setup SQL is missing message-recipient merge support.');
+console.log('PASS: notification contact groups and cloud-sync merge');
+console.log('PASS: WhatsApp remains manual and one-to-one; reports are date-scoped');
 console.log('PASS: group invite link is stored and new customers can be invited manually without silent auto-add');
 console.log('PASS: invoice saves a PDF then opens the direct customer WhatsApp chat for manual attachment/send');
 console.log('PASS: daily reminder defaults to 7:50 AM IST and exposes next-run and test controls');
@@ -271,8 +279,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v23') throw new Error('Android 2.9.1 side-by-side app ID v23 was not set.');
-console.log('PASS: app manifest uses the expected v23 Android package ID');
+if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.9.2 side-by-side app ID v24 was not set.');
+console.log('PASS: app manifest uses the expected v24 Android package ID');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -695,8 +703,8 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v28')) {
-  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v28 cache version.');
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v29')) {
+  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v29 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
@@ -715,7 +723,7 @@ console.log('PASS: invoice PDFs and full backups use the Prime Auto Care Downloa
 const sql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
 if (!html.includes('function reconcileStockLedger(data)') ||
     !html.includes('function recordStockMovement(productId,delta,reason,sourceId,movementId)') ||
-    !html.includes("collections=['customers','vehicles','services','invoices','products','stockMovements','purchases','expenses','staff','staffAdvances','attendance','payments']") ||
+    !html.includes("collections=['customers','vehicles','services','invoices','products','stockMovements','purchases','expenses','staff','staffAdvances','attendance','payments','messageRecipients']") ||
     !html.includes("recordStockMovement(productId,-qty,'invoice',invoiceId") ||
     !html.includes("recordStockMovement(productId,qty,'invoice-cancellation',i.id") ||
     !html.includes("recordStockMovement(p.id,q,'purchase',purchaseId") ||

@@ -1,0 +1,206 @@
+# Prime Auto Care / WashDesk — Complete Technical Handover
+
+Verified on 18 November 2026. This file is the continuity guide for future updates. Always re-check GitHub main, Supabase and external Google settings before making changes.
+
+## 1. Project identity
+
+- GitHub repository: https://github.com/zaid404sec/zaid404sec
+- Default branch: main
+- Application folder: car-wash-erp/
+- Android app name: Prime Auto Care
+- Current production baseline at the time of this handover: 2.9.1, package ID com.washdesk.carwash.v23, main commit 2cd193e131d19d170d73d5736c6508c296cb2f08.
+- 2.9.2 feature branch: feature/prime-auto-care-message-groups-2.9.2
+- Feature PR: https://github.com/zaid404sec/zaid404sec/pull/56
+- 2.9.2 changes are a release candidate until PR #56 is merged and a new main-branch build succeeds.
+- 2.9.2 Android package ID is com.washdesk.carwash.v24. It intentionally installs beside v23; it does not inherit v23-only local app storage.
+
+## 2. Application architecture
+
+The application is a mobile-first web application packaged as an Android app with Capacitor and a Windows desktop application with Electron.
+
+| Responsibility | Source |
+| --- | --- |
+| Main UI, billing, dashboard and business rules | car-wash-erp/index.html |
+| Project scripts and dependency versions | car-wash-erp/package.json |
+| Android app ID and app name | car-wash-erp/capacitor.config.json |
+| Android build and Windows installer CI | .github/workflows/build-installers.yml |
+| GitHub Pages website deployment | .github/workflows/pages.yml |
+| Supabase client, auth, pairing, sync and Realtime | car-wash-erp/src/cloud-sync.js |
+| Shared workspace initial SQL | car-wash-erp/cloud-sync-setup.sql |
+| Database migrations | car-wash-erp/supabase/migrations/ |
+| Google Review Edge Functions | car-wash-erp/supabase/functions/google-review-*/ |
+| Communications Edge Functions | car-wash-erp/supabase/functions/communication-*/ |
+| WhatsApp / SMS / external app launch | car-wash-erp/src/native-links.js |
+| Provider API queue client | car-wash-erp/src/communications.js |
+| Native invoice PDF and file handling | car-wash-erp/src/invoice-native.js |
+| Regression validator | car-wash-erp/scripts/validate-app.mjs |
+| Offline service-worker shell | car-wash-erp/sw.js |
+| Complete feature responsibility map | AI_HANDOVER/FEATURE_MAP.md |
+| Mandatory data-safety rules | AI_HANDOVER/SAFE_CHANGE_RULES.md |
+
+Do not replace the large index.html with a new app template. Read SAFE_CHANGE_RULES.md before editing any code or SQL.
+
+## 3. Where the Android APK connects
+
+The Android package includes a bundled copy of the application and its source modules. Its shared-cloud client is compiled from car-wash-erp/src/cloud-sync.js.
+
+- Supabase project URL: https://jkjudmkqaebrgllemris.supabase.co
+- Supabase project reference: jkjudmkqaebrgllemris
+- Supabase region: ap-northeast-2 (Seoul)
+- The app contains the Supabase project URL and a publishable client key. A publishable key is intended for client use and is not a service-role secret.
+- A device creates an authenticated anonymous Supabase session, then joins the Prime Auto Care workspace with the private pairing code produced by the one-time cloud setup.
+- Business records are persisted locally first and synchronized through the washdesk_merge_sync RPC into public.washdesk_sync. Workspace membership and invoice counters are stored in their own tables.
+- Realtime is the main update channel; reconciliation is used as a recovery path.
+- Google OAuth refresh tokens and Gemini secrets are not embedded in the APK. Google Review calls are made through Supabase Edge Functions.
+
+Before switching from v23 to v24, keep the older app installed. Pair v24 with the existing workspace or restore a verified JSON backup. Check customers, vehicles, invoices, payments, staff, attendance, advances, expenses, stock and settings before retiring v23.
+
+## 4. Supabase production state verified on 18 November 2026
+
+Project jkjudmkqaebrgllemris was ACTIVE_HEALTHY on PostgreSQL 17. The following additive database migrations were applied and verified:
+
+1. 20261112000100_communications_automation
+2. 20261117000100_google_reviews
+3. 20261118000100_google_review_pubsub
+
+The existing WashDesk core tables remain present, and the newly created pac_communication_* and pac_google_* tables have RLS enabled. The Google review settings, OAuth state/credential, review, AI analysis, reply-draft, sync-log and Pub/Sub event tables were verified in the project after migration.
+
+Important: the Supabase Edge Function list was empty at the same verification point. Database migrations are deployed; application Edge Functions and their secrets are not yet deployed/configured. Do not describe the Google Review system as live until the functions are deployed, secrets are set, owner OAuth succeeds, API access is approved, and a real review sync / push event has been verified.
+
+## 5. Google Review AI architecture
+
+The source includes these functions:
+
+- google-review-api: authenticates the paired workspace owner/member, calls Google Business Profile APIs, manages review settings, sync actions, Gemini analysis and reply-draft actions.
+- google-review-oauth-callback: receives Google's OAuth redirect, validates one-time state/PKCE, encrypts tokens and stores the owner's verified account.
+- google-review-worker: refreshes reviews and records sync results using a private worker secret.
+- google-review-pubsub-webhook: verifies a Google Pub/Sub OIDC push identity, deduplicates events and calls the review worker.
+
+The AI design generates review analysis, management insights and response drafts. A human owner/manager must approve a reply before it is published. Never change this into automatic public replies without an explicit product decision and a clear approval flow.
+
+### Required Supabase Edge Function secrets
+
+Set these only in Supabase Dashboard → Edge Functions → Secrets. Do not put values in GitHub source, source ZIPs, APKs, EXEs, screenshots or chat.
+
+| Secret | Purpose |
+| --- | --- |
+| GOOGLE_OAUTH_CLIENT_ID | Google OAuth web application client ID |
+| GOOGLE_OAUTH_CLIENT_SECRET | Google OAuth web application secret |
+| GOOGLE_OAUTH_REDIRECT_URI | Exact OAuth callback URL below |
+| GOOGLE_TOKEN_ENCRYPTION_KEY | Base64 encoding of exactly 32 random bytes for AES-256-GCM |
+| GEMINI_API_KEY | Google AI Studio / Gemini API key |
+| GEMINI_MODEL | Optional model override; source has a default |
+| GOOGLE_REVIEW_WORKER_SECRET | Long random secret shared by worker caller and worker |
+| GOOGLE_PUBSUB_TOPIC_NAME | Full Google Cloud Pub/Sub topic resource name |
+| GOOGLE_PUBSUB_AUDIENCE | Exact public Pub/Sub webhook URL |
+| GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT | Email of the service account used for authenticated push |
+
+OAuth callback URL:
+https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-oauth-callback
+
+Pub/Sub push URL:
+https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-pubsub-webhook
+
+Worker URL:
+https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-worker
+
+The runtime also needs its built-in Supabase URL and privileged server key. Confirm these are present as Supabase-provided function environment variables; never copy a service-role key into the client app.
+
+### GitHub Actions deployment secrets
+
+The existing communications deployment workflow expects these repository Actions secrets:
+- SUPABASE_ACCESS_TOKEN
+- SUPABASE_PROJECT_REF
+- SUPABASE_DB_PASSWORD
+
+The project reference value is jkjudmkqaebrgllemris. The access token and database password must be created/retrieved by the owner and stored only in GitHub Actions Secrets. Do not send them to an AI chat or add them to the ZIP.
+
+### Google Cloud and Pub/Sub setup
+
+1. Create or select the Google Cloud project used for Business Profile API access.
+2. Request Basic API Access and wait for Google's approval.
+3. Enable the required Business Profile APIs after approval.
+4. Create an OAuth 2.0 Web application client. Add the exact callback URL above as an authorised redirect URI.
+5. Create Pub/Sub topic projects/GOOGLE_CLOUD_PROJECT_ID/topics/prime-auto-care-reviews.
+6. Grant mybusiness-api-pubsub@system.gserviceaccount.com permission to publish to that topic.
+7. Create an authenticated push subscription to the webhook URL. The Pub/Sub push service agent needs roles/iam.serviceAccountTokenCreator on the selected push service account.
+8. Set the matching Pub/Sub audience and service-account email as Edge Function secrets.
+9. Deploy the four Google Review Edge Functions from the corresponding folders. The API and OAuth callback authenticate their own requests; the worker uses GOOGLE_REVIEW_WORKER_SECRET; the webhook validates Google OIDC identity. Keep public function endpoints protected by their in-function authentication.
+10. Connect the Google account from Review Center using the Business Profile owner account, then run manual Sync Reviews and verify data and sync logs.
+11. Register Pub/Sub notifications only after Google API access, location mapping and OAuth are confirmed.
+12. Set the optional four-hour fallback schedule only after worker secrets are configured. Use car-wash-erp/google-reviews-cron-setup.sql once, and create the two Vault secrets shown in that file.
+
+## 6. Google Business Profile prerequisites and website
+
+Business Profile ID recorded for the app: 13506481990772076097.
+Recorded owner email: bmumz3909@gmail.com. Confirm this account is actually an Owner or Manager before OAuth and API application.
+
+The expected website URL is:
+https://zaid404sec.github.io/zaid404sec/website/
+
+As of this handover, the Pages deployment workflow's build job succeeded but deploy job failed repeatedly. The public website URL has not been verified as live. In GitHub repository Settings → Pages, choose GitHub Actions as the build/deployment source, then rerun the Pages workflow. Do not claim deployment succeeded until the deploy job succeeds and the URL opens publicly.
+
+After the website is publicly available, add its full HTTPS URL in the Google Business Profile editor under Edit profile → Contact → Website, and save. Verify the URL is visible on the public listing before requesting API access.
+
+Google's official Business Profile API prerequisites state that the applicant must manage a verified Business Profile active for more than 60 days and have the business website listed on that profile. The API access request should be submitted using the Google Cloud project number and an email listed as an owner/manager. Google indicates API quotas of 0 QPM when not approved and 300 QPM when approved. See:
+https://developers.google.com/my-business/content/prereqs
+https://developers.google.com/my-business/content/basic-setup
+https://support.google.com/business/answer/3039617
+
+Google approval is an external decision. Code deployment cannot guarantee approval.
+
+## 7. GitHub SSH access
+
+Repository SSH remote:
+git@github.com:zaid404sec/zaid404sec.git
+
+HTTPS clone remote:
+https://github.com/zaid404sec/zaid404sec.git
+
+No SSH connection is used by the WashDesk Android app or by its Supabase database. SSH is only an optional way to access the GitHub source repository from a developer computer. Supabase API traffic uses HTTPS.
+
+Generate a fresh Ed25519 key on the computer that will use GitHub:
+ssh-keygen -t ed25519 -C "your GitHub account email"
+
+Add only the public-key file (id_ed25519.pub) to GitHub → Settings → SSH and GPG keys → New SSH key. Test with:
+ssh -T git@github.com
+
+Then clone using the SSH remote above. The private key (id_ed25519) stays on that computer and must never be committed, uploaded, pasted into chat or included in this ZIP. This handover intentionally contains no private SSH key, password, API token, OAuth secret, database password or workspace pairing code. If the developer machine is replaced, create a new key on that machine and register its public key; do not copy an old private key into a shared archive.
+
+## 8. Build, tests and release process
+
+GitHub Actions workflow:
+https://github.com/zaid404sec/zaid404sec/actions
+
+Installer workflow:
+.github/workflows/build-installers.yml
+
+Website workflow:
+.github/workflows/pages.yml
+
+The installer workflow validates the app, builds the Android debug APK, builds a Windows NSIS installer, splits the large Windows installer into two auxiliary download parts, and packages source ZIP artifacts.
+
+Required release checks:
+- PR validation must pass.
+- Merge the PR only after all checks pass.
+- A new main-branch installer run must succeed after merge.
+- Download the real APK and EXE artifacts from the main-branch run.
+- Verify the APK opens as a valid APK/ZIP and run SHA-256 checks.
+- Deliver the app source ZIP and complete repository handover ZIP.
+- Update PROJECT_STATE.md and add a dated release note with the merge SHA, run URL, artifact IDs, sizes and hashes.
+- Separate CI success from manual phone acceptance tests.
+
+For app changes, preserve the existing live business data. Prefer additive, backwards-compatible migrations; never reset, drop, truncate or reseed production business tables.
+
+## 9. Manual verification still required
+
+- GitHub Pages website deploy and public URL.
+- Add public website URL to the verified Google Business Profile.
+- Google Basic API Access approval and quota check.
+- Edge Function deployment and secret configuration.
+- Owner OAuth connection to the actual Business Profile.
+- Google review manual sync and a live Pub/Sub notification test.
+- Actual handset check of v24 installation, shared cloud pairing, invoice PDFs, WhatsApp handoff, notifications and offline/online sync.
+- Confirm Windows installer opens and existing user data remains present.
+
+The source repository is the source of truth. This ZIP is a safe source and configuration handover, not a backup of production database contents or secrets.

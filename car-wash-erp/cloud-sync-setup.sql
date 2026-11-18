@@ -420,7 +420,7 @@ begin
 
   foreach v_collection in array array[
     'customers', 'vehicles', 'services', 'invoices', 'products', 'stockMovements',
-    'purchases', 'expenses', 'staff', 'staffAdvances', 'attendance', 'payments'
+    'purchases', 'expenses', 'staff', 'staffAdvances', 'attendance', 'payments', 'messageRecipients'
   ] loop
     execute format(
       'select public.washdesk_merge_records($1->%L, $2->%L, $3)',
