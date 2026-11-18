@@ -1,144 +1,108 @@
 # Project state — Prime Auto Care / WashDesk
 
-_Last repository verification: 16 November 2026_
+_Last verified: 18 November 2026_
 
-## Source of truth
+## Current source of truth
 
 | Item | Current verified value |
 |---|---|
 | GitHub repository | https://github.com/zaid404sec/zaid404sec |
 | Default branch | `main` |
-| Application source directory | `car-wash-erp/` |
-| Android app name | Prime Auto Care |
-| App version | `2.8.4` |
-| Android application ID | `com.washdesk.carwash.v21` |
+| Current main commit | `a8a4fb14f4219cd9fd9f8f1976ff8064c5ce134a` |
+| Application folder | `car-wash-erp/` |
+| App name | Prime Auto Care |
+| App version | **2.9.2** |
+| Android application ID | `com.washdesk.carwash.v24` |
 | Capacitor | 8.x |
-| Node version in CI | 22 |
-| Python version in CI | 3.12 |
-| Android Java version in CI | 21 |
-| App release source commit | `b5c9954e71aef18cf9195ce4d0a47fbe4b23e834` |
-| Handover update PR #44 commit | `23b4e5cf8a42cc8483b4a4068ef45e486677ae9f` |
-| Handover correction PR #45 commit | `3d5f1a088a3e0d189ac7185191118baf11d8cbd5` |
-| Release PR | [#47 — merged](https://github.com/zaid404sec/zaid404sec/pull/47) |
-| Release workflow | [Run #188 — Android + Windows succeeded](https://github.com/zaid404sec/zaid404sec/actions/runs/43888779236) |
+| Build environment | Node 22, Python 3.12, Java 21 |
+| Feature PR | [#56 — merged](https://github.com/zaid404sec/zaid404sec/pull/56) |
+| Main release build | [Run #220 — Android, Windows and package jobs succeeded](https://github.com/zaid404sec/zaid404sec/actions/runs/44240836622) |
+| Website deployment | [Pages run #67 — build passed, deploy failed](https://github.com/zaid404sec/zaid404sec/actions/runs/44240836667) |
+| Supabase project | `jkjudmkqaebrgllemris` |
+| Supabase project URL | https://jkjudmkqaebrgllemris.supabase.co |
 
-Always inspect live `main` before changing code; this file is a checkpoint, not a replacement for source inspection. The application code is released at `b5c9954`. PRs #44 and #45 were earlier handover-documentation updates; PR #47 contains the 2.8.4 app release.
+The 2.9.2 Android APK uses a new package ID v24 so it installs beside v23. It does not inherit v23-only local app storage. Keep v23 installed until v24 is paired with the same workspace or restored from a verified JSON backup and all records are checked.
 
-## Product summary
+## Version 2.9.2 release summary
 
-Prime Auto Care / WashDesk is a mobile-first car-wash business manager. The source is a web app packaged for Android with Capacitor, with a Windows desktop build through Electron and a PWA path. It stores real business data, including customers, vehicles, service catalogue, invoices, payments, stock, purchases, expenses, staff, attendance, salary settlements, advances and reports.
+PR #56 added the Number & notification group manager under Offers & WhatsApp.
 
-## Current feature baseline (2.8.4)
+- Add, edit and remove named Indian mobile contacts.
+- Validate ten-digit Indian mobile numbers and +91-prefixed numbers; prevent duplicate numbers.
+- Assign one or more groups: Attendance, Expenses, Staff & payroll, Operations, Sales & bills, Inventory and Offers.
+- "All contacts" includes every saved recipient.
+- Prepare date-scoped attendance and business-expense messages. Personal/household expenses, salaries and staff advances are excluded from the business-expense summary.
+- WhatsApp is manual and one-to-one. The owner reviews and presses Send; there is no silent WhatsApp broadcast or automatic group addition.
+- Contact records are persisted in the app's existing database and synchronize through the WashDesk cloud merge path.
 
-- Customer and vehicle register, vehicle history, duplicate checks and vehicle classification.
-- Service catalogue, private/taxi/commercial/SUV pricing and multi-line invoices.
-- Financial-year invoice numbering, discounts, configured GST, partial payments, due balances, A4 PDF bills and Android save/share / WhatsApp handoff.
-- Selectable invoice PDF palettes: original gold/black, Navy, Forest Green and Burgundy.
-- Inventory, stock movement ledger, low-stock alerts, purchases, weighted-average costs and optional per-service consumable recipes.
-- Staff directory, individual Present/Absent attendance, optional daily hours, shifts, accrued salary, salary payments and advances.
-- Individual employee PDF and Excel statements for a chosen date range. Each export identifies the selected employee and date range in its dialog, summary, filename and confirmation.
-- Monthly payroll Net Payable subtracts the full outstanding advance liability. If advances exceed earned salary, it displays a negative recovery balance in red. A separate staff recovery total is shown. Actual salary-settlement adjustments remain capped at the salary available.
-- Date-wise business report with separate A4 landscape PDF and multi-sheet Excel workbook exports, both using the same selected-date dataset: daily summary, sales register, collections, purchases, business expenses, personal/household expenses and staff advances.
-- Monthly Excel business workbook remains available. Dashboard sales trend is now a selectable ISO weekly chart (Monday–Sunday) with seven daily bars, invoice counts and rupee totals.
-- Dashboard Recent Invoices uses responsive tap-to-open invoice cards with customer, vehicle, status, amount and due balance.
-- Business and personal/household expense tracking.
-- JSON backup/restore, invoice CSV export, optional shared cloud data via Supabase and offline app-shell support.
-- Daily local reminder defaults to 7:50 AM Asia/Kolkata, with permission handling, status/next-time display and test-notification action.
+The production Supabase migration `20261118050000_add_message_recipients_sync_merge` is applied. It extends the existing `washdesk_merge_sync(jsonb)` collection list with `messageRecipients`; it does not reset the database or rewrite old business records.
 
-For exact behavior, limitations and integration details, inspect the live source and `car-wash-erp/README.md`.
+## Product capabilities
 
-## Key 2.8.4 changes from PR #47
+- Customers, vehicles, service catalogue, price lists and visit history.
+- Multi-line invoices, financial-year numbering, discounts, configured GST, partial payments, due balances, A4 PDFs and WhatsApp handoff.
+- Inventory, stock movements, purchases, low-stock notices and consumable recipes.
+- Staff directory, individual attendance, shifts/hours, salaries, advances and payroll reports.
+- Daily/monthly reporting, CSV/Excel/PDF exports, dashboard analytics, backups and restore.
+- Local reminder notifications, offline app shell, shared Supabase sync and WhatsApp offers.
+- Google Review Center UI, AI analysis/copy generation, reply drafts and notification workflow source code. Live Google API integration is not yet operational; see the deployment state below.
 
-- Added selected-date business report export to a professional A4 landscape PDF and a seven-sheet Excel workbook. Both are generated from the same date-filtered report model.
-- PDF and Excel contain daily summary, sales register, payments received, purchases, business expenses, personal/household expenses and staff advances.
-- Replaced the dashboard Monthly Sales Trend with a selectable ISO weekly sales trend, Monday through Sunday, with daily amounts and invoice counts.
-- Reworked Recent Invoices into responsive, touch-friendly invoice cards that open the selected invoice.
-- Updated the service-worker cache to v25.
-- Bumped app version to 2.8.4 and Android package ID to v21 for a separate debug install. Keep v20 installed until v21 cloud sync or backup restoration is verified.
+## Production Supabase database state
 
-## Key 2.8.3 changes from PR #43
+The existing project is ACTIVE_HEALTHY on PostgreSQL 17. The following additive migrations were successfully applied:
 
-- Fixed the payroll calculation so `netPayable = balanceBeforeAdvances - openAdvances`; the displayed balance uses all outstanding advances instead of the salary-capped advance adjustment.
-- Kept `advanceDeduction` capped at the remaining salary amount. The salary-settlement form therefore cannot consume more salary than is available.
-- Added a visible red **Recovery due** label for negative employee Net Payable and a separate **Staff recovery due** summary card.
-- Changed the salary-payable card to sum only positive salary liability, so negative employee balances do not offset payroll owed to other staff.
-- Made individual statement identity explicit: employee name, role and selected range appear in the statement summary; the export dialog/buttons and success confirmation name the employee.
-- Added a regression case: ₹2,500 in open advances against ₹1,000 earned salary must display **−₹1,500**, while salary adjustment remains capped at ₹1,000.
-- Updated the service worker cache to v24.
-- Bumped app version to 2.8.3 and Android package ID to v20 for the separate debug install described below.
+1. `20261112000100_communications_automation`
+2. `20261117000100_google_reviews`
+3. `20261118000100_google_review_pubsub`
+4. `20261118050000_add_message_recipients_sync_merge`
 
-## Latest verified 2.8.4 build (PR validation build)
+Verified after deployment:
+- Existing `washdesk_sync` snapshot row still present.
+- Existing Prime Auto Care workspace still present.
+- 24 existing workspace-member records still present.
+- New `pac_communication_*` and `pac_google_*` tables exist with RLS enabled.
+- The server merge function contains `messageRecipients`.
 
-GitHub Actions run #188 (PR #47 merge-ref build):  
-https://github.com/zaid404sec/zaid404sec/actions/runs/43888779236
+Do not run setup SQL again as an update shortcut. Do not reset, drop, truncate or reseed production business tables.
 
-Both required jobs completed successfully:
-- Android APK — success.
-- Windows EXE installer — success.
+## Remaining external activation work
 
-The Android job completed asset generation, `npm run validate`, Capacitor preparation/sync, Gradle `assembleDebug` and APK artifact upload. The validator includes regression coverage for the excess-advance negative balance and employee-specific statement identity. The Windows EXE build and artifact upload also succeeded.
+| Workstream | Verified status | Required next action |
+|---|---|---|
+| Public website | Not live yet. Latest Pages run #67 built and uploaded the site, but its deploy job failed. | Repository Settings → Pages → Build and deployment → Source = GitHub Actions, then rerun the Pages workflow. Confirm the URL opens publicly. |
+| Add website to Google Business Profile | Not verified / not done. | After the website is live, add https://zaid404sec.github.io/zaid404sec/website/ under Edit profile → Contact → Website. |
+| Google Basic API Access | Approval not verified; no approved Cloud project/quota was seen. | Complete Google’s Basic API Access request using the Cloud project number and a GBP owner/manager account. Google approval is external. |
+| Supabase Edge Functions | No deployed functions were returned at last check. | Configure the secrets in `GOOGLE_REVIEW_DEPLOYMENT.md`, then run the backend deployment workflow. |
+| Google OAuth | No OAuth credentials or connected-owner account are stored yet. | After API access and function deployment, connect the primary GBP owner from WashDesk Review Center. |
+| Live review sync / alerts | Not live yet. Review, OAuth, sync-log and Pub/Sub event tables currently have no review data. | Run manual sync, register Google Pub/Sub notifications, test a push event and configure the four-hour fallback. |
 
-### APK artifact and fingerprint
+Google's current prerequisites include managing a verified Business Profile that has been active for more than 60 days and having the business website listed on that profile. The applicant also needs the Google Cloud project number and must submit the Basic API Access application using an email listed as a Business Profile owner/manager. See https://developers.google.com/my-business/content/prereqs.
 
-- Artifact name: `WashDesk-Android-APK`
-- Artifact ID: `14234694316`
-- Artifact archive SHA-256: `b08e314bc77f58a947394ad981df2511ccdcf13230adc70d8459184b0b376ef0`
-- Delivered file name: `Prime-Auto-Care-2.8.4.apk`
-- APK size: 6,532,798 bytes (about 6.23 MiB / 6.53 MB decimal).
-- APK SHA-256: `bdede1d7aa0f6d77a05a7eb252511ddb5c415e730599c63ef09dfbfa29e0b22f`
-- Embedded Android app ID: `com.washdesk.carwash.v21`
-- Build type: debug APK.
+## Security and data continuity
 
-The artifact ZIP passed integrity verification. The APK itself passed ZIP integrity verification. The package ID is confirmed by the release source configuration and validator; the APK was not separately decoded with Android SDK tooling in this environment.
+- Client application uses the Supabase project URL and publishable key; these are not service-role credentials.
+- Google OAuth tokens are designed to be encrypted server-side; service keys and Gemini keys must never enter the APK or frontend bundle.
+- Never store a workspace pairing code, OAuth secret, Gemini key, database password, service-role key or private SSH key in GitHub source, ZIP files, screenshots or chat.
+- Complete handover includes SSH setup instructions and repository remotes only. SSH private keys must be generated and kept on the developer's own device.
+- Keep v23 installed while checking v24. Confirm same workspace pairing or restore a verified backup before moving business operations to v24.
+- CI success is not manual Android handset testing. Verify PDFs/WhatsApp handoff, notification permissions, cloud sync after offline/online transitions and backup restoration on a real device.
 
-## Android install and data safety
+## Release artifacts from main run #220
 
-**2.8.4 is a debug APK using package ID `com.washdesk.carwash.v21`.** The build workflow currently does not use a persistent release-signing key, so v21 was selected to install beside the previous v20 app.
+Workflow: https://github.com/zaid404sec/zaid404sec/actions/runs/44240836622
 
-- Installing v21 does not automatically update or replace v20.
-- Keep v20 installed. Do not uninstall it or clear its data while checking v21.
-- The new package has separate local app storage. Existing v20-only local records are not automatically copied into v21.
-- Before moving normal business use to v21, connect it to the same shared cloud workspace and verify that records sync, or export a JSON backup from v20 and restore it in v21.
-- Check customer, vehicle, invoice, payment, staff, payroll, advance, inventory and expense records before considering v20 retirement.
-- Never tell the owner to uninstall the old app as a troubleshooting step.
+| Artifact | GitHub Actions artifact ID |
+|---|---:|
+| Android APK | `14399920220` |
+| Windows installer | `14399551693` |
+| Application source ZIP | `14399681390` |
+| Complete repository / AI handover ZIP | `14398979658` |
+| Combined APK + EXE + source + handover package | `14399885975` |
 
-A persistent signing key could enable in-place updates, but only with a deliberate signing continuity plan and protected GitHub Actions secrets. Never place a keystore or password in the public repository or handover ZIP. Do not change the app ID casually.
+Artifact archives expire under GitHub's retention policy; download and keep a local copy. SHA-256 files are included inside the combined release package.
 
-## Physical device verification still required
+## Safe release process
 
-CI success is not a real handset test. Still check on the owner's Android phone:
-- notification permission, test notification and scheduled reminder after reboot;
-- battery optimisation / Doze and device-vendor background restrictions;
-- native PDF save/share and WhatsApp handoff;
-- cloud sync during offline/online changes;
-- restoration from the actual business backup.
+Read `AI_HANDOVER/SAFE_CHANGE_RULES.md` before modifying anything. Work from current `main` on a feature branch, make a narrow diff, add regression coverage, pass PR validation, merge only after checks pass, then verify the main build and retrieve its actual artifacts. Update this document, `RELEASE_2.9.2.md` and the handover ZIP after every production release.
 
-Do not claim these were tested unless someone tests them on the phone.
-
-## Cloud and real-data safety
-
-The optional shared workspace uses Supabase. Before cloud-related changes, inspect:
-- `car-wash-erp/README.md`
-- `car-wash-erp/cloud-sync-setup.sql`
-- `car-wash-erp/src/cloud-sync.js`
-- `car-wash-erp/supabase/`
-
-Do not replace the Supabase project, pairing model, record identity or merge logic. Do not re-run one-time setup SQL on a live workspace as an update shortcut. Never expose pairing codes or credentials.
-
-## Product limitations to preserve truthfully
-
-The README states this is not a complete double-entry accounting or statutory compliance product. Do not claim audited P&L / balance sheet, bank reconciliation, GST return filing, IRN e-invoicing, e-way bills, statutory payroll compliance or complete supplier ledgers. Have the business's chartered accountant check tax configuration and legal invoice particulars. WhatsApp sends remain user-initiated unless the official WhatsApp Business Platform is configured.
-
-## Development posture for the next AI
-
-For every future feature:
-1. Verify latest `main`, app version, app ID and workflow status.
-2. Read the handover files and inspect related source/test code.
-3. Make the smallest focused change on a feature branch and PR.
-4. Preserve existing data and unrelated features; prefer additive migrations.
-5. Extend `npm run validate` for important calculations and regression risks.
-6. Pass the full Android + Windows workflow before merge.
-7. After merge, verify the main build, retrieve the APK, check integrity, size and SHA-256.
-8. Update this handover, add a historical release note and refresh the downloadable handover ZIP.
-
-The owner uses Android and does not use terminal, Git CLI, Android Studio or SSH keys. Use connected GitHub tools and GitHub Actions; do not ask the owner to edit source files or provide secrets.
+Historical 2.8.4 and earlier release notes remain in the repository for traceability; they are not the current app version.

@@ -4,9 +4,9 @@ Last verified: 18 November 2026.
 
 ## Current state
 
-The Supabase project jkjudmkqaebrgllemris is active. The communications schema, Google Review schema and Pub/Sub event schema were successfully applied and checked in Supabase. The Edge Function list was still empty at last check. No OAuth credentials, Google review rows or Pub/Sub events were present in the new review tables.
+The Supabase project jkjudmkqaebrgllemris is active. The communications schema, Google Review schema, Pub/Sub event schema and messageRecipients sync merge migration were successfully applied and checked in Supabase. The Edge Function list was empty at last check. No OAuth credentials, Google review rows or Pub/Sub events were present in the new review tables.
 
-Therefore the data model is deployed, but the API, OAuth, worker and notification webhooks are not live yet.
+Therefore the database model is deployed, including the new recipient-group sync collection, but the Google Review API, OAuth callback, worker and notification webhooks are not live yet.
 
 ## Function sources and endpoints
 
