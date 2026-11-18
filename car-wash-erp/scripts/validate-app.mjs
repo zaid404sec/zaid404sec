@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.10.1') throw new Error('The package version must be 2.10.1.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.10.1 debug APK must use v24 to install beside the existing v21, v22 and v23 apps.');
+if (packageJson.version !== '2.11.0') throw new Error('The package version must be 2.11.0.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v25') {
+  throw new Error('The 2.11.0 debug APK must use v25 to install beside the existing v21, v22, v23 and v24 apps.');
 }
-console.log('PASS: Android 2.10.1 uses v24 for a side-by-side install that preserves v23 data');
+console.log('PASS: Android 2.11.0 uses v25 for a side-by-side install that preserves v23 data');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -19,6 +19,19 @@ console.log('PASS: Founder and Owner Operator roles');
 if (!html.includes('Personal / Household · Vehicle Petrol') || !html.includes('Personal / Household · House Light Bill') || !html.includes("expenseType==='personal'")) throw new Error('Personal and household expense classification is missing.');
 console.log('PASS: personal and household expense separation');
 if (!html.includes('https://share.google/6g3f0aJqTezi6JH5T') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
+if (!html.includes('data-page="bookings"') || !html.includes("function bookings(){") ||
+    !html.includes("function loadBookingCenter(") || !html.includes("submitBookingQuickForm") ||
+    !html.includes("saveBookingSettingsForm") || !html.includes("PUBLIC_BOOKING_URL")) {
+  throw new Error('WashDesk Bookings page, staff booking workflow or public link is incomplete.');
+}
+if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
+    !existsSync(new URL('../website/booking/index.html', import.meta.url)) ||
+    !existsSync(new URL('../supabase/functions/booking-api/index.ts', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261118190000_prime_auto_care_bookings.sql', import.meta.url))) {
+  throw new Error('One or more booking source, migration, API or public website files are missing.');
+}
+console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
+
 console.log('PASS: Google review workflow');
 const googleReviewPageStart=html.indexOf('function googleReviews(){');
 const googleReviewPageEnd=html.indexOf('async function loadGoogleReviewCenter(',googleReviewPageStart);
@@ -305,8 +318,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.10.1 side-by-side app ID v24 was not set.');
-console.log('PASS: app manifest uses the expected v24 Android package ID');
+if (appId !== 'com.washdesk.carwash.v25') throw new Error('Android 2.11.0 side-by-side app ID v25 was not set.');
+console.log('PASS: app manifest uses the expected v25 Android package ID');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
