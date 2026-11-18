@@ -39,7 +39,9 @@ if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes("'public-config'") ||
     !bookingWebsite.includes("'availability'") ||
     !bookingWebsite.includes("'create-public'") ||
-    !bookingWebsite.includes('PENDING until Prime Auto Care confirms')) {
+    !bookingWebsite.includes('PENDING until Prime Auto Care confirms') ||
+    !bookingWebsite.includes('src="../../prime-auto-care-logo.jpg"') ||
+    !existsSync(new URL('../prime-auto-care-logo.jpg', import.meta.url))) {
   throw new Error('Customer booking page is missing its public API flow or pending-confirmation safeguard.');
 }
 const bookingInlineScripts = [...bookingWebsite.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
@@ -1112,7 +1114,7 @@ for (const token of ['ai-generate','ensure-daily-growth-posts','Asia/Kolkata','l
   if (!growthApi.includes(token)) throw new Error('Google AI Growth backend is missing: '+token);
 }
 if (!growthClient.includes('ensureDailyGrowthPosts') || growthClient.includes('GOOGLE_OAUTH_CLIENT_SECRET')) throw new Error('The browser API client must expose daily draft automation and contain no server-side secrets.');
-for (const token of ['canonical','og:title','twitter:card','AutoWash','openingHoursSpecification','Prime Auto Care','wash-enquiry-form','WhatsApp']) {
+for (const token of ['canonical','og:title','twitter:card','AutoWash','openingHoursSpecification','Prime Auto Care','wash-enquiry-form','WhatsApp','href="./booking/"','08:00 AM – 07:00 PM']) {
   if (!website.includes(token)) throw new Error('Public website SEO or enquiry markup is missing: '+token);
 }
 if (!html.includes('--bg:#f3efe6') || !html.includes('backdrop-filter:blur(22px)')) throw new Error('The warm liquid-glass interface styles are missing.');
