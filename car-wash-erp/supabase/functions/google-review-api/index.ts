@@ -338,6 +338,11 @@ async function status(ctx: Context) {
   const sent = logs.filter((row: any) => row.status === 'sent_confirmed');
   const prepared = logs.filter((row: any) => row.status === 'prepared');
   return {
+    permissions: {
+      google_reviews_admin: ctx.googleReviewAdmin,
+      workspace_role: ctx.member.role,
+      workspace_owner_unchanged: ctx.workspace.owner_auth_user_id !== ctx.user.id
+    },
     settings: { google_account_email: settings.google_account_email || null, google_business_profile_id: settings.google_business_profile_id || '13506481990772076097', google_business_profile_url: settings.google_business_profile_url || 'https://share.google/6g3f0aJqTezi6JH5T', website_url: settings.website_url || null, review_link: settings.review_link || null, pubsub_topic_name: settings.pubsub_topic_name || null, notifications_enabled: settings.notifications_enabled === true, notifications_last_event_at: settings.notifications_last_event_at || null, notifications_last_error: settings.notifications_last_error || null },
     connection: {
       status: settings.api_status || 'access_pending',
