@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.google-review-pubsub-webhook]
 verify_jwt = false
+
+[functions.booking-api]
+verify_jwt = false
