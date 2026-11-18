@@ -196,6 +196,22 @@ body{background:radial-gradient(1100px 600px at 94% -8%,rgba(222,190,130,.22),tr
 .growth-keyword{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid rgba(182,151,103,.2)}.growth-badge{display:inline-flex;padding:4px 8px;border-radius:20px;background:#f1e7d2;color:#735421;font-size:9px;font-weight:800}.growth-status{font-size:10px;color:#746b5c;line-height:1.55}.growth-hidden{display:none!important}
 @media(max-width:760px){.growth-grid{grid-template-columns:1fr}.growth-hero{padding:19px}.growth-hero h3{font-size:19px}.growth-post{padding:12px}}
 
+
+/* WashDesk 2.10.0 — warm liquid-glass workspace surfaces */
+:root{--bg:#f3efe6;--panel:rgba(255,253,248,.76);--ink:#2a241a;--muted:#796f60;--line:rgba(174,135,67,.22);--nav:#15120d;--shadow:0 16px 42px rgba(52,37,15,.085);--radius:21px}
+html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),transparent 30%),radial-gradient(ellipse at 92% 16%,rgba(255,248,231,.9),transparent 32%),linear-gradient(145deg,#f8f5ed,#eee8dc)}body{background-attachment:fixed}
+.sidebar{background:linear-gradient(155deg,#1d1911 0%,#11100d 54%,#080807 100%);border-right:1px solid rgba(214,177,95,.18)}
+.nav button:hover,.nav button.active{background:linear-gradient(110deg,rgba(215,177,96,.22),rgba(255,248,230,.06));color:#fff5df;box-shadow:inset 0 0 0 1px rgba(221,187,117,.16)}
+.topbar{background:rgba(255,252,245,.78);backdrop-filter:blur(22px) saturate(145%);-webkit-backdrop-filter:blur(22px) saturate(145%);border-bottom:1px solid rgba(174,135,67,.18);box-shadow:0 8px 28px rgba(45,32,12,.04)}
+.card,.stat{background:linear-gradient(145deg,rgba(255,255,251,.86),rgba(255,250,239,.68));border:1px solid rgba(255,255,255,.78);box-shadow:0 16px 42px rgba(52,37,15,.075),inset 0 1px 0 rgba(255,255,255,.9);backdrop-filter:blur(19px) saturate(145%);-webkit-backdrop-filter:blur(19px) saturate(145%)}
+.card{border-color:rgba(188,153,96,.18)}.stat-icon{background:linear-gradient(145deg,#f5ead3,#fffaf0);color:#896321;border:1px solid rgba(185,145,71,.12)}
+.btn{border-radius:13px;border-color:rgba(165,129,65,.2);background:rgba(255,255,250,.74);box-shadow:0 5px 14px rgba(50,36,13,.035);transition:transform .16s ease,box-shadow .16s ease,background .16s ease}.btn:hover{transform:translateY(-1px);box-shadow:0 9px 22px rgba(50,36,13,.08);border-color:rgba(175,136,65,.36);background:rgba(255,255,252,.94)}.btn.primary{background:linear-gradient(135deg,#e8cb8e,#b58b43);border-color:#b58b43;color:#21180b;box-shadow:0 9px 22px rgba(166,125,49,.16)}
+.field input,.field select,.field textarea,.search input{border-color:rgba(174,148,104,.32);background:rgba(255,255,251,.79);border-radius:13px;box-shadow:inset 0 1px 2px rgba(62,43,14,.035)}.field input:focus,.field select:focus,.field textarea:focus,.search input:focus{outline:none;border-color:#ba914b;box-shadow:0 0 0 3px rgba(193,154,80,.13)}
+.page-head h2,.card-head h3{letter-spacing:-.02em}.growth-hero{border-radius:24px;border:1px solid rgba(224,190,128,.34);box-shadow:0 22px 52px rgba(35,25,12,.18),inset 0 1px 0 rgba(255,255,255,.13)}.growth-card{border-radius:21px}.growth-post{background:linear-gradient(145deg,rgba(255,255,251,.94),rgba(249,242,226,.82));border:1px solid rgba(187,151,91,.22);box-shadow:0 9px 24px rgba(55,39,13,.045)}
+.growth-photo-brief{margin-top:8px;padding:10px 11px;border-radius:12px;background:rgba(226,210,179,.18);border:1px solid rgba(177,141,78,.16);color:#75674f;font-size:10px;line-height:1.55}.growth-auto-note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;margin:12px 0 0;border:1px solid rgba(177,141,78,.2);border-radius:14px;background:rgba(249,242,227,.58);color:#64563f;font-size:11px;line-height:1.5}.growth-auto-note b{color:#75551f}
+@media(max-width:760px){.topbar{background:rgba(255,251,242,.92);padding-inline:14px}.content{padding:18px 14px 36px}.card,.stat{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}.growth-auto-note{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.btn,.growth-post,.nav button{transition:none!important;scroll-behavior:auto!important}}
+
 </style>
 </head>
 <body>
@@ -1178,25 +1194,31 @@ body{background:radial-gradient(1100px 600px at 94% -8%,rgba(222,190,130,.22),tr
   }
   function googleGrowthMarkup(){
     const key=googleAiKey(),posts=googleGrowthState.posts||[],keywords=googleGrowthState.keywords||[];
+    const today=googleGrowthContext().date;
+    const todayCount=posts.filter(p=>p.created_at&&new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata'}).format(new Date(p.created_at))===today).length;
+    const dailyText=key?(todayCount>=2?"Today's two shared drafts are ready.":"Daily autopilot will create any missing drafts when this page opens."):"Save the free AI key on this device to enable daily draft generation.";
     const cards=posts.map(function(p){
-      const id=esc(p.id),img=p.image_url?'<img src="'+esc(p.image_url)+'" alt="Authentic Prime Auto Care business photo">':'';
-      return '<article class="growth-post"><div style="display:flex;justify-content:space-between;gap:8px"><h4>'+esc(p.title)+'</h4><span class="growth-badge">'+esc(p.status||'draft')+'</span></div>'+img+
+      const id=esc(p.id),img=p.image_url?'<img src="'+esc(p.image_url)+'" alt="Original Prime Auto Care business photo" loading="lazy">':'';
+      const photoBrief=(p.image_prompt||p.photo_checklist?.join(' · '))?'<div class="growth-photo-brief"><b>Photo brief:</b> '+esc(p.image_prompt||'')+(Array.isArray(p.photo_checklist)&&p.photo_checklist.length?'<br>'+esc(p.photo_checklist.join(' · ')):'')+'</div>':'';
+      const poster=p.image_url?'<button class="btn small" data-growth-action="poster" data-post-id="'+id+'">Create gold-glass poster</button>':'';
+      return '<article class="growth-post"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><h4>'+esc(p.title)+'</h4><span class="growth-badge">'+esc(p.status||'draft')+'</span></div>'+img+photoBrief+
       '<div class="field" style="margin-top:9px"><label>Google post text</label><textarea data-growth-summary="'+id+'" maxlength="1200">'+esc(p.summary||'')+'</textarea></div>'+
       '<div class="field" style="margin-top:8px"><label>Share caption / extra copy</label><textarea data-growth-caption="'+id+'" maxlength="2400">'+esc(p.caption||'')+'</textarea></div>'+
-      '<div class="growth-status">Keyword: <b>'+esc(p.primary_keyword||'—')+'</b> · '+esc((p.secondary_keywords||[]).join(', '))+'</div>'+
-      '<div class="growth-actions"><button class="btn small" data-growth-action="save" data-post-id="'+id+'">Save edits</button><button class="btn small" data-growth-action="copy" data-post-id="'+id+'">Copy post</button><button class="btn small" data-growth-action="manual" data-post-id="'+id+'">Copy & open Google</button><label class="btn small">Add real photo<input class="growth-hidden" type="file" accept="image/jpeg,image/png" data-growth-photo="'+id+'"></label>'+
-      (googleReviewState.connection&&googleReviewState.connection.oauth_connected?'<button class="btn primary small" data-growth-action="publish" data-post-id="'+id+'">Publish / schedule</button>':'<span class="growth-status">API publishing needs Google approval. Manual posting is available.</span>')+
+      '<div class="growth-status">Main keyword: <b>'+esc(p.primary_keyword||'—')+'</b> · '+esc((p.secondary_keywords||[]).join(', '))+'</div>'+
+      '<div class="growth-actions"><button class="btn small" data-growth-action="save" data-post-id="'+id+'">Save edits</button><button class="btn small" data-growth-action="copy" data-post-id="'+id+'">Copy post</button><button class="btn small" data-growth-action="manual" data-post-id="'+id+'">Copy & open Google</button><label class="btn small">Add real photo<input class="growth-hidden" type="file" accept="image/jpeg,image/png" data-growth-photo="'+id+'"></label>'+poster+
+      (googleReviewState.connection&&googleReviewState.connection.oauth_connected?'<button class="btn primary small" data-growth-action="publish" data-post-id="'+id+'">Publish / schedule</button>':'<span class="growth-status">Google API publishing needs approval. Manual posting is available.</span>')+
       '<button class="btn ghost small" data-growth-action="archive" data-post-id="'+id+'">Archive</button></div></article>';
     }).join('');
     const keywordRows=keywords.map(function(k){return '<div class="growth-keyword"><div><b>'+esc(k.keyword)+'</b><small>'+esc(k.intent||'local service')+' · '+esc(k.cluster||'local car wash')+'<br>'+esc(k.rationale||'AI relevance suggestion')+'</small></div><div><span class="growth-badge">'+esc(k.priority||'medium')+' · '+Number(k.relevance_score||0)+'/100</span><div><a href="'+esc(k.trend_url||'https://trends.google.com/trends/')+'" target="_blank" rel="noopener">Compare in Google Trends ↗</a></div></div></div>'}).join('');
-    return '<section class="growth-hero" style="margin-top:17px"><div class="growth-eyebrow">PRIME AUTO CARE · AI GROWTH STUDIO</div><h3>Local visibility, planned with AI.</h3><p>Create review reply drafts, two Google post ideas and local keyword clusters. You approve every reply and post. Use real business photos. Keyword scores are AI relevance estimates, not search volumes.</p></section>'+
-    '<div class="growth-grid"><div class="card growth-card"><div class="card-head"><h3>1 · Connect free AI</h3><span class="growth-badge">$0 model route</span></div><p class="help">Create a free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys ↗</a>. It is stored on this device only, not in backups or cloud sync.</p>'+
+    return '<section class="growth-hero" style="margin-top:17px"><div class="growth-eyebrow">PRIME AUTO CARE · AI GROWTH STUDIO</div><h3>Local visibility, planned with AI.</h3><p>AI prepares review replies, daily Google post drafts and local keyword ideas. You check the wording and publish. Use genuine business photos; branded posters are made from your own photo, not fake vehicle results. Keyword scores are AI relevance estimates, not measured search volumes.</p></section>'+
+    '<div class="growth-auto-note"><span>✦</span><div><b>Daily post autopilot</b><br>'+esc(dailyText)+' It creates up to two drafts per workspace per Asia/Kolkata day, shared across devices. It runs only when an authorised device opens this page with the free key saved; it does not run while the app is closed and never publishes automatically. Today: '+todayCount+'/2 drafts.</div></div>'+
+    '<div class="growth-grid"><div class="card growth-card"><div class="card-head"><h3>1 · Connect free AI</h3><span class="growth-badge">$0 model route</span></div><p class="help">Create a free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys ↗</a>. The key is stored in this device browser only, not in backups or shared cloud data. Only a device with the key can request AI drafts.</p>'+
     '<div class="field"><label>OpenRouter API key · this device only</label><input id="google-ai-api-key" type="password" autocomplete="off" placeholder="Paste your OpenRouter key" value="'+esc(key)+'"></div><div class="growth-actions"><button class="btn primary" data-growth-action="save-key">Save key</button><button class="btn" data-growth-action="test">Test free AI</button><button class="btn ghost" data-growth-action="remove-key">Remove key</button></div>'+
-    '<div class="growth-status">'+(key?'Key saved on this device.':'No key saved on this device.')+' '+esc(googleGrowthState.aiNote||'')+'</div><p class="help">Free usage is limited to 50 requests/day and 20/minute. Save the key separately on each device.</p></div>'+
-    '<div class="card growth-card"><div class="card-head"><h3>2 · AI review reply assistant</h3><span class="growth-badge">Draft only</span></div><p class="help">Paste a public review in the Manual reply workspace above. AI writes a factual draft; you review, copy and publish it in Google.</p><div class="growth-actions"><button class="btn primary" data-growth-action="review-reply">Generate reply draft</button></div><div class="growth-status">Complaints are flagged for your attention. AI never publishes without approval.</div></div></div>'+
-    '<div class="growth-grid"><div class="card growth-card"><div class="card-head"><h3>3 · Surat keyword planner</h3><span class="growth-badge">Gujarat</span></div><p class="help">Generate phrases from the real services configured in WashDesk, then compare relative interest in Google Trends.</p><div class="growth-actions"><button class="btn primary" data-growth-action="keywords">Generate local keywords</button><a class="btn" href="https://trends.google.com/trends/explore?geo=IN-GJ" target="_blank" rel="noopener">Open Trends ↗</a></div><div>'+ (keywordRows||'<div class="empty">No keyword ideas saved yet.</div>')+'</div><p class="help">AI relevance scores are not monthly search-volume statistics.</p></div>'+
-    '<div class="card growth-card"><div class="card-head"><h3>4 · Daily post planner</h3><span class="growth-badge">Two drafts per run</span></div><p class="help">Generate two distinct Google post drafts. Add a real JPG/PNG business photo, 10 KB–5 MB and at least 250 × 250 px. Avoid AI-fabricated customer photos.</p><div class="growth-actions"><button class="btn primary" data-growth-action="posts">Generate today’s 2 posts</button></div><div class="growth-status">Review and approve each post. Manual publishing remains available without Google API access.</div></div></div>'+
-    '<div class="card growth-card" style="margin-top:14px"><div class="card-head"><h3>5 · Shared post library</h3><span class="help">Saved in your workspace</span></div>'+(cards||'<div class="empty">No drafts yet. Generate today’s two posts.</div>')+'</div>';
+    '<div class="growth-status">'+(key?'Key saved on this device.':'No key saved on this device.')+' '+esc(googleGrowthState.aiNote||'')+'</div><p class="help">Free model variants are limited to about 50 requests/day and 20/minute. The free model route can change or be temporarily unavailable. Avoid sending private customer details; contact numbers, emails and vehicle registrations are removed from review text before AI analysis.</p></div>'+
+    '<div class="card growth-card"><div class="card-head"><h3>2 · AI review reply assistant</h3><span class="growth-badge">Draft only</span></div><p class="help">Paste a public review in the Manual reply workspace above. AI prepares a factual reply in the review language where possible. You check, copy and publish it in Google.</p><div class="growth-actions"><button class="btn primary" data-growth-action="review-reply">Generate reply draft</button></div><div class="growth-status">Complaints are flagged for your attention. AI never publishes review replies or asks for a rating change.</div></div></div>'+
+    '<div class="growth-grid"><div class="card growth-card"><div class="card-head"><h3>3 · Surat keyword planner</h3><span class="growth-badge">Gujarat</span></div><p class="help">Generate phrases from the real services configured in WashDesk, then compare relative interest over time in Google Trends.</p><div class="growth-actions"><button class="btn primary" data-growth-action="keywords">Generate local keywords</button><a class="btn" href="https://trends.google.com/trends/explore?geo=IN-GJ" target="_blank" rel="noopener">Open Gujarat Trends ↗</a></div><div>'+ (keywordRows||'<div class="empty">No keyword ideas saved yet.</div>')+'</div><p class="help">AI relevance scores are not monthly search-volume statistics. Compare phrases in Trends before using them in public posts.</p></div>'+
+    '<div class="card growth-card"><div class="card-head"><h3>4 · Daily post planner</h3><span class="growth-badge">Up to 2 drafts / day</span></div><p class="help">When this page opens, the free AI route checks whether today’s two shared drafts already exist and generates any missing ones. Generate additional drafts manually only when you need more content. Add a real JPG/PNG photo, 10 KB–5 MB and at least 250 × 250 px; then create a branded poster from that photo.</p><div class="growth-actions"><button class="btn primary" data-growth-action="posts">Generate 2 additional drafts</button></div><div class="growth-status">Google API posting requires approved API access and OAuth. Without it, copy the post and publish in Google Business Profile yourself.</div></div></div>'+
+    '<div class="card growth-card" style="margin-top:14px"><div class="card-head"><h3>5 · Shared post library</h3><span class="help">Saved in your workspace</span></div>'+(cards||'<div class="empty">No drafts yet. Open the Review Center with the free AI key saved to generate today’s drafts.</div>')+'</div>';
   }
   async function googleGrowthLoad(){
     const api=window.PrimeAutoCareGoogleReviews;
@@ -1216,16 +1238,49 @@ body{background:radial-gradient(1100px 600px at 94% -8%,rgba(222,190,130,.22),tr
   }
   async function googleAiReply(){
     const review=String(document.getElementById('google-manual-review')?.value||'').trim();if(review.length<4){notify('Paste the customer review in the Manual reply workspace first.');return}
-    try{googleReviewState.manualReviewText=review;googleGrowthState.aiNote='Writing a reply draft…';render();const safe=review.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[email removed]').replace(/(?:\+?91[\s-]?)?[6-9]\d{9}/g,'[phone removed]');const result=await googleAiRun('review-reply',{...googleGrowthContext(),review:{text:safe}});const parsed=googleAiParse(result.text);if(!String(parsed.replyDraft||'').trim())throw new Error('The AI returned an empty reply draft.');googleReviewState.manualReplyDraft=String(parsed.replyDraft).trim();googleGrowthState.aiNote=parsed.needsOwnerAttention?'Owner attention suggested.':'Draft ready. Review before copying.';render();notify('Review reply draft ready. Check it and publish manually in Google.')}
+    try{googleReviewState.manualReviewText=review;googleGrowthState.aiNote='Writing a reply draft…';render();const safe=review.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi,'[email removed]').replace(/(?:\\+?91[\\s-]?)?[6-9]\\d{9}/g,'[phone removed]').replace(/\\b(?:GJ|MH|DL|UP|RJ|MP|KA|TN|TS|AP|HR|PB|WB|BR|OD|UK|AS|CG|GA|JK|HP|CH|DD|DN)[ -]?\\d{1,2}[ -]?[A-Z]{1,3}[ -]?\\d{1,4}\\b/gi,'[vehicle number removed]');const result=await googleAiRun('review-reply',{...googleGrowthContext(),review:{text:safe}});const parsed=googleAiParse(result.text);if(!String(parsed.replyDraft||'').trim())throw new Error('The AI returned an empty reply draft.');googleReviewState.manualReplyDraft=String(parsed.replyDraft).trim();googleGrowthState.aiNote=parsed.needsOwnerAttention?'Owner attention suggested.':'Draft ready. Review before copying.';render();notify('Review reply draft ready. Check it and publish manually in Google.')}
     catch(error){googleGrowthState.aiNote=error.message||'AI reply failed.';notify(googleGrowthState.aiNote)}finally{render()}
   }
   async function googleAiKeywordRun(){
     try{googleGrowthState.aiNote='Generating keyword ideas…';render();const result=await googleAiRun('keywords',googleGrowthContext());const parsed=googleAiParse(result.text);if(!Array.isArray(parsed.ideas)||!parsed.ideas.length)throw new Error('No keyword ideas returned.');const saved=await window.PrimeAutoCareGoogleReviews.saveGrowthKeywords(parsed.ideas);googleGrowthState.keywords=saved.keywords||[];googleGrowthState.aiNote='Keyword suggestions saved. Compare them in Google Trends.';notify('Local keyword ideas saved.')}
     catch(error){googleGrowthState.aiNote=error.message||'Keyword generation failed.';notify(googleGrowthState.aiNote)}finally{render()}
   }
-  async function googleAiPostRun(){
-    try{googleGrowthState.aiNote='Creating two post drafts…';render();const result=await googleAiRun('daily-posts',googleGrowthContext());const parsed=googleAiParse(result.text),ideas=Array.isArray(parsed.posts)?parsed.posts.slice(0,2):[];if(ideas.length!==2)throw new Error('The AI must return exactly two drafts. Try again.');const saved=[];for(const p of ideas){const m=String(p.suggestedTime||'').match(/^(\d{1,2}:\d{2})$/);const row=await window.PrimeAutoCareGoogleReviews.saveGrowthPost({title:p.title,topic:p.topic,summary:p.summary,caption:p.caption,primary_keyword:p.primaryKeyword,secondary_keywords:p.secondaryKeywords,image_prompt:p.imagePrompt,photo_checklist:p.photoChecklist,model_name:result.model||'openrouter/free',suggested_publish_at:m?new Date(googleGrowthContext().date+'T'+m[1]+':00+05:30').toISOString():null});if(row.post)saved.push(row.post)}googleGrowthState.posts=saved.concat(googleGrowthState.posts);googleGrowthState.aiNote='Two drafts saved. Add real photos and review every detail.';notify('Two Google post drafts saved.')}
+  async function googleAiPostRun(requested=2){
+    const count=Math.max(1,Math.min(2,Number(requested)||2));
+    try{googleGrowthState.aiNote='Creating '+count+' additional post draft(s)…';render();const result=await googleAiRun('daily-posts',{...googleGrowthContext(),posts_needed:count});const parsed=googleAiParse(result.text),ideas=Array.isArray(parsed.posts)?parsed.posts.slice(0,count):[];if(ideas.length!==count)throw new Error('The AI must return exactly '+count+' drafts. Try again.');const saved=[];for(const p of ideas){const m=String(p.suggestedTime||'').match(/^(\\d{1,2}:\\d{2})$/);const planned=m?new Date(googleGrowthContext().date+'T'+m[1]+':00+05:30'):null;const suggested=planned&&planned.getTime()>Date.now()+5*60*1000?planned.toISOString():null;const row=await window.PrimeAutoCareGoogleReviews.saveGrowthPost({title:p.title,topic:p.topic,summary:p.summary,caption:p.caption,primary_keyword:p.primaryKeyword,secondary_keywords:p.secondaryKeywords,image_prompt:p.imagePrompt,photo_checklist:p.photoChecklist,model_name:result.model||'openrouter/free',suggested_publish_at:suggested});if(row.post)saved.push(row.post)}googleGrowthState.posts=saved.concat(googleGrowthState.posts);googleGrowthState.aiNote=saved.length+' additional drafts saved. Add a real photo and check every fact.';notify(saved.length+' additional Google post draft(s) saved.')}
     catch(error){googleGrowthState.aiNote=error.message||'Post generation failed.';notify(googleGrowthState.aiNote)}finally{render()}
+  }
+  async function googleGrowthCreatePoster(post){
+    try{
+      if(!post||!post.image_url)throw new Error('Upload a real business photo first.');
+      googleGrowthState.aiNote='Creating a branded poster from your original photo…';render();
+      const img=new Image();img.crossOrigin='anonymous';
+      await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('This photo cannot be edited in the browser. Try uploading a JPG or PNG from your device.'));img.src=post.image_url;});
+      const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
+      const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Poster canvas is unavailable on this device.');
+      const scale=Math.max(canvas.width/img.naturalWidth,canvas.height/img.naturalHeight);
+      const sw=canvas.width/scale,sh=canvas.height/scale,sx=(img.naturalWidth-sw)/2,sy=(img.naturalHeight-sh)/2;
+      ctx.drawImage(img,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
+      const shade=ctx.createLinearGradient(0,0,0,canvas.height);shade.addColorStop(0,'rgba(9,9,8,.72)');shade.addColorStop(.32,'rgba(9,9,8,.12)');shade.addColorStop(.64,'rgba(9,9,8,.12)');shade.addColorStop(1,'rgba(9,9,8,.88)');ctx.fillStyle=shade;ctx.fillRect(0,0,canvas.width,canvas.height);
+      const gold='#e7c783',cream='#fff8e8';ctx.fillStyle=gold;ctx.fillRect(76,83,8,90);
+      ctx.font='800 29px Arial,sans-serif';ctx.fillStyle=cream;ctx.fillText('PRIME AUTO CARE',108,112);
+      ctx.font='700 17px Arial,sans-serif';ctx.fillStyle=gold;ctx.fillText('FULWADI · SURAT',108,147);
+      ctx.strokeStyle='rgba(231,199,131,.7)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(78,980);ctx.lineTo(1002,980);ctx.stroke();
+      const title=String(post.title||'Professional Vehicle Care').slice(0,62);ctx.font='800 64px Arial,sans-serif';ctx.fillStyle=cream;
+      const words=title.split(/\\s+/);let line='',lines=[],maxWidth=900;
+      for(const word of words){const test=line?line+' '+word:word;if(ctx.measureText(test).width>maxWidth&&line){lines.push(line);line=word;}else line=test;}
+      if(line)lines.push(line);lines=lines.slice(0,2);let y=1070-lines.length*76;
+      for(const textLine of lines){ctx.fillText(textLine,78,y,900);y+=76;}
+      ctx.font='700 22px Arial,sans-serif';ctx.fillStyle=gold;const keyword=String(post.primary_keyword||'CAR WASH · FOAM WASH').toUpperCase().slice(0,66);ctx.fillText(keyword,80,1190,900);
+      ctx.font='700 18px Arial,sans-serif';ctx.fillStyle=cream;ctx.fillText('PROFESSIONAL CARE  ·  PREMIUM SHINE',80,1250,900);
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.9));
+      if(!blob)throw new Error('The branded poster could not be exported.');
+      const file=new File([blob],'prime-auto-care-'+String(post.id).slice(0,8)+'-poster.jpg',{type:'image/jpeg'});
+      const result=await window.PrimeAutoCareGoogleReviews.uploadGrowthPhoto(post.id,file);
+      googleGrowthState.posts=googleGrowthState.posts.map(p=>p.id===post.id?{...p,image_url:result.image_url,image_object_path:result.image_object_path}:p);
+      googleGrowthState.aiNote='Branded poster created using your original business photo.';notify('Poster added to the shared post library.');
+    }catch(error){googleGrowthState.aiNote=error.message||'Poster creation failed.';notify(googleGrowthState.aiNote)}
+    finally{render()}
   }
   async function googleGrowthAction(action,id){
     const api=window.PrimeAutoCareGoogleReviews,post=googleGrowthState.posts.find(x=>x.id===id);
@@ -1235,6 +1290,7 @@ body{background:radial-gradient(1100px 600px at 94% -8%,rgba(222,190,130,.22),tr
     if(action==='review-reply'){await googleAiReply();return}
     if(action==='keywords'){await googleAiKeywordRun();return}
     if(action==='posts'){await googleAiPostRun();return}
+    if(action==='poster'){await googleGrowthCreatePoster(post);return}
     if(!post){notify('Post draft not found.');return}
     if(action==='save'){try{const summary=document.querySelector('[data-growth-summary="'+id+'"]').value,caption=document.querySelector('[data-growth-caption="'+id+'"]').value;const r=await api.saveGrowthPost({...post,summary:summary,caption:caption});googleGrowthState.posts=googleGrowthState.posts.map(x=>x.id===id?{...x,...r.post}:x);render();notify('Draft saved.')}catch(e){notify(e.message||'Save failed.')}return}
     if(action==='copy'||action==='manual'){try{await navigator.clipboard.writeText(post.summary);notify('Post text copied. Add your original photo in Google.')}catch(e){notify('Copy the post text manually.')}if(action==='manual')await googleReviewOpenManager();return}
@@ -1324,6 +1380,15 @@ body{background:radial-gradient(1100px 600px at 94% -8%,rgba(222,190,130,.22),tr
       googleReviewState.metrics=summary.metrics||{};
       googleReviewState.reviews=reviewResult.reviews||[];
       await googleGrowthLoad();
+      if(googleAiKey() && googleReviewState.permissions.google_reviews_admin){
+        try{
+          const daily=await api.ensureDailyGrowthPosts({provider:'openrouter',model:'openrouter/free',api_key:googleAiKey(),context:googleGrowthContext()});
+          if(Array.isArray(daily.posts))googleGrowthState.posts=daily.posts;
+          if(daily.generated_count>0)googleGrowthState.aiNote='Daily autopilot saved '+daily.generated_count+' post draft(s) for '+daily.date+'. Add real photos and review before publishing.';
+          else if(daily.in_progress)googleGrowthState.aiNote='Today’s daily post drafts are being prepared on another paired device.';
+          else if(daily.already_generated)googleGrowthState.aiNote='Today’s daily post drafts are already saved in the shared workspace.';
+        }catch(dailyError){googleGrowthState.aiNote='Daily autopilot could not generate drafts: '+(dailyError?.message||'Free AI is temporarily unavailable.');}
+      }
       googleReviewState.loaded=true;
     }catch(error){googleReviewState.error=error?.message||'Could not load Google Reviews.';googleReviewState.loaded=false;}
     finally{googleReviewState.loading=false;render()}
