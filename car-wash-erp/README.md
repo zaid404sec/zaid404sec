@@ -4,8 +4,6 @@
 - Android package ID: `com.washdesk.carwash.v24`. The v24 app installs beside v23 and has separate local storage; preserve v23 and verify shared cloud pairing or backup restore before switching.
 - Production Supabase migration `20261118050000_add_message_recipients_sync_merge` is applied. It adds only the `messageRecipients` collection to the existing server merge function; no workspace reset or business-data replacement occurred.
 
-## Version 2.9.2 — number and notification group manager
-
 - Added a Number & notification group manager under Offers & WhatsApp. Add, edit and remove named mobile contacts; validate Indian mobile numbers; prevent duplicates; assign one or more groups: Attendance, Expenses, Staff & payroll, Operations, Sales & bills, Inventory and Offers. All contacts is an automatic view of every saved number.
 - Added date-scoped Attendance and Business Expense message templates. Personal/household expenses, Salary and Staff Advance entries are excluded from the expense template.
 - Recipient data uses the existing local database and cloud-sync collection merge. A matching server migration adds the new collection to the merge function; it does not create, delete or reset business tables.
