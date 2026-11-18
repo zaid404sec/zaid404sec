@@ -94,6 +94,26 @@ function requireGoogleReviewAdmin(ctx: Context) {
     throw new Error('This device is not authorised to administer Google Reviews. Ask the Prime Auto Care workspace owner to grant Google Reviews access.');
   }
 }
+function requireOriginalWorkspaceOwner(ctx: Context) {
+  if (ctx.member.role !== 'owner' || ctx.workspace.owner_auth_user_id !== ctx.user.id) {
+    throw new Error('Only the original Prime Auto Care Workspace Owner can enable automatic Google replies.');
+  }
+}
+async function saveAutoReplySettings(ctx: Context, settings: any) {
+  requireOriginalWorkspaceOwner(ctx);
+  const enabled = settings?.enabled === true;
+  const minRating = Number(settings?.min_rating ?? 5);
+  if (![4, 5].includes(minRating)) throw new Error('Automatic replies can be limited to 4-star or 5-star reviews only.');
+  const { error } = await ctx.service.from('pac_google_review_settings').upsert({
+    workspace_id: ctx.workspace.id,
+    auto_reply_enabled: enabled,
+    auto_reply_min_rating: minRating,
+    auto_reply_last_error: null,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'workspace_id' });
+  if (error) throw error;
+  return { saved: true, enabled, min_rating: minRating };
+}
 async function getSettings(ctx: Context) {
   const { data, error } = await ctx.service.from('pac_google_review_settings')
     .select('*').eq('workspace_id', ctx.workspace.id).maybeSingle();
@@ -678,9 +698,10 @@ async function status(ctx: Context) {
     permissions: {
       google_reviews_admin: ctx.googleReviewAdmin,
       workspace_role: ctx.member.role,
-      workspace_owner_unchanged: ctx.workspace.owner_auth_user_id !== ctx.user.id
+      workspace_owner: ctx.member.role === 'owner' && ctx.workspace.owner_auth_user_id === ctx.user.id,
+      workspace_owner_unchanged: true
     },
-    settings: { google_account_email: settings.google_account_email || null, google_business_profile_id: settings.google_business_profile_id || '13506481990772076097', google_business_profile_url: settings.google_business_profile_url || 'https://share.google/6g3f0aJqTezi6JH5T', website_url: settings.website_url || null, review_link: settings.review_link || null, pubsub_topic_name: settings.pubsub_topic_name || null, notifications_enabled: settings.notifications_enabled === true, notifications_last_event_at: settings.notifications_last_event_at || null, notifications_last_error: settings.notifications_last_error || null },
+    settings: { google_account_email: settings.google_account_email || null, google_business_profile_id: settings.google_business_profile_id || '13506481990772076097', google_business_profile_url: settings.google_business_profile_url || 'https://share.google/6g3f0aJqTezi6JH5T', website_url: settings.website_url || null, review_link: settings.review_link || null, pubsub_topic_name: settings.pubsub_topic_name || null, notifications_enabled: settings.notifications_enabled === true, notifications_last_event_at: settings.notifications_last_event_at || null, notifications_last_error: settings.notifications_last_error || null, auto_reply_enabled: settings.auto_reply_enabled === true, auto_reply_min_rating: Number(settings.auto_reply_min_rating || 5), auto_reply_last_error: settings.auto_reply_last_error || null, auto_reply_last_sent_at: settings.auto_reply_last_sent_at || null },
     connection: {
       status: settings.api_status || 'access_pending',
       oauth_connected: !!credentials.data?.workspace_id,
@@ -720,6 +741,7 @@ async function handle(ctx: Context, body: any) {
     return {archived:true};
   }
   if (action === 'save-settings') return ownerSettings(ctx, body.settings || {});
+  if (action === 'save-auto-reply-settings') return saveAutoReplySettings(ctx, body.settings || {});
   if (action === 'connect') return startOAuth(ctx);
   if (action === 'enable-notifications') {
     requireGoogleReviewAdmin(ctx);
