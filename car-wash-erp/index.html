@@ -1147,9 +1147,9 @@
       requestPermission
     });
   }
-  let googleReviewState={loaded:false,loading:false,attempted:false,error:'',connection:{status:'access_pending',oauth_connected:false},settings:{},metrics:{},reviews:[],drafts:{},analyses:{},chatAnswer:'',copilot:null};
+  let googleReviewState={loaded:false,loading:false,attempted:false,error:'',connection:{status:'access_pending',oauth_connected:false},permissions:{},settings:{},metrics:{},reviews:[],drafts:{},analyses:{},chatAnswer:'',copilot:null};
   function googleReviews(){
-    const state=googleReviewState||{},records=Array.isArray(state.reviews)?state.reviews:[],metrics=state.metrics||{},b=db.business||{},connection=state.connection||{};
+    const state=googleReviewState||{},records=Array.isArray(state.reviews)?state.reviews:[],metrics=state.metrics||{},b=db.business||{},connection=state.connection||{},permissions=state.permissions||{};
     const average=metrics.average_rating===null||metrics.average_rating===undefined?'—':Number(metrics.average_rating).toFixed(1)+' / 5';
     const lastSync=connection.last_sync_at?new Date(connection.last_sync_at).toLocaleString('en-IN'):'Not synced yet';
     const status=connection.oauth_connected?(connection.status==='connected'?'Connected':'Owner account connected · API sync pending'):'API access / OAuth pending';
@@ -1167,7 +1167,7 @@
     const error=state.error?'<div class="notice" style="margin-bottom:12px;border-color:#a33;color:#a33">'+esc(state.error)+'</div>':'';
     return pageHead('Google Review Center','Live customer feedback, review management and three-level Gemini intelligence.','<button class="btn" data-action="google-review-whatsapp">Prepare WhatsApp request</button><button class="btn" data-action="google-review-sync">↻ Sync reviews</button><button class="btn primary" data-action="google-review-connect">Connect Google owner account</button>')+
       error+
-      '<div class="notice" style="margin-bottom:16px"><b>Google connection: '+esc(status)+'</b><br/>Google account: '+esc(connection.google_user_email||state.settings.google_account_email||b.googleAccountEmail||'bmumz3909@gmail.com')+' · Profile ID: '+esc(state.settings.google_business_profile_id||b.googleBusinessProfileId||'13506481990772076097')+'<br/>Last successful sync: '+esc(lastSync)+(connection.last_error?'<br/>Last error: '+esc(connection.last_error):'')+'</div>'+
+      '<div class="notice" style="margin-bottom:16px"><b>Google connection: '+esc(status)+'</b><br/>Google Reviews access: '+(permissions.google_reviews_admin?'Authorised admin':'Workspace member')+' · Workspace role: '+esc(permissions.workspace_role||'member')+' · Original owner unchanged<br/>Google account: '+esc(connection.google_user_email||state.settings.google_account_email||b.googleAccountEmail||'bmumz3909@gmail.com')+' · Profile ID: '+esc(state.settings.google_business_profile_id||b.googleBusinessProfileId||'13506481990772076097')+'<br/>Last successful sync: '+esc(lastSync)+(connection.last_error?'<br/>Last error: '+esc(connection.last_error):'')+'</div>'+
       '<div class="grid stats">'+
         stat('Google reviews synced',metrics.total_reviews===undefined?'—':String(metrics.total_reviews),'★','Verified records retrieved from Google')+
         stat('Average Google rating',average,'☆','Calculated from synced review ratings')+
@@ -1198,7 +1198,7 @@
         '<div class="field"><label>Ask your review data</label><textarea id="google-review-question" rows="2" placeholder="What do customers mention most often?">'+esc(state.question||'')+'</textarea></div>'+
         '<button class="btn primary" data-action="google-review-chat">Ask Gemini</button>'+chat+'</div>'+
       '<div class="card" style="margin-top:16px"><div class="card-head"><h3>Level 2 · Gemini Review Management Agent</h3><span class="help">Sentiment, complaint detection and reply drafts</span></div>'+
-        '<p class="help">Analyse an individual review and generate a factual reply draft. Publishing always requires explicit owner approval.</p>'+
+        '<p class="help">Analyse an individual review and generate a factual reply draft. Publishing requires explicit approval from an authorised Google Reviews administrator.</p>'+
         '<div class="table-wrap">'+(records.length?'<table><thead><tr><th>Reviewer</th><th>Rating</th><th>Review & AI insight</th><th>Date</th><th>Business reply</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table>':empty('No Google reviews synced','Connect your Primary Owner account and sync after Google API access is approved.'))+'</div></div>'+
       '<div class="card" style="margin-top:16px"><div class="card-head"><h3>Level 3 · Multi-Agent Business Growth Copilot</h3><span class="help">Specialist agents + coordinator</span></div>'+
         '<p class="help">The Review Analyst, Customer Experience, Improvement Planner and Management Reporter examine the same real review evidence. Recommendations are advisory and never change bills, send messages or publish replies.</p>'+
@@ -1214,6 +1214,7 @@
       const summary=await api.status();
       const reviewResult=await api.list();
       googleReviewState.connection=summary.connection||{};
+      googleReviewState.permissions=summary.permissions||{};
       googleReviewState.settings=summary.settings||{};
       googleReviewState.metrics=summary.metrics||{};
       googleReviewState.reviews=reviewResult.reviews||[];

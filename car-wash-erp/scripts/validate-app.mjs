@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.9.2') throw new Error('The package version must be 2.9.2.');
+if (packageJson.version !== '2.9.3') throw new Error('The package version must be 2.9.3.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.9.2 debug APK must use v24 to install beside the existing v21, v22 and v23 apps.');
+  throw new Error('The 2.9.3 debug APK must use v24 to install beside the existing v21, v22 and v23 apps.');
 }
-console.log('PASS: Android 2.9.2 uses v24 for a side-by-side install that preserves v23 data');
+console.log('PASS: Android 2.9.3 uses v24 for a side-by-side install that preserves v23 data');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -279,7 +279,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.9.2 side-by-side app ID v24 was not set.');
+if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.9.3 side-by-side app ID v24 was not set.');
 console.log('PASS: app manifest uses the expected v24 Android package ID');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
@@ -703,8 +703,8 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v29')) {
-  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v29 cache version.');
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v30')) {
+  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v30 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
@@ -961,6 +961,7 @@ const googleReviewWorker = await readFile(new URL('../supabase/functions/google-
 const googleReviewWebhook = await readFile(new URL('../supabase/functions/google-review-pubsub-webhook/index.ts', import.meta.url), 'utf8');
 const googleReviewPubSubMigration = await readFile(new URL('../supabase/migrations/20261118000100_google_review_pubsub.sql', import.meta.url), 'utf8');
 const googleReviewMigration = await readFile(new URL('../supabase/migrations/20261117000100_google_reviews.sql', import.meta.url), 'utf8');
+const googleReviewAdminMigration = await readFile(new URL('../supabase/migrations/20261118082000_google_review_admins.sql', import.meta.url), 'utf8');
 const googleReviewDeploy = await readFile(new URL('../../.github/workflows/deploy-communications.yml', import.meta.url), 'utf8');
 const googleReviewCron = await readFile(new URL('../google-reviews-cron-setup.sql', import.meta.url), 'utf8');
 const prepareAssets = await readFile(new URL('../scripts/prepare-assets.mjs', import.meta.url), 'utf8');
@@ -987,12 +988,15 @@ for (const token of ['pac_google_review_settings','pac_google_oauth_states','pac
   'pac_google_review_sync_logs','pac_review_copilot_runs','pac_is_workspace_member']) {
   if (!googleReviewMigration.includes(token)) throw new Error('Google Review migration is missing: '+token);
 }
+for (const token of ['pac_google_review_admins','google_reviews_admin','workspace_id','auth_user_id','revoked_at','revoke all on public.pac_google_review_admins from anon, authenticated']) {
+  if (!googleReviewAdminMigration.includes(token)) throw new Error('Scoped Google Reviews admin migration is missing: '+token);
+}
 for (const token of ['auth.getUser(token)','GOOGLE_TOKEN_ENCRYPTION_KEY','GOOGLE_OAUTH_CLIENT_SECRET',
   'business.manage','mybusiness.googleapis.com/v4','level1-chat','level2-analyze','level3-copilot',
-  'approved !== true','requireOwner(ctx)','GEMINI_API_KEY']) {
+  'approved !== true','requireGoogleReviewAdmin(ctx)','pac_google_review_admins','GEMINI_API_KEY']) {
   if (!googleReviewApi.includes(token)) throw new Error('Google Review API missing authentication/AI/platform safeguard: '+token);
 }
-for (const token of ['oauth2.googleapis.com/token','email_verified','business.manage','encrypted_refresh_token','consumed_at']) {
+for (const token of ['oauth2.googleapis.com/token','email_verified','business.manage','encrypted_refresh_token','consumed_at','pac_google_review_admins','initiated_by']) {
   if (!googleReviewCallback.includes(token)) throw new Error('Google OAuth callback missing: '+token);
 }
 for (const token of ['GOOGLE_REVIEW_WORKER_SECRET','api_status','last_successful_sync_at','pac_google_reviews']) {

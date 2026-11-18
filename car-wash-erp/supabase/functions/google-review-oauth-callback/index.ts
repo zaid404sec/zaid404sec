@@ -58,6 +58,25 @@ Deno.serve(async req => {
     if (stateError || !oauthState || oauthState.consumed_at || Date.parse(oauthState.expires_at) < Date.now()) {
       return html('The one-time Google authorization state is invalid or expired. Start Connect Google again.', true);
     }
+    // Re-check that the initiating device still has Google Reviews access.
+    // A revoked or removed device must not be able to finish an old OAuth flow.
+    const { data: workspace, error: workspaceError } = await service.from('washdesk_workspaces')
+      .select('owner_auth_user_id').eq('id', oauthState.workspace_id).maybeSingle();
+    const { data: initiatingMember, error: memberError } = await service.from('washdesk_workspace_members')
+      .select('role').eq('workspace_id', oauthState.workspace_id).eq('auth_user_id', oauthState.initiated_by).maybeSingle();
+    if (workspaceError || memberError || !workspace?.owner_auth_user_id || !initiatingMember) {
+      return html('The initiating WashDesk device is no longer an active workspace member. Start again from an authorised device.', true);
+    }
+    const isOwner = initiatingMember.role === 'owner' && workspace.owner_auth_user_id === oauthState.initiated_by;
+    if (!isOwner) {
+      const { data: grant, error: grantError } = await service.from('pac_google_review_admins')
+        .select('auth_user_id').eq('workspace_id', oauthState.workspace_id)
+        .eq('auth_user_id', oauthState.initiated_by)
+        .eq('permission', 'google_reviews_admin').is('revoked_at', null).maybeSingle();
+      if (grantError || !grant) {
+        return html('Google Reviews permission for this device is no longer active. Return to WashDesk and ask the workspace owner to authorise it.', true);
+      }
+    }
     const verifier = await decryptText(oauthState.encrypted_code_verifier);
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

@@ -4,15 +4,15 @@ Last verified: 18 November 2026.
 
 ## Current state
 
-The Supabase project jkjudmkqaebrgllemris is active. The communications schema, Google Review schema, Pub/Sub event schema and messageRecipients sync merge migration were successfully applied and checked in Supabase. The Edge Function list was empty at last check. No OAuth credentials, Google review rows or Pub/Sub events were present in the new review tables.
+The Supabase project jkjudmkqaebrgllemris is active. The communications schema, Google Review schema, Pub/Sub event schema and recipient sync migrations are applied. On 18 November 2026, all seven deployed Edge Functions were returned as ACTIVE: google-review-api, google-review-oauth-callback, google-review-worker, google-review-pubsub-webhook, communication-api, communication-worker and communication-webhook.
 
-Therefore the database model is deployed, including the new recipient-group sync collection, but the Google Review API, OAuth callback, worker and notification webhooks are not live yet.
+The live review data check returned zero OAuth credentials, zero synced reviews, zero Pub/Sub events, zero sync logs and zero notification settings enabled. Function deployment alone does not mean Google OAuth or review sync is operational. PR #58 contains the proposed 2.9.3 scoped v24 permission update; its migration and v24 grant are not yet applied to production.
 
 ## Function sources and endpoints
 
 | Function folder | Endpoint suffix | Purpose |
 | --- | --- | --- |
-| google-review-api | /functions/v1/google-review-api | Owner-authenticated API and Gemini review workflows |
+| google-review-api | /functions/v1/google-review-api | Workspace-owner or explicitly scoped Google Reviews administrator API and Gemini review workflows |
 | google-review-oauth-callback | /functions/v1/google-review-oauth-callback | Google OAuth callback and encrypted token storage |
 | google-review-worker | /functions/v1/google-review-worker | Secret-authenticated review sync worker |
 | google-review-pubsub-webhook | /functions/v1/google-review-pubsub-webhook | OIDC-authenticated Pub/Sub push endpoint |
@@ -76,6 +76,9 @@ Google's requirements currently include a verified Business Profile that has bee
 - Service-role keys stay in Edge Function runtime, never in APK or frontend files.
 - Webhook validates the Google-issued OIDC identity, audience, service-account email and expiry.
 - Worker accepts only the configured worker secret.
-- Google API function checks the signed-in Supabase user and workspace membership; owner-only actions require the workspace owner.
+- The 2.9.3 candidate checks the signed-in Supabase user and workspace membership; Google Reviews administration requires either the original workspace owner or an explicit `google_reviews_admin` allowlist row. This does not grant billing, invoice, inventory or customer administration.
+- The OAuth callback rechecks that the initiating device's Google Reviews permission remains active before saving tokens.
+- The `pac_google_review_admins` table is server-only: no authenticated read/write policies or grants.
+- The v24 membership remains `member`; do not promote it to `owner`.
 - AI response generation creates drafts. A human must approve before the public reply is posted.
 - Do not store real credentials in GitHub source, docs, issue comments, screenshots or chat.
