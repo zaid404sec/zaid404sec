@@ -1048,8 +1048,12 @@ if (!googleReviewApi.includes('enable-notifications') || !googleReviewApi.includ
   throw new Error('Google Notifications API registration is missing.');
 }
 if (!googleReviewDeploy.includes('google-review-pubsub-webhook')) throw new Error('Pub/Sub webhook is not included in deployment.');
-if (!html.includes('google-review-enable-alerts') || !html.includes('notifications_last_event_at')) throw new Error('The instant review alerts control/status is missing.');
-console.log('PASS: three-level Gemini review features, owner-approved reply publishing, server-only credentials and scheduled sync');
+if (!googleReviewPage.includes('API sync') || !googleReviewPage.includes('optional') ||
+    !googleReviewApi.includes('enable-notifications') ||
+    !googleReviewPubSubMigration.includes('notifications_last_event_at')) {
+  throw new Error('Google API automation must remain an optional backend capability while manual replies work without it.');
+}
+console.log('PASS: manual replies are the default; OAuth, scheduled sync, Gemini and instant alerts remain optional API capabilities');
 
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
