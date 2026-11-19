@@ -14,6 +14,11 @@ async function decrypt(value: string) {
   const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:raw.slice(0,12)},key,raw.slice(12));
   return new TextDecoder().decode(plain);
 }
+async function openRouterKeyForWorkspace(service:any,workspaceId:string) {
+  const {data,error}=await service.rpc('pac_get_openrouter_key',{p_workspace_id:workspaceId});
+  if(error)throw error;
+  return String(data||env('OPENROUTER_API_KEY')||'').trim();
+}
 function ratingNumber(value: unknown) {
   const map:Record<string,number>={ONE:1,TWO:2,THREE:3,FOUR:4,FIVE:5};
   return map[String(value||'').toUpperCase()]||Number(value)||null;
@@ -77,9 +82,9 @@ async function autoReplyForReview(service:any,settings:any,token:string,accountN
   const complaintPattern=/\b(?:bad|poor|worst|terrible|awful|hate|refund|complaint|damage|damaged|scratch|scratched|rude|late|delay|dirty|unclean|problem|issue|unhappy|disappoint(?:ed|ing)?|not satisfied|not good|never again|fraud|scam|careless|broken|missed|overcharged|unsafe|wrong|unacceptable|unprofessional|waste|regret|long wait|no response)\b/i;
   if(complaintPattern.test(comment))return {status:'held_for_owner',reason:'complaint_or_negative_language'};
   if(comment.length>1800)return {status:'held_for_owner',reason:'review_too_long_for_auto_reply'};
-  const openRouterKey=env('OPENROUTER_API_KEY');
+  const openRouterKey=await openRouterKeyForWorkspace(service,settings.workspace_id);
   if(comment&& !openRouterKey){
-    await service.from('pac_google_review_settings').update({auto_reply_last_error:'OPENROUTER_API_KEY is not configured in Supabase Edge Function Secrets.'}).eq('workspace_id',settings.workspace_id);
+    await service.from('pac_google_review_settings').update({auto_reply_last_error:'The original Workspace Owner has not saved the replacement OpenRouter key in Google Review Center Setup.'}).eq('workspace_id',settings.workspace_id);
     return {status:'held_for_owner',reason:'server_ai_key_missing'};
   }
   const {data:claim,error:claimError}=await service.rpc('pac_claim_google_auto_reply',{
