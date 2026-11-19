@@ -4,6 +4,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 const OPENING_REMINDER_ID = 725401;
 const TEST_REMINDER_ID = 725402;
 const CHANNEL_ID = 'prime-auto-care-opening-reminder';
+const BOOKING_ALERT_CHANNEL_ID = 'prime-auto-care-booking-alerts';
 const INDIA_TIME_ZONE = 'Asia/Kolkata';
 const INDIA_OFFSET = 330;
 let listenerRegistered = false;
@@ -39,6 +40,59 @@ async function registerListeners() {
     if (notification?.id === OPENING_REMINDER_ID) window.dispatchEvent(new CustomEvent('prime-auto-care-opening-reminder-received'));
   });
 }
+async function ensureBookingAlertChannel() {
+  try {
+    await LocalNotifications.createChannel({
+      id: BOOKING_ALERT_CHANNEL_ID,
+      name: 'Customer booking alerts',
+      description: 'New customer and urgent booking requests for Prime Auto Care',
+      importance: 5,
+      sound: 'default',
+      vibration: true
+    });
+  } catch (error) {
+    if (!String(error?.message || '').toLowerCase().includes('already')) throw error;
+  }
+}
+function bookingNotificationId(value) {
+  const input = String(value || Date.now());
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % 2000000000 + 1;
+}
+export async function sendBookingAlertNotification(booking = {}) {
+  if (!Capacitor.isNativePlatform()) return { supported: false };
+  let permission = await LocalNotifications.checkPermissions();
+  if (permission.display !== 'granted') permission = await LocalNotifications.requestPermissions();
+  if (permission.display !== 'granted') return { supported: true, permissionDenied: true };
+  await registerListeners();
+  await ensureBookingAlertChannel();
+  const urgent = booking.is_urgent === true;
+  const title = urgent ? 'URGENT BOOKING · Prime Auto Care' : 'New booking · Prime Auto Care';
+  const bookingCode = String(booking.booking_code || '').slice(0, 40);
+  const customer = String(booking.customer_name || 'Customer').slice(0, 60);
+  const vehicle = String(booking.vehicle_number || 'Vehicle').slice(0, 20);
+  const service = String(booking.service_type || 'Wash service').slice(0, 40);
+  const date = String(booking.booking_date || '').slice(0, 10);
+  const time = String(booking.start_time || '').slice(0, 5);
+  const body = [bookingCode, customer, vehicle, service, date + (time ? ' ' + time : '')].filter(Boolean).join(' · ').slice(0, 240);
+  const id = bookingNotificationId(booking.id || booking.booking_code || (customer + vehicle + date + time));
+  await LocalNotifications.schedule({ notifications: [{
+    id,
+    title,
+    body,
+    channelId: BOOKING_ALERT_CHANNEL_ID,
+    sound: 'default',
+    autoCancel: true,
+    extra: { action: 'bookingAlert', bookingId: String(booking.booking_id || ''), bookingCode, isUrgent: urgent },
+    schedule: { at: new Date(Date.now() + 250), allowWhileIdle: true }
+  }]});
+  return { supported: true, scheduled: true, id };
+}
+
 async function ensureChannel() {
   try {
     await LocalNotifications.createChannel({ id: CHANNEL_ID, name: 'Opening announcement reminder', description: 'Daily reminder to prepare the Prime Auto Care opening announcement', importance: 4 });
@@ -91,4 +145,4 @@ export async function syncOpeningReminderIfPermitted(settings = {}) {
   if (!Capacitor.isNativePlatform()) return { supported: false, enabled: false };
   return scheduleOpeningReminder({ ...settings, requestPermission: false });
 }
-window.PrimeAutoCareNotifications = { scheduleOpeningReminder, syncOpeningReminderIfPermitted, getReminderStatus, sendTestNotification, isNative: () => Capacitor.isNativePlatform() };
+window.PrimeAutoCareNotifications = { scheduleOpeningReminder, syncOpeningReminderIfPermitted, getReminderStatus, sendTestNotification, sendBookingAlertNotification, isNative: () => Capacitor.isNativePlatform() };
