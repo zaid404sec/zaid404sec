@@ -360,7 +360,7 @@ async function handle(req: Request, body: any) {
     if (body.vehicle_type && acceptedVehicleTypes.includes(String(body.vehicle_type))) query = query.eq('vehicle_type', String(body.vehicle_type));
     if (body.service_type && ['Regular Wash','Foam Wash','Wax & Shine','Outside Wash'].includes(String(body.service_type))) query = query.eq('service_type', String(body.service_type));
     if (body.is_urgent === true || body.is_urgent === false) query = query.eq('is_urgent', body.is_urgent);
-    const search = String(body.search || '').replace(/[^a-zA-Z0-9 -]/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 60);
+    const search = String(body.search || '').replace(/[^a-zA-Z0-9 -]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
     if (search.length >= 2) {
       const pattern = '%' + search + '%';
       query = query.or('customer_name.ilike.' + pattern + ',customer_phone.ilike.' + pattern + ',vehicle_number.ilike.' + pattern + ',booking_code.ilike.' + pattern);
