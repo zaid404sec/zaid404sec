@@ -32,6 +32,7 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261118190000_prime_auto_care_bookings.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261118193000_google_review_auto_reply.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119034723_booking_urgency_notifications_google_publication.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119041849_booking_notification_fk_indexes.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
   throw new Error('One or more booking source, migration, API or public website files are missing.');
@@ -359,10 +360,13 @@ if (inlineStart < 0 || inlineEnd < 0) throw new Error('No inline application scr
 const inlineSource = html.slice(inlineStart + '<script>'.length, inlineEnd);
 await transform(inlineSource, { loader: 'js', target: 'es2020', logLevel: 'silent' });
 console.log('PASS: inline application JavaScript syntax');
-for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','communications.bundle.js','native-links.bundle.js','google-reviews.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','communications.bundle.js','native-links.bundle.js','google-reviews.bundle.js','bookings.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
   const path = new URL('../' + asset, import.meta.url);
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
   console.log('PASS: bundled asset ' + asset);
+const serviceWorkerSource = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
+if (!serviceWorkerSource.includes('prime-auto-care-shell-v33') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v33 and precache the booking bundle.');
+console.log('PASS: offline shell cache version and booking bundle precache');
 }
 const pdfFontsBundle = await readFile(new URL('../pdfmake-vfs.js', import.meta.url), 'utf8');
 if (!pdfFontsBundle.includes('__primeAutoCarePdfFontsReady') || !pdfFontsBundle.includes('addVirtualFileSystem(vfs)')) {
