@@ -65,9 +65,9 @@ if (!bookingApiSource.includes("'Private Car'") ||
     !bookingApiSource.includes("'Commercial Transport / Traveller'") ||
     bookingApiSource.includes("'Taxi / Commercial'") ||
     !bookingApiSource.includes("'rejected'") ||
-    !bookingApiSource.includes("updates.rejected_at") ||
-    !bookingApiSource.includes("updates.rejected_by") ||
-    !bookingApiSource.includes(".in('status', allowedCurrent)") ||
+    !bookingApiSource.includes("pac_update_booking_status_and_notify") ||
+    !bookingApiSource.includes("p_actor_user_id") ||
+    !bookingApiSource.includes("p_actor_label") ||
     !html.includes("data-status=\"rejected\"") ||
     !html.includes("rejected:'red'") ||
     !html.includes("'Commercial Transport / Traveller'")) {
@@ -103,7 +103,11 @@ console.log('PASS: owner-issued one-time codes authorise each phone independentl
 const localNotificationsSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
 if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
     !localNotificationsSource.includes('BOOKING_ALERT_CHANNEL_ID') ||
-    !html.includes('sendBookingAlertNotification')) {
+    !localNotificationsSource.includes('booking_confirmed') ||
+    !localNotificationsSource.includes('booking_rejected') ||
+    !html.includes('sendBookingAlertNotification') ||
+    !html.includes("BOOKING ACCEPTED") ||
+    !html.includes("BOOKING REJECTED")) {
   throw new Error('Native Android booking notifications are missing from the app polling flow.');
 }
 console.log('PASS: new booking alerts can show as Android system notifications when the app is active and permission is granted');
