@@ -505,7 +505,7 @@ async function runFreeAi(ctx: Context, body: any) {
     headers: {
       'Authorization': 'Bearer ' + apiKey,
       'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://zaid404sec.github.io/zaid404sec/website/',
+      'HTTP-Referer': 'https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-website',
       'X-Title': 'Prime Auto Care WashDesk'
     },
     body: JSON.stringify({
