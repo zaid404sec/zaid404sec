@@ -405,6 +405,12 @@ async function handle(req: Request, body: any) {
       if (!notificationPhone) throw new Error('Enter the owner mobile number for WhatsApp booking alerts.');
       normalizePhone(notificationPhone);
       if (!/^[a-z0-9_]{3,80}$/i.test(notificationTemplate)) throw new Error('Enter the approved WhatsApp utility template name.');
+      const { data: whatsappConfig, error: whatsappConfigError } = await ctx.admin.from('pac_communication_settings')
+        .select('whatsapp_phone_number_id').eq('workspace_id', ctx.workspace.id).maybeSingle();
+      if (whatsappConfigError) throw new Error('WhatsApp sender configuration could not be checked.');
+      if (!whatsappConfig?.whatsapp_phone_number_id || !env('META_ACCESS_TOKEN') || !env('META_GRAPH_API_VERSION')) {
+        throw new Error('WhatsApp Cloud API is not configured yet. Keep In-app alerts selected until the sender and server credentials are configured.');
+      }
     }
     const { data, error } = await ctx.admin.from('pac_booking_settings').update({
       opening_time: opening, closing_time: closing, slot_minutes: slot,
