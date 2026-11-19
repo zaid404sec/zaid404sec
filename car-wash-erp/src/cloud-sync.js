@@ -294,6 +294,15 @@ function listenForChanges() {
         setStatus('Cloud update error · local data is safe');
       }
     })
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'pac_booking_notification_events',
+      filter: 'workspace_id=eq.' + workspace.workspace_id
+    }, event => {
+      if (!event.new?.id) return;
+      window.dispatchEvent(new CustomEvent('washdesk-booking-notification', { detail: event.new }));
+    })
     .subscribe(state => {
       if (state === 'SUBSCRIBED') setStatus('Connected · live sync active on all paired devices');
       else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') setStatus('Reconnecting live sync…');
