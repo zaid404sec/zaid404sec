@@ -9,20 +9,18 @@ function fromBase64(value: string) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
   return Uint8Array.from(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')), c => c.charCodeAt(0));
 }
-async function encryptText(value: string) {
-  const encoded = env('GOOGLE_TOKEN_ENCRYPTION_KEY');
-  if (!encoded) throw new Error('Google token encryption is not configured.');
-  const raw = fromBase64(encoded);
+async function encryptText(value: string, keyText: string) {
+  if (!keyText) throw new Error('Google token encryption is not configured.');
+  const raw = fromBase64(keyText);
   if (raw.length !== 32) throw new Error('Google token encryption key must be 32 bytes.');
   const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(value));
   return base64Url(new Uint8Array([...iv, ...new Uint8Array(encrypted)]));
 }
-async function decryptText(value: string) {
-  const encoded = env('GOOGLE_TOKEN_ENCRYPTION_KEY');
-  if (!encoded) throw new Error('Google token encryption is not configured.');
-  const rawKey = fromBase64(encoded), raw = fromBase64(value);
+async function decryptText(value: string, keyText: string) {
+  if (!keyText) throw new Error('Google token encryption is not configured.');
+  const rawKey = fromBase64(keyText), raw = fromBase64(value);
   if (rawKey.length !== 32 || raw.length < 29) throw new Error('Google encrypted credential is invalid.');
   const key = await crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['decrypt']);
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(0, 12) }, key, raw.slice(12));
@@ -77,13 +75,19 @@ Deno.serve(async req => {
         return html('Google Reviews permission for this device is no longer active. Return to WashDesk and ask the workspace owner to authorise it.', true);
       }
     }
-    const verifier = await decryptText(oauthState.encrypted_code_verifier);
+    const { data: oauthConfig, error: oauthConfigError } = await service.rpc('pac_get_google_oauth_app_config', {
+      p_workspace_id: oauthState.workspace_id
+    });
+    if (oauthConfigError || !oauthConfig?.client_id || !oauthConfig?.client_secret || !oauthConfig?.redirect_uri || !oauthConfig?.encryption_key) {
+      return html('Google OAuth Web Client credentials are not configured. Return to WashDesk Setup and save the OAuth Client ID and Secret.', true);
+    }
+    const verifier = await decryptText(oauthState.encrypted_code_verifier, String(oauthConfig.encryption_key));
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: env('GOOGLE_OAUTH_CLIENT_ID'),
-        client_secret: env('GOOGLE_OAUTH_CLIENT_SECRET'),
-        redirect_uri: env('GOOGLE_OAUTH_REDIRECT_URI'),
+        client_id: String(oauthConfig.client_id),
+        client_secret: String(oauthConfig.client_secret),
+        redirect_uri: String(oauthConfig.redirect_uri),
         grant_type: 'authorization_code', code, code_verifier: verifier
       })
     });
@@ -108,7 +112,7 @@ Deno.serve(async req => {
     const { data: existing } = await service.from('pac_google_oauth_credentials')
       .select('encrypted_refresh_token').eq('workspace_id', oauthState.workspace_id).maybeSingle();
     const refreshToken = token.refresh_token
-      ? await encryptText(String(token.refresh_token))
+      ? await encryptText(String(token.refresh_token), String(oauthConfig.encryption_key))
       : existing?.encrypted_refresh_token;
     if (!refreshToken) return html('Google did not issue an offline refresh token. Revoke this app in Google Account security and connect again, selecting the consent prompt.', true);
     const now = new Date().toISOString();
@@ -119,7 +123,7 @@ Deno.serve(async req => {
     const { error: saveError } = await service.from('pac_google_oauth_credentials').upsert({
       workspace_id: oauthState.workspace_id,
       google_user_email: String(userInfo.email),
-      encrypted_access_token: await encryptText(String(token.access_token)),
+      encrypted_access_token: await encryptText(String(token.access_token), String(oauthConfig.encryption_key)),
       encrypted_refresh_token: refreshToken,
       access_token_expires_at: new Date(Date.now() + Number(token.expires_in || 3600) * 1000).toISOString(),
       granted_scopes: grantedScopes, token_type: String(token.token_type || 'Bearer'),
