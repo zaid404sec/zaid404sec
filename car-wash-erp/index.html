@@ -1447,6 +1447,7 @@ window.addEventListener('washdesk-booking-notification',event=>{
     bookingNotificationSeen.delete(id);
     bookingNotificationRetryAt.delete(id);
   }
+  if(page==='bookings')void loadBookingCenter(true);
   void pollBookingNotifications();
 });
 async function loadBookingCenter(force=false){
