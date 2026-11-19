@@ -1,3 +1,45 @@
+# Current verified state — 20 November 2026
+
+> This current-state section supersedes older historical status notes below. Preserve the existing data and original Workspace Owner.
+
+## Source control and build
+- Repository: https://github.com/zaid404sec/zaid404sec
+- Production baseline: `main` commit `03191af76a703cb341eca88ac651bc331a935a32`, WashDesk 2.13.
+- Active PR: [#68 — Google Review Vault pairing and booking fixes](https://github.com/zaid404sec/zaid404sec/pull/68).
+- Current application-code commit: `39b2205860587b52cbadb5a1933e91c2ab497014` (WashDesk 2.13.1).
+- Latest complete CI run: [Run #445972](https://github.com/zaid404sec/zaid404sec/actions/runs/44597254275); Android APK, Windows installer, Google/Booking Edge Function type-check, and full release packaging all passed.
+- Main app package remains `com.washdesk.carwash.v24`.
+
+## Production Supabase
+- Project: `jkjudmkqaebrgllemris`, status `ACTIVE_HEALTHY`, region `ap-northeast-2`.
+- Active functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v10, `prime-auto-care-website` v2, `prime-auto-care-booking` v2, `prime-auto-care-site` v3, `public-reviews` v3.
+- Business website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/
+- Public booking page: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
+- Google Review Center's saved `website_url` already points to the Supabase business website, not GitHub Pages.
+
+## Booking and notifications
+- Public booking is enabled for `prime-auto-care`, Asia/Kolkata, 08:00–19:00, 30-minute slots, capacity 1, 14-day horizon.
+- The booking database uses a per-workspace/per-day PostgreSQL advisory transaction lock and checks overlapping pending/confirmed/rescheduled bookings before insert. This prevents two simultaneous requests from claiming the same capacity slot.
+- Booking API v10 supports owner-issued one-time phone pairing codes (8 digits, 10-minute expiry, single use) and per-device receipts. Acknowledging an alert on one phone does not clear it for other phones.
+- Last database check: 34 paired workspace members, 1 non-owner notification admin plus the original Owner (2 authorised phones total), 0 unused pairing codes, 0 per-device receipts, 0 booking records and 0 booking notification events. Generate a separate code on the original Owner phone for each of the other two phones; each signed-in paired device redeems its own code.
+- Booking creation and accept/reject/cancel status changes now create notification events atomically in PostgreSQL. Paired devices subscribe to Supabase Realtime with fallback polling. Android local notifications require the app to be active and permission granted; background delivery while fully closed still requires remote push/FCM.
+
+## Google Reviews setup
+- Vault-backed OAuth app config, OpenRouter key storage and Pub/Sub worker secret storage are implemented and deployed.
+- Last database check: 0 OAuth app configs, 0 original-owner OAuth connections, 0 OpenRouter Vault keys, 0 Pub/Sub worker secrets and 0 enabled Google Review notification settings.
+- Google Basic API Access approval, original-owner Google OAuth consent, Pub/Sub topic/subscription/OIDC configuration and a replacement AI key are still required. Auto-replies remain disabled by default.
+- An OpenRouter key was exposed in chat. Revoke it and create a replacement; enter the replacement only through WashDesk Setup. Never commit or reuse the exposed key.
+
+## 2.13.1 release baseline
+- Half-day attendance salary deduction is exactly 50% of the calendar-day rate.
+- Dark Liquid Glass app and booking UI are implemented; printed invoices remain paper-white.
+- Dashboard automatic full reloads are reduced; manual refresh is available.
+- Vehicle categories distinguish Private Car, Private SUV, Taxi and Commercial Transport.
+- Android signing: the 2.13.1 debug APK certificate differs from the 2.11.0 APK certificate. Do not install it over the existing v24 app. No original keystore was found. See `AI_HANDOVER/ANDROID_SIGNING_STATUS.md`.
+- Keep old source, APK, business records and existing owner identity intact. Never reset or reseed production data.
+
+---
+
 # Project state — Prime Auto Care / WashDesk
 
 _Last verified: 19 November 2026_

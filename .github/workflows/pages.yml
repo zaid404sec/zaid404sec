@@ -1,11 +1,8 @@
 name: Deploy WashDesk to GitHub Pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'car-wash-erp/**'
-      - '.github/workflows/pages.yml'
+  # Legacy GitHub Pages deployment is manual-only. The public Prime Auto Care
+  # website and booking portal are served by the active Supabase Edge Functions.
   workflow_dispatch:
 
 permissions:

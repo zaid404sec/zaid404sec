@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.12.1') throw new Error('The package version must be 2.12.1.');
+if (packageJson.version !== '2.13.1') throw new Error('The package version must be 2.13.1.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.12.1 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
+  throw new Error('The 2.13.1 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
 }
-console.log('PASS: Android 2.12.0 retains the existing v24 application ID for an in-place upgrade.');
+console.log('PASS: Android 2.13.1 retains the existing v24 application ID for an in-place upgrade.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -51,26 +51,40 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119034723_booking_urgency_notifications_google_publication.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119041849_booking_notification_fk_indexes.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119080000_booking_rejected_status.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119085155_booking_multi_device_notifications_20261119.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119085216_booking_status_actor_attribution_20261119.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119085230_booking_status_atomic_notifications_20261119.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119085605_google_ai_key_vault_setup_20261119.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119090408_booking_notification_realtime_20261119.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119190447_booking_create_atomic_notification_events_20261120.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119160000_google_vault_setup_wizard.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
   throw new Error('One or more booking source, migration, API or public website files are missing.');
 }
 console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
 const bookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
-if (!bookingApiSource.includes("'Private Car / SUV'") ||
+if (!bookingApiSource.includes("'Private Car'") ||
+    !bookingApiSource.includes("'Private SUV'") ||
+    !bookingApiSource.includes("'Private Car / SUV'") ||
     !bookingApiSource.includes("'Taxi'") ||
     !bookingApiSource.includes("'Commercial Transport / Traveller'") ||
     bookingApiSource.includes("'Taxi / Commercial'") ||
     !bookingApiSource.includes("'rejected'") ||
-    !bookingApiSource.includes("updates.rejected_at") ||
-    !bookingApiSource.includes("updates.rejected_by") ||
-    !bookingApiSource.includes(".in('status', allowedCurrent)") ||
+    !bookingApiSource.includes("pac_update_booking_status_and_notify") ||
+    !bookingApiSource.includes("p_actor_user_id") ||
+    !bookingApiSource.includes("p_actor_label") ||
     !html.includes("data-status=\"rejected\"") ||
     !html.includes("rejected:'red'") ||
     !html.includes("'Commercial Transport / Traveller'")) {
   throw new Error('Booking taxonomy, rejection action or guarded status-transition checks are missing.');
 }
 console.log('PASS: private vehicles, taxis and commercial transport are distinct; Pending requests can be rejected safely');
+if (!html.includes('<option value="Private Car">Private Car</option>') ||
+    !html.includes('<option value="Private SUV">Private SUV</option>')) {
+  throw new Error('Staff booking form must distinguish Private Car and Private SUV.');
+}
+console.log('PASS: staff booking filters distinguish Private Car, Private SUV, Taxi and Commercial Transport');
 
 const bookingNotificationMigration = await readFile(new URL('../supabase/migrations/20261119043635_booking_notification_admin_access.sql', import.meta.url), 'utf8');
 for (const token of ['canManageBookingNotifications','pac_booking_notification_admins','action === \'notifications\'','action === \'acknowledge-notification\'']) {
@@ -80,10 +94,26 @@ for (const token of ['pac_booking_notification_admins','booking_notifications_ad
   if (!bookingNotificationMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Booking notification permission migration is incomplete: '+token);
 }
 console.log('PASS: the paired booking desk receives scoped alerts without changing the original Workspace Owner');
+for (const token of ['create-notification-pair-code','redeem-notification-pair-code','pac_booking_notification_pair_codes','pac_booking_notification_receipts','notification_id','auth_user_id','device_acknowledged']) {
+  if (!bookingApiSource.includes(token)) throw new Error('Per-device booking notification pairing/receipt support is missing: '+token);
+}
+if (bookingApiSource.includes('acknowledged_at: new Date().toISOString(), acknowledged_by: ctx.user.id')) {
+  throw new Error('Booking acknowledgement must be per-device, not a global event acknowledgement.');
+}
+if (!html.includes('booking-notification-create-code') ||
+    !html.includes('booking-notification-redeem-code') ||
+    !html.includes('notificationPairCode')) {
+  throw new Error('WashDesk must expose the owner-issued phone pairing flow.');
+}
+console.log('PASS: owner-issued one-time codes authorise each phone independently; one phone acknowledgement does not hide alerts from others');
 const localNotificationsSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
 if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
     !localNotificationsSource.includes('BOOKING_ALERT_CHANNEL_ID') ||
-    !html.includes('sendBookingAlertNotification')) {
+    !localNotificationsSource.includes('booking_confirmed') ||
+    !localNotificationsSource.includes('booking_rejected') ||
+    !html.includes('sendBookingAlertNotification') ||
+    !html.includes("BOOKING ACCEPTED") ||
+    !html.includes("BOOKING REJECTED")) {
   throw new Error('Native Android booking notifications are missing from the app polling flow.');
 }
 console.log('PASS: new booking alerts can show as Android system notifications when the app is active and permission is granted');
@@ -94,11 +124,12 @@ const notificationPoll = html.slice(notificationPollStart, notificationPollEnd);
 const deliveryIndex = notificationPoll.indexOf('const delivery=await sendAlert(item);');
 const receiptIndex = notificationPoll.indexOf('acknowledgeNotification(id)');
 const deniedIndex = notificationPoll.indexOf('if(delivery?.permissionDenied)');
-const deniedEnd = notificationPoll.indexOf('if(delivery?.supported===true', deniedIndex);
+const deliveryGuardIndex = notificationPoll.indexOf('if(delivery?.supported!==true||delivery?.scheduled!==true)');
 if (deliveryIndex < 0 || receiptIndex < deliveryIndex || deniedIndex < 0 ||
-    deniedEnd < deniedIndex || notificationPoll.slice(deniedIndex, deniedEnd).includes('acknowledgeNotification') ||
+    deliveryGuardIndex < deniedIndex || notificationPoll.slice(deniedIndex, deliveryGuardIndex).includes('acknowledgeNotification') ||
     !notificationPoll.includes('bookingNotificationRetryAt.set(id,Date.now()+60000)') ||
-    !notificationPoll.includes("document.addEventListener('visibilitychange'")) {
+    deliveryGuardIndex < deliveryIndex ||
+    !html.includes("document.addEventListener('visibilitychange'")) {
   throw new Error('Booking alerts must remain unread when Android delivery fails and retry after the app resumes.');
 }
 console.log('PASS: booking alert receipts are acknowledged only after delivery; denied/failed alerts remain retryable');
@@ -112,7 +143,7 @@ if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes('PENDING until Prime Auto Care confirms') ||
     !bookingWebsite.includes('id="is_urgent"') ||
     !bookingWebsite.includes("is_urgent:$('is_urgent').checked===true") ||
-    !bookingWebsite.includes('src="../../prime-auto-care-logo.jpg"') ||
+    !bookingWebsite.includes('src="https://raw.githubusercontent.com/zaid404sec/zaid404sec/main/car-wash-erp/prime-auto-care-logo.jpg"') ||
     !existsSync(new URL('../prime-auto-care-logo.jpg', import.meta.url))) {
   throw new Error('Customer booking page is missing its public API flow or pending-confirmation safeguard.');
 }
@@ -145,8 +176,6 @@ if (!html.includes('google-auto-reply-enabled') || !html.includes('google-review
     !html.includes('function googleReviewSetupMarkup(state)') ||
     !html.includes('google-review-save-project-number') ||
     !html.includes('google-review-copy-oauth-callback') ||
-    !html.includes('GOOGLE_OAUTH_CLIENT_SECRET') ||
-    !html.includes('OPENROUTER_API_KEY') ||
     !html.includes('oauth_credentials_ready') ||
     !html.includes('pubsub_credentials_ready') ||
     html.includes('google-ai-api-key') ||
@@ -159,8 +188,48 @@ if (!googleReviewApiSource.includes("env('OPENROUTER_API_KEY')") ||
     googleReviewApiSource.includes('body.api_key') ||
     !googleReviewApiSource.includes('save-google-project-number') ||
     !googleReviewApiSource.includes('oauth_callback_url') ||
-    !googleReviewApiSource.includes('openrouter_api_key_configured')) {
-  throw new Error('Google setup must use server-side AI secrets and expose only safe configuration readiness flags.');
+    !googleReviewApiSource.includes('openrouter_api_key_configured') ||
+    !googleReviewApiSource.includes('save-google-oauth-config') ||
+    !googleReviewApiSource.includes('pac_store_google_oauth_app_config') ||
+    !googleReviewApiSource.includes('pac_get_google_oauth_app_config') ||
+    !googleReviewApiSource.includes('save-openrouter-key') ||
+    !googleReviewApiSource.includes('pac_store_openrouter_key') ||
+    !googleReviewApiSource.includes('save-google-pubsub-settings') ||
+    !googleReviewApiSource.includes('pac_store_google_review_worker_secret') ||
+    !googleReviewApiSource.includes('google_pubsub_audience')) {
+  throw new Error('Google setup must save OAuth, AI and Pub/Sub credentials through the paired owner session into Supabase Vault.');
+}
+const googleVaultSetupClient = await readFile(new URL('../src/google-reviews.js', import.meta.url), 'utf8');
+if (!html.includes('google-oauth-client-id') ||
+    !html.includes('google-oauth-client-secret') ||
+    !html.includes('google-openrouter-api-key') ||
+    !html.includes('google-pubsub-topic') ||
+    !html.includes('google-pubsub-service-account') ||
+    !html.includes('google-review-save-oauth-config') ||
+    !html.includes('google-review-save-openrouter-key') ||
+    !html.includes('google-review-save-pubsub-settings') ||
+    !googleVaultSetupClient.includes('saveGoogleOAuthConfig') ||
+    !googleVaultSetupClient.includes('saveOpenRouterKey') ||
+    !googleVaultSetupClient.includes('savePubSubSettings')) {
+  throw new Error('Google Review Center must expose the paired-session Vault setup fields and save actions.');
+}
+const googleVaultSetupCallback = await readFile(new URL('../supabase/functions/google-review-oauth-callback/index.ts', import.meta.url), 'utf8');
+const googleVaultSetupWebhook = await readFile(new URL('../supabase/functions/google-review-pubsub-webhook/index.ts', import.meta.url), 'utf8');
+const googleVaultSetupMigration = await readFile(new URL('../supabase/migrations/20261119160000_google_vault_setup_wizard.sql', import.meta.url), 'utf8');
+if (!googleVaultSetupMigration.includes('ORIGINAL_WORKSPACE_OWNER_REQUIRED') ||
+    !googleVaultSetupMigration.includes('vault.create_secret') ||
+    !googleVaultSetupMigration.includes('vault.update_secret') ||
+    !googleVaultSetupMigration.includes('revoke all on function public.pac_store_google_review_worker_secret')) {
+  throw new Error('The internal Pub/Sub worker secret must be stored in Supabase Vault through an original-owner-only RPC.');
+}
+if (!googleVaultSetupCallback.includes('pac_get_google_oauth_app_config') ||
+    !googleReviewWorkerSource.includes('pac_get_google_oauth_app_config') ||
+    !googleVaultSetupWebhook.includes('google_pubsub_audience') ||
+    !googleVaultSetupWebhook.includes('pac_get_google_review_worker_secret') ||
+    googleVaultSetupWebhook.includes("env('GOOGLE_PUBSUB_AUDIENCE')") ||
+    googleVaultSetupWebhook.includes("env('GOOGLE_REVIEW_WORKER_SECRET')") ||
+    !googleReviewWorkerSource.includes('pac_get_google_review_worker_secret')) {
+  throw new Error('Google OAuth callback and Pub/Sub event processing must load their per-workspace credentials from Vault.');
 }
 console.log('PASS: Google setup wizard uses paired session, original-owner OAuth and server-side AI secrets');
 if (!googleReviewWorkerSource.includes('readGoogleReplyModeration') ||
@@ -804,10 +873,16 @@ console.log('PASS: remote cloud updates preserve the active bill form, text focu
 for (const token of [
   'pairDevice', 'signInAnonymously()', 'washdesk_join_workspace',
   'washdesk_get_workspace', 'washdesk_merge_sync', 'washdesk_next_invoice_number',
-  'postgres_changes', 'startSafetyRefresh', 'Offline',
-  'Offline'
+  'postgres_changes', 'pac_booking_notification_events', 'washdesk-booking-notification',
+  'startSafetyRefresh', 'Offline'
 ]) {
   if (!cloudSource.includes(token)) throw new Error('Shared device pairing / cloud sync hook is missing: ' + token);
+}
+if (!html.includes("window.addEventListener('washdesk-booking-notification'") ||
+    !html.includes('bookingNotificationSeen.delete(id)') ||
+    !html.includes("if(page==='bookings')void loadBookingCenter(true)") ||
+    !html.includes('void pollBookingNotifications()')) {
+  throw new Error('Live booking events must immediately trigger the per-device notification poller.');
 }
 for (const obsolete of ['requestEmailOtp', 'verifyEmailOtp', 'emailRedirectTo', 'AUTH_REDIRECT_URL', 'exchangeCodeForSession']) {
   if (cloudSource.includes(obsolete)) throw new Error('Legacy email-link authentication remains in the cloud module: ' + obsolete);
@@ -1186,7 +1261,7 @@ for (const token of ['google-review-connect','google-review-sync','google-review
 }
 if (!html.includes('googleAccountEmail') || !html.includes('13506481990772076097') ||
     !html.includes('https://share.google/6g3f0aJqTezi6JH5T') ||
-    !html.includes('https://zaid404sec.github.io/zaid404sec/website/')) {
+    !html.includes('https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/')) {
   throw new Error('Prime Auto Care Google owner/profile/website settings were not prefilled.');
 }
 if (!html.includes('qr:reviewProfileLink') || !googleReviewClient.includes('qr: target') ||
@@ -1209,7 +1284,7 @@ for (const token of ['auth.getUser(token)','GOOGLE_TOKEN_ENCRYPTION_KEY','GOOGLE
 for (const token of ['oauth2.googleapis.com/token','email_verified','business.manage','encrypted_refresh_token','consumed_at','pac_google_review_admins','initiated_by']) {
   if (!googleReviewCallback.includes(token)) throw new Error('Google OAuth callback missing: '+token);
 }
-for (const token of ['GOOGLE_REVIEW_WORKER_SECRET','api_status','last_successful_sync_at','pac_google_reviews']) {
+for (const token of ['pac_get_google_review_worker_secret','api_status','last_successful_sync_at','pac_google_reviews']) {
   if (!googleReviewWorker.includes(token)) throw new Error('Scheduled Google review worker missing: '+token);
 }
 for (const token of ['google-review-api','google-review-oauth-callback','google-review-worker','google-review-pubsub-webhook','supabase db push']) {
@@ -1220,8 +1295,12 @@ if (!googleReviewCron.includes('pg_cron') || !googleReviewCron.includes('pg_net'
     !googleReviewCron.includes('prime-auto-care-google-reviews-worker')) {
   throw new Error('Vault-backed scheduled Google review catch-up sync is incomplete.');
 }
-for (const token of ['GOOGLE_PUBSUB_AUDIENCE','GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT','tokeninfo?id_token=','NEW_REVIEW','UPDATED_REVIEW','google-review-worker','pac_google_review_events','nested.type','nested.location','nested.review']) {
+for (const token of ['google_pubsub_audience','pubsub_push_service_account','tokeninfo?id_token=','NEW_REVIEW','UPDATED_REVIEW','google-review-worker','pac_google_review_events','nested.type','nested.location','nested.review']) {
   if (!googleReviewWebhook.includes(token)) throw new Error('Pub/Sub notification receiver is missing safeguard: '+token);
+}
+if (googleReviewWebhook.includes("env('GOOGLE_PUBSUB_AUDIENCE')") ||
+    googleReviewWebhook.includes("env('GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT')")) {
+  throw new Error('Pub/Sub identity must be verified against workspace-scoped database configuration.');
 }
 for (const token of ['notifications_enabled','notifications_last_event_at','pac_google_review_events','pac_is_workspace_member']) {
   if (!googleReviewPubSubMigration.includes(token)) {

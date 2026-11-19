@@ -358,7 +358,7 @@ Meta template approval, number/API onboarding, Exotel account activation, DLT re
 
 ## Version 2.9.1 — Google Review AI Center and Pub/Sub instant alerts
 
-- Added a mobile-first Prime Auto Care one-page website at `website/`; expected Pages URL: https://zaid404sec.github.io/zaid404sec/website/. The owner must add the published URL to the Google Business Profile after deployment.
+- Added a mobile-first Prime Auto Care one-page website at `website/`. The public website is served by Supabase at `https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/`; the public booking page is `https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking`. GitHub Pages auto-deployment is disabled. Add the Supabase website URL to the Google Business Profile website field.
 - Added a Google Review Center with review metrics/inbox, manual sync, neutral WhatsApp invitations, invoice PDF QR and printable A5 counter QR.
 - Added three server-side Gemini levels: Level 1 grounded review chatbot, Level 2 per-review analysis and reply drafts, and Level 3 multi-agent Business Growth Copilot.
 - Public Google replies remain owner-approved; AI cannot publish automatically.

@@ -1,3 +1,24 @@
+# Current verified state — 20 November 2026
+
+This section supersedes older release/status notes below. Preserve the existing production workspace and original Workspace Owner.
+
+- Current app release target: **WashDesk 2.13.1**, package ID `com.washdesk.carwash.v24`.
+- Active development PR: [#68](https://github.com/zaid404sec/zaid404sec/pull/68), branch `feature/google-review-vault-pairing`.
+- Complete CI run: [#445972](https://github.com/zaid404sec/zaid404sec/actions/runs/44597254275) — Android APK, Windows installer, Edge Function type-check and full release package all succeeded.
+- Production Supabase project: `jkjudmkqaebrgllemris`, `ACTIVE_HEALTHY`, region `ap-northeast-2`.
+- Active functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v10, `prime-auto-care-site` v3, `prime-auto-care-website` v2, `prime-auto-care-booking` v2, `public-reviews` v3.
+- Public website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/
+- Public booking page: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
+- Booking creation and accept/reject/cancel status changes write notification events atomically. Four-phone pairing uses one-time owner-issued codes and independent per-device receipts. Paired devices receive Supabase Realtime events and the app refreshes the booking list without a full dashboard reload.
+- Current database check: 34 workspace members, 1 non-owner notification admin plus the original Owner (2 authorised phones total), 0 unused pairing codes, 0 per-device receipts, 0 booking records and 0 notification events. Pair the other three signed-in phones from Bookings → Phone notification access.
+- The 2.13.1 APK is a runner-generated debug build. Its signing certificate differs from the old 2.11.0 APK; Android will reject an in-place update. No original keystore was found. **Do not install over the existing v24 app.** See `AI_HANDOVER/ANDROID_SIGNING_STATUS.md`.
+- App-active booking notifications use Realtime plus Android local notifications. Background delivery with the app fully closed still requires FCM setup.
+- Google Basic API Access, original-owner OAuth consent, Pub/Sub/OIDC configuration and a replacement OpenRouter key remain external prerequisites. Auto-replies stay disabled. The OpenRouter key pasted in chat is compromised and must be revoked.
+- GitHub Pages auto-deployment is manual-only. The Supabase Edge Function URLs above are the public source of truth.
+- Migration recovery note: `AI_HANDOVER/MIGRATION_HISTORY_RECOVERY.md`. Do not run `supabase db push` until the remote/local migration ledger is reconciled.
+
+---
+
 # Prime Auto Care / WashDesk — Complete Technical Handover
 
 Verified on 18 November 2026. This file is the continuity guide for future updates. Always re-check GitHub main, Supabase and external Google settings before making changes.
@@ -204,3 +225,65 @@ For app changes, preserve the existing live business data. Prefer additive, back
 - Confirm Windows installer opens and existing user data remains present.
 
 The source repository is the source of truth. This ZIP is a safe source and configuration handover, not a backup of production database contents or secrets.
+
+
+## 2026-11-20 continuation checkpoint
+
+This section records the verified state for continuing the Prime Auto Care WashDesk work without restarting.
+
+### Source control
+- Repository: `zaid404sec/zaid404sec`
+- Production baseline: `main` commit `03191af76a703cb341eca88ac651bc331a935a32` (WashDesk 2.13).
+- Active development: PR [#68](https://github.com/zaid404sec/zaid404sec/pull/68), branch `feature/google-review-vault-pairing`.
+- Latest application-code commit: `fa1c1f029dd9eb67a235a061d5c8ffc5da0add05`. The handover-only checkpoint update follows on the same branch.
+- Do not merge PR #68 until Android, Windows and Edge Function type-check workflows all pass. The latest run was still in progress when this checkpoint was written.
+
+### Already merged in 2.13
+- Half-day attendance deducts exactly 50% of the actual calendar-day salary rate.
+- Dark Liquid Glass styling is applied to the main workspace and booking UI; printed invoices remain paper-white.
+- Background Realtime snapshots no longer rebuild the active dashboard; refresh is user-controlled.
+- Private Car, Private SUV, Taxi and Commercial Transport are distinct booking categories.
+- Urgent booking field, pending/reject workflow, booking filters, and notification event/receipt schema are present.
+
+### Latest development changes
+- Google OAuth Client ID/Secret, redirect URI and token-encryption key are saved through paired-session, original-owner-checked Supabase Vault RPCs.
+- Google AI provider key and internal Pub/Sub worker token use Vault-backed storage.
+- OAuth callback, Google review worker and Pub/Sub webhook were updated to load workspace-scoped secrets server-side.
+- Google reply publication status is re-read from Google and stored separately from the initial HTTP submission.
+- Fixed Google setup validation to test the server-side Vault flow instead of expecting secret names in browser HTML.
+- Fixed Pub/Sub bearer-token whitespace parsing and booking search whitespace normalization.
+- Added owner-issued, one-time, 10-minute booking notification pairing codes and per-device notification receipts. Each phone now acknowledges its own alert; one phone's acknowledgement must not hide the event from other phones. This change is in PR #68 and must pass CI before merge.
+
+### Supabase production state checked
+- Existing project: `jkjudmkqaebrgllemris`, region `ap-northeast-2`, status `ACTIVE_HEALTHY`. Preserve this project and its existing Workspace Owner.
+- Active Edge Functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v10, `prime-auto-care-website` v2, `prime-auto-care-booking` v2, `prime-auto-care-site` v3, and `public-reviews` v3.
+- Public business website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-website
+- Public customer booking page: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
+- Booking settings are enabled for slug `prime-auto-care`, timezone `Asia/Kolkata`, 08:00–19:00, 30-minute slots, capacity 1, 14-day booking horizon.
+- At the last read-only status check: 0 booking rows and 0 booking notification events. Do not create fake production bookings for testing.
+- At the last read-only Google status check: 0 saved OAuth app configs, 0 owner OAuth connections, 0 OpenRouter Vault keys, 0 Pub/Sub worker secrets, and 0 enabled Google review notification settings. The setup wizard is deployed, but real Google credentials have not yet been supplied through it.
+
+### External prerequisites and security
+- Google Business Profile Basic API Access approval remains an external Google decision. Pairing-code authentication cannot bypass Google approval or the original owner's explicit Google OAuth consent.
+- Google Pub/Sub topic, authenticated push subscription, OIDC service account and publisher/service-agent permissions must be configured in the Google Cloud project.
+- Automatic Google replies remain disabled by default. Do not enable until API approval, owner OAuth, review sync, Pub/Sub and AI-key checks pass.
+- An OpenRouter key was pasted into chat and must be treated as compromised. Revoke it and create a replacement; enter the replacement only in WashDesk Setup. Never add it to source, APK, logs, screenshots or this handover.
+- Booking creation and status changes now create notification events atomically. Paired devices receive Supabase Realtime events plus fallback polling; Android local notifications require the app to be active and permission granted. Background delivery while fully closed still requires FCM registration and a server-side sender.
+- The live Supabase website and booking Edge Functions are ACTIVE. GitHub Pages is not the public source of truth for these links; keep the Supabase links above in the app and Google Business Profile.
+
+### Next exact steps
+1. Finish CI for PR #68. Fix any new validator or build failure; do not bypass tests.
+2. Deploy the latest booking API only after its Deno type-check passes.
+3. Confirm the phone-pairing UI is visible; on the original Owner phone, generate one code per additional paired phone, then redeem each code on that phone. Test independent receipts across devices.
+4. Complete the Google Review Center wizard from the original Workspace Owner account; save the Google OAuth Web Client, connect the Owner account, save a replacement OpenRouter key, and configure Pub/Sub.
+5. Confirm Google Basic API Access approval and quota before attempting live review sync or reply publication.
+6. Run a production-safe test using a controlled booking test only with explicit approval; verify no overlapping reservation can be created and notifications appear on every authorised device.
+7. After all CI checks pass, merge PR #68, build the main-branch APK/EXE/source artifacts, verify SHA-256 hashes, and update the release handover with exact artifact IDs and checksums.
+
+
+### Post-deployment update (2026-11-20)
+- Deployed the latest booking API as `booking-api` v10 after the Deno Edge Function type-check passed.
+- The v10 booking API now supports owner-generated one-time phone codes, per-device notification receipts, and independent acknowledgement. One phone no longer marks the same alert as read for every phone.
+- The WashDesk Bookings page now includes the phone pairing panel. Generate a separate code on the Owner phone for each additional phone; each code expires after 10 minutes and can be redeemed once by an already-paired workspace member.
+- Last live access count: 34 workspace members, 1 authorised booking-notification device, 0 unused pairing codes, 0 per-device receipts. The other two phones still need to be paired by their signed-in users.
+- Latest complete CI run [#445954](https://github.com/zaid404sec/zaid404sec/actions/runs/44595450691) passed Android, Windows, Edge Function type-check and release packaging.
