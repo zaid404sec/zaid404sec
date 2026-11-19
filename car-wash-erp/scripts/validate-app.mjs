@@ -6,7 +6,7 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.12.1') throw new Error('The package version must be 2.12.1.');
+if (packageJson.version !== '2.13.0') throw new Error('The package version must be 2.13.0.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
   throw new Error('The 2.12.1 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
 }
@@ -281,6 +281,15 @@ const staffBalanceFn=html.slice(staffBalanceStart,staffBalanceEnd);
 const staffBalance=vm.runInNewContext(staffBalanceFn+String.fromCharCode(10)+"calculateStaffStatementBalance({grossAccrual:12000,absenceDeduction:1000,salaryPayments:9000,advanceAdjustments:1500,openAdvances:750})",{});
 if(staffBalance!==-250)throw new Error('Staff statement must preserve negative final balances: '+staffBalance);
 console.log('PASS: employee statements preserve negative final balance values');
+const staffPayStart=html.indexOf('function calculateStaffAttendancePay(');
+const staffPayEnd=html.indexOf('function staffPayrollBreakdown(',staffPayStart);
+if(staffPayStart<0||staffPayEnd<0)throw new Error('Half-day payroll helper was not found.');
+const staffPaySource=html.slice(staffPayStart,staffPayEnd);
+const halfDayPay=vm.runInNewContext(staffPaySource+String.fromCharCode(10)+"calculateStaffAttendancePay({monthlySalary:31000,calendarDays:31,accruedDays:10,absentDays:1,halfDays:2})",{});
+if(halfDayPay.dailyRate!==1000||halfDayPay.absenceDeduction!==1000||halfDayPay.halfDayDeduction!==1000||halfDayPay.attendanceDeduction!==2000||halfDayPay.earnedDays!==8||halfDayPay.earnedSalary!==8000){
+  throw new Error('Half-day payroll must deduct half a daily rate for each Half Day: '+JSON.stringify(halfDayPay));
+}
+console.log('PASS: half-day payroll: ₹31,000 / 31 days, 1 absent + 2 half days = ₹2,000 attendance deduction and ₹8,000 earned salary for 10 accrued days');
 if (!html.includes("'Staff Member':st.name") ||
     !html.includes("'Statement From':fromDate") ||
     !html.includes("This export contains records for <b>${esc(st.name)}</b> only.") ||
@@ -394,7 +403,7 @@ const mustContain = [
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'pairDevice', 'pairingCode', 'Connect / Pair this device', 'Prime-Auto-Care-',
-  'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'function staffMonthDayCount', 'function staffAttendanceSummary', 'function staffPayrollBreakdown', 'Monthly payroll calculator', 'function staffAttendanceForDate', 'function setStaffAttendanceEntry', 'function removeStaffMember', 'function staffShiftEnd', 'function staffManagerPinDigest', 'function verifyStaffManagerPin', 'staff-attendance-row', 'Manager PIN', 'Daily staff attendance', 'Present', 'Absent', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
+  'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'function staffMonthDayCount', 'function staffAttendanceSummary', 'function staffPayrollBreakdown', 'Monthly payroll calculator', 'function staffAttendanceForDate', 'function setStaffAttendanceEntry', 'function removeStaffMember', 'function staffShiftEnd', 'function staffManagerPinDigest', 'function verifyStaffManagerPin', 'staff-attendance-row', 'Manager PIN', 'Daily staff attendance', 'Present', 'Half Day', 'Absent', 'calculateStaffAttendancePay', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -714,10 +723,17 @@ const remoteReceiveStart = html.indexOf('function receiveCloudData(');
 const remoteReceiveEnd = html.indexOf('async function connectCloud', remoteReceiveStart);
 if (remoteReceiveStart < 0 || remoteReceiveEnd < 0) throw new Error('Remote sync handler not found.');
 const remoteReceive = html.slice(remoteReceiveStart, remoteReceiveEnd);
-if (!remoteReceive.includes('if(shouldDeferRemoteUpdate())') ||
+if (!remoteReceive.includes('if(!cloudInitialSnapshotApplied)') ||
+    !remoteReceive.includes('cloudInitialSnapshotApplied=true') ||
+    !remoteReceive.includes('pendingRemotePayload=remote') ||
     !remoteReceive.includes('return {__cloudSyncDeferred:true}') ||
     remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db));render();')) {
-  throw new Error('A remote sync event can still mutate local data or the active app DOM during billing.');
+  throw new Error('Only the initial snapshot may render automatically; later cloud updates must be staged for manual refresh.');
+}
+if (!html.includes('id="manual-refresh"') ||
+    !html.includes("addEventListener('click',refreshCloudSession)") ||
+    !html.includes('applyPendingRemoteData();')) {
+  throw new Error('The dashboard manual refresh control or pending-update apply path is missing.');
 }
 if (!html.includes('let pendingRemotePayload=null;') ||
     !html.includes('function applyPendingRemoteData()') ||
@@ -730,7 +746,7 @@ if (!html.includes('function render(preserveScroll=true)') ||
   throw new Error('Same-page rerenders must preserve scroll, while deliberate module navigation must start at the top.');
 }
 if (!cloudSource.includes('if (applied?.__cloudSyncDeferred) return null;') ||
-    !cloudSource.includes("update queued until you leave the current screen")) {
+    !cloudSource.includes('update waiting for manual refresh or navigation')) {
   throw new Error('Cloud sync does not honor the active-screen-safe remote update deferral contract.');
 }
 const saveBillStart = html.indexOf('async function saveBill()');
