@@ -31,7 +31,7 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/booking-api/index.ts', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261118190000_prime_auto_care_bookings.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261118193000_google_review_auto_reply.sql', import.meta.url)) ||
-    !existsSync(new URL('../supabase/migrations/20261119000100_booking_urgency_notifications_google_publication.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119034723_booking_urgency_notifications_google_publication.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
   throw new Error('One or more booking source, migration, API or public website files are missing.');
