@@ -456,29 +456,23 @@ async function handle(req: Request, body: any) {
     const id = String(body.id || '');
     if (!allowed.has(status) || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid booking update.');
 
-    // Status transitions are enforced on the server. Confirm/reject can only act on
-    // a Pending request; terminal or completed bookings cannot be overwritten.
-    const allowedCurrent = status === 'confirmed' || status === 'rejected'
-      ? ['pending']
-      : status === 'cancelled'
-        ? ['pending', 'confirmed', 'rescheduled']
-        : ['confirmed', 'rescheduled'];
-    const now = new Date().toISOString();
-    const updates: any = { status, updated_at: now };
-    if (status === 'confirmed') updates.confirmed_at = now;
-    if (status === 'rejected') {
-      updates.rejected_at = now;
-      updates.rejected_by = ctx.user.id;
+    // The database function locks the booking row, enforces allowed status transitions,
+    // attributes the actor, and inserts the corresponding per-device notification event
+    // in the same transaction. This prevents a successful accept/reject with no alert.
+    const { data, error } = await ctx.admin.rpc('pac_update_booking_status_and_notify', {
+      p_workspace_id: ctx.workspace.id,
+      p_booking_id: id,
+      p_status: status,
+      p_status_note: String(body.status_note || '').trim().slice(0, 300),
+      p_actor_user_id: ctx.user.id,
+      p_actor_label: String(ctx.user.email || 'WashDesk user').slice(0, 100)
+    });
+    if (error) {
+      const message = String(error.message || '');
+      if (message.includes('BOOKING_STATUS_CHANGED')) throw new Error('Booking status changed on another phone. Refresh the list before trying again.');
+      if (message.includes('BOOKING_NOT_FOUND')) throw new Error('Booking was not found in this workspace.');
+      throw new Error(message || 'Booking update failed.');
     }
-    if (status === 'cancelled') updates.cancelled_at = now;
-    if (status === 'completed') updates.completed_at = now;
-    updates.status_note = String(body.status_note || '').trim().slice(0, 300) || null;
-
-    const { data, error } = await ctx.admin.from('pac_bookings').update(updates)
-      .eq('workspace_id', ctx.workspace.id).eq('id', id).in('status', allowedCurrent)
-      .select('*').maybeSingle();
-    if (error) throw new Error(error.message || 'Booking update failed.');
-    if (!data) throw new Error('Booking was not found or its status changed. Refresh the list before trying again.');
     return { ok: true, booking: data };
   }
   if (action === 'save-settings') {
