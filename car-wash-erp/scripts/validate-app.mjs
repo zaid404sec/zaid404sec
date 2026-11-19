@@ -54,6 +54,9 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119085155_booking_multi_device_notifications_20261119.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119085216_booking_status_actor_attribution_20261119.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119085230_booking_status_atomic_notifications_20261119.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119085605_google_ai_key_vault_setup_20261119.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119090408_booking_notification_realtime_20261119.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119190447_booking_create_atomic_notification_events_20261120.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119160000_google_vault_setup_wizard.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
