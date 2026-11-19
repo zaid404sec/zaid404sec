@@ -286,7 +286,7 @@ jobs:
           Android package ID: com.washdesk.carwash.v24
           GitHub commit: $GITHUB_SHA
           Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-          Install this APK as an update to the existing v24 app; it keeps the same Android package ID and advances the version code.
+          IMPORTANT: this CI APK is debug-signed with a runner-generated key. Its signing certificate is not the same as the previous 2.11.0 APK, so Android will NOT accept it as an in-place update. Do not install over the existing v24 app. Use a spare device, or wait for a release build signed with the original keystore. Never commit the keystore or its passwords.
           This package excludes passwords, API tokens, OAuth secrets, private SSH keys and workspace pairing codes.
           EOF
           (cd release-package && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
