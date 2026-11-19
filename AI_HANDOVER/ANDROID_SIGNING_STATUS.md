@@ -1,9 +1,9 @@
 # Android signing status — 20 November 2026
 
 ## Verified APK certificate comparison
-- Existing 2.11.0 APK artifact: SHA-256 signing-certificate fingerprint starts `dcc0d72b5524`.
-- Example 2.13.1 CI APK from run #445954: SHA-256 signing-certificate fingerprint starts `0100feb9239a`. Each fresh GitHub runner can generate a different debug certificate, so this fingerprint is not a stable release identity.
-- These certificates do not match. Android will reject 2.13.1 as an in-place update over the existing 2.11.0/v24 installation, despite the same package ID `com.washdesk.carwash.v24` and a higher version code.
+- The existing 2.11.0 APK and a tested 2.13.1 CI APK have different SHA-256 signing-certificate fingerprints.
+- The 2.13.1 build is debug-signed on a fresh GitHub runner; each runner may generate a different certificate, so there is no stable release identity.
+- Android will reject the tested 2.13.1 APK as an in-place update over the existing 2.11.0/v24 installation, despite the same package ID `com.washdesk.carwash.v24` and a higher version code.
 
 ## Signing-key availability
 - No original Android `.jks` / `.keystore` or signing password was found in the current conversation files or Library search.
