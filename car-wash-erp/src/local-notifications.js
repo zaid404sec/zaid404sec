@@ -71,14 +71,22 @@ export async function sendBookingAlertNotification(booking = {}) {
   await registerListeners();
   await ensureBookingAlertChannel();
   const urgent = booking.is_urgent === true;
-  const title = urgent ? 'URGENT BOOKING · Prime Auto Care' : 'New booking · Prime Auto Care';
+  const eventType = String(booking.event_type || 'booking_created');
+  const eventTitle = {
+    booking_created: 'New booking',
+    booking_confirmed: 'Booking confirmed',
+    booking_rejected: 'Booking rejected',
+    booking_cancelled: 'Booking cancelled'
+  }[eventType] || 'Booking update';
+  const title = (urgent ? 'URGENT · ' : '') + eventTitle + ' · Prime Auto Care';
   const bookingCode = String(booking.booking_code || '').slice(0, 40);
   const customer = String(booking.customer_name || 'Customer').slice(0, 60);
   const vehicle = String(booking.vehicle_number || 'Vehicle').slice(0, 20);
   const service = String(booking.service_type || 'Wash service').slice(0, 40);
   const date = String(booking.booking_date || '').slice(0, 10);
   const time = String(booking.start_time || '').slice(0, 5);
-  const body = [bookingCode, customer, vehicle, service, date + (time ? ' ' + time : '')].filter(Boolean).join(' · ').slice(0, 240);
+  const actor = booking.actor_label ? 'By ' + String(booking.actor_label).slice(0, 80) : '';
+  const body = [bookingCode, customer, vehicle, service, date + (time ? ' ' + time : ''), actor].filter(Boolean).join(' · ').slice(0, 240);
   const id = bookingNotificationId(booking.id || booking.booking_code || (customer + vehicle + date + time));
   await LocalNotifications.schedule({ notifications: [{
     id,
@@ -87,7 +95,7 @@ export async function sendBookingAlertNotification(booking = {}) {
     channelId: BOOKING_ALERT_CHANNEL_ID,
     sound: 'default',
     autoCancel: true,
-    extra: { action: 'bookingAlert', bookingId: String(booking.booking_id || ''), bookingCode, isUrgent: urgent },
+    extra: { action: 'bookingAlert', bookingId: String(booking.booking_id || ''), bookingCode, eventType, isUrgent: urgent },
     schedule: { at: new Date(Date.now() + 250), allowWhileIdle: true }
   }]});
   return { supported: true, scheduled: true, id };
