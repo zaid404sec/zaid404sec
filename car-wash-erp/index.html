@@ -2269,7 +2269,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
         if(status==='Clear'){const result=setStaffAttendanceEntry(st.id,st.name,date,'Clear');if(result==='cleared')cleared++;continue}
         if(!status&&!hoursText)continue;
         const effectiveStatus=status||old?.status;
-        if(!effectiveStatus){notify('Choose Present, Half Day or Absent before recording hours for '+st.name+'.'');return}
+        if(!effectiveStatus){notify('Choose Present, Half Day or Absent before recording hours for '+st.name+'.');return}
         if(hoursText!==''&&(!Number.isFinite(Number(hoursText))||Number(hoursText)<0||Number(hoursText)>24)){notify('Enter working hours between 0 and 24 for '+st.name+'.');return}
         const result=setStaffAttendanceEntry(st.id,st.name,date,effectiveStatus,hoursText===''?undefined:Number(hoursText));if(result==='saved')saved++;
       }
