@@ -16,8 +16,7 @@ const services = [
   { name: 'Outside Wash', duration_minutes: 30 }
 ];
 const vehicleTypes = [
-  'Private Car',
-  'Private SUV / 7-Seater',
+  'Private Car / SUV',
   'Taxi',
   'Commercial Transport / Traveller',
   'Auto Rickshaw',
