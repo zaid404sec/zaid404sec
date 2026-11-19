@@ -249,6 +249,24 @@ tbody tr:hover{background:rgba(135,180,225,.09)}
 .invoice-preview td{border-bottom:1px solid #edf0f5}
 .close:hover,.hamb:hover{background:rgba(255,255,255,.14)}
 #manual-refresh-data.refresh-available{background:linear-gradient(135deg,rgba(241,215,158,.24),rgba(199,157,83,.13));border-color:rgba(241,215,158,.5);color:#f7dfa9;box-shadow:0 0 0 3px rgba(241,215,158,.08)}
+html{scroll-behavior:smooth;scrollbar-gutter:stable}
+body,.content,.table-wrap,.customer-search-results{overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
+.table-wrap{scrollbar-width:thin;scrollbar-color:rgba(225,238,255,.24) transparent}
+.dashboard-insight b{color:#edf5ff}
+.dashboard-insight{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.customer-search-results{background:rgba(12,22,37,.96);border-color:rgba(225,238,255,.18);box-shadow:0 18px 42px rgba(0,0,0,.32);backdrop-filter:blur(22px)}
+.customer-search-option{background:transparent;color:#edf5ff;border-color:rgba(225,238,255,.09)}
+.customer-search-option:hover{background:rgba(255,255,255,.08)}
+.customer-search-option small,.customer-search-empty{color:#9eb0c7}
+.duplicate-hint{color:#aabbd1}
+.duplicate-hint.warning{color:#f3d28c}
+.duplicate-hint.error{color:#ff9c9c}
+.growth-post{background:rgba(255,255,255,.055);border-color:rgba(225,238,255,.16);color:#eaf2fc;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 14px 34px rgba(0,0,0,.18)}
+.growth-post textarea,.growth-post input,.growth-post select{background:rgba(5,12,22,.62);color:#f4f7fc;border-color:rgba(225,238,255,.18)}
+.growth-status{color:#b6c5d8}
+.dashboard-quick-link{background:rgba(255,255,255,.055);border-color:rgba(225,238,255,.16);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.dashboard-quick-link>span{background:rgba(215,177,105,.18);color:#f1d49a}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
 .modal-backdrop{background:rgba(2,7,14,.68);backdrop-filter:blur(12px)}
 .toast{background:rgba(17,29,46,.92);color:#fff;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(22px)}
 @media(prefers-reduced-motion:no-preference){.card,.stat,.btn,.nav button{transition:background .2s ease,border-color .2s ease,box-shadow .2s ease,transform .2s ease}.card:hover,.stat:hover{box-shadow:0 22px 58px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.2)}}
