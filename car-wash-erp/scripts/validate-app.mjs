@@ -179,11 +179,14 @@ if (!html.includes('google-oauth-client-id') ||
     !html.includes('google-review-save-oauth-config') ||
     !html.includes('google-review-save-openrouter-key') ||
     !html.includes('google-review-save-pubsub-settings') ||
-    !googleReviewClient.includes('saveGoogleOAuthConfig') ||
-    !googleReviewClient.includes('saveOpenRouterKey') ||
-    !googleReviewClient.includes('savePubSubSettings')) {
+    !googleVaultSetupClient.includes('saveGoogleOAuthConfig') ||
+    !googleVaultSetupClient.includes('saveOpenRouterKey') ||
+    !googleVaultSetupClient.includes('savePubSubSettings')) {
   throw new Error('Google Review Center must expose the paired-session Vault setup fields and save actions.');
 }
+const googleVaultSetupClient = await readFile(new URL('../src/google-reviews.js', import.meta.url), 'utf8');
+const googleVaultSetupCallback = await readFile(new URL('../supabase/functions/google-review-oauth-callback/index.ts', import.meta.url), 'utf8');
+const googleVaultSetupWebhook = await readFile(new URL('../supabase/functions/google-review-pubsub-webhook/index.ts', import.meta.url), 'utf8');
 const googleVaultSetupMigration = await readFile(new URL('../supabase/migrations/20261119160000_google_vault_setup_wizard.sql', import.meta.url), 'utf8');
 if (!googleVaultSetupMigration.includes('ORIGINAL_WORKSPACE_OWNER_REQUIRED') ||
     !googleVaultSetupMigration.includes('vault.create_secret') ||
@@ -191,12 +194,12 @@ if (!googleVaultSetupMigration.includes('ORIGINAL_WORKSPACE_OWNER_REQUIRED') ||
     !googleVaultSetupMigration.includes('revoke all on function public.pac_store_google_review_worker_secret')) {
   throw new Error('The internal Pub/Sub worker secret must be stored in Supabase Vault through an original-owner-only RPC.');
 }
-if (!googleReviewCallback.includes('pac_get_google_oauth_app_config') ||
+if (!googleVaultSetupCallback.includes('pac_get_google_oauth_app_config') ||
     !googleReviewWorkerSource.includes('pac_get_google_oauth_app_config') ||
-    !googleReviewWebhook.includes('google_pubsub_audience') ||
-    !googleReviewWebhook.includes('pac_get_google_review_worker_secret') ||
-    googleReviewWebhook.includes("env('GOOGLE_PUBSUB_AUDIENCE')") ||
-    googleReviewWebhook.includes("env('GOOGLE_REVIEW_WORKER_SECRET')") ||
+    !googleVaultSetupWebhook.includes('google_pubsub_audience') ||
+    !googleVaultSetupWebhook.includes('pac_get_google_review_worker_secret') ||
+    googleVaultSetupWebhook.includes("env('GOOGLE_PUBSUB_AUDIENCE')") ||
+    googleVaultSetupWebhook.includes("env('GOOGLE_REVIEW_WORKER_SECRET')") ||
     !googleReviewWorkerSource.includes('pac_get_google_review_worker_secret')) {
   throw new Error('Google OAuth callback and Pub/Sub event processing must load their per-workspace credentials from Vault.');
 }
