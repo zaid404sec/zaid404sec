@@ -27,25 +27,29 @@ function serviceClient() {
   if (!url || !key) throw new Error('Supabase server credentials are not configured.');
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
-async function verifyPushIdentity(req: Request) {
+async function verifyPushIdentity(req: Request, service: any) {
   const auth = req.headers.get('Authorization') || '';
-  const match = auth.match(/^Bearer\s+(.+)$/i);
+  const match = auth.match(/^Bearer\\s+(.+)$/i);
   if (!match) throw new Error('Google Pub/Sub OIDC token is missing.');
   const token = match[1];
   if (token.length > 12000) throw new Error('Google Pub/Sub OIDC token is too large.');
   const response = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(token));
   const claims = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error('Google Pub/Sub identity token could not be verified.');
-  const expectedAudience = env('GOOGLE_PUBSUB_AUDIENCE');
-  const expectedEmail = env('GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT').toLowerCase();
-  if (!expectedAudience || !expectedEmail) throw new Error('Pub/Sub OIDC audience and push service account are not configured.');
   const audience = String(claims.aud || '');
   const email = String(claims.email || '').toLowerCase();
   const verified = claims.email_verified === true || String(claims.email_verified).toLowerCase() === 'true';
   const expires = Number(claims.exp || 0);
-  if (audience !== expectedAudience || email !== expectedEmail || !verified || expires <= Math.floor(Date.now() / 1000)) {
-    throw new Error('Google Pub/Sub identity does not match the configured subscription.');
+  if (!audience || !email || !verified || expires <= Math.floor(Date.now() / 1000)) {
+    throw new Error('Google Pub/Sub identity token is invalid, unverified or expired.');
   }
+  const { data, error } = await service.from('pac_google_review_settings')
+    .select('workspace_id')
+    .eq('google_pubsub_audience', audience)
+    .ilike('pubsub_push_service_account', email)
+    .maybeSingle();
+  if (error || !data?.workspace_id) throw new Error('Google Pub/Sub identity does not match the configured Prime Auto Care subscription.');
+  return String(data.workspace_id);
 }
 function decodePubSubData(value: string) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -66,7 +70,8 @@ Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'POST required.' }, 405);
   try {
-    await verifyPushIdentity(req);
+    const service = await serviceClient();
+    const verifiedWorkspaceId = await verifyPushIdentity(req, service);
     const envelope = await req.json().catch(() => null);
     const message = envelope?.message;
     if (!message?.data || !message?.messageId) throw new Error('Pub/Sub push envelope is incomplete.');
@@ -78,9 +83,9 @@ Deno.serve(async req => {
       throw new Error('Google review notification did not contain a valid location resource.');
     }
     const accountName = event.locationName.split('/locations/')[0];
-    const service = serviceClient();
     const { data: settings, error: settingsError } = await service.from('pac_google_review_settings')
-      .select('workspace_id,notifications_enabled').eq('google_account_resource_name', accountName).eq('notifications_enabled', true).maybeSingle();
+      .select('workspace_id,notifications_enabled').eq('workspace_id', verifiedWorkspaceId)
+      .eq('google_account_resource_name', accountName).eq('notifications_enabled', true).maybeSingle();
     if (settingsError) throw settingsError;
     if (!settings?.workspace_id) {
       return json({ accepted: true, ignored: true, reason: 'No enabled Prime Auto Care notification setting matched this Google account.' });
@@ -107,8 +112,8 @@ Deno.serve(async req => {
       return json({ accepted: true, duplicate: true, processed: true });
     }
     const url = env('SUPABASE_URL');
-    const workerSecret = env('GOOGLE_REVIEW_WORKER_SECRET');
-    if (!url || !workerSecret) throw new Error('The scheduled Google review worker is not configured.');
+    const { data: workerSecret, error: workerSecretError } = await service.rpc('pac_get_google_review_worker_secret', { p_workspace_id: workspaceId });
+    if (workerSecretError || !workerSecret) throw new Error('The internal Google review worker token is missing from Supabase Vault. Re-save Pub/Sub setup in WashDesk.');
     const workerResponse = await fetch(url.replace(/\/$/, '') + '/functions/v1/google-review-worker', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-google-review-worker-secret': workerSecret },
