@@ -825,6 +825,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
     
     ${db.staff.length?`<div class="grid stats" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:-4px">
       ${stat('Present',String(presentCount),'✓',attendanceDate)}
+       ${stat('Half day',String(halfDayCount),'½',attendanceDate)}
       ${stat('Absent',String(absentCount),'—',todaysAttendance.length+' of '+db.staff.length+' marked')}
     </div>`:''}
     <div class="card" style="margin-bottom:16px">
