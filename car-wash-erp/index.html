@@ -1441,6 +1441,14 @@ document.addEventListener('visibilitychange',()=>{
     void pollBookingNotifications();
   }
 });
+window.addEventListener('washdesk-booking-notification',event=>{
+  const id=String(event.detail?.id||'');
+  if(id){
+    bookingNotificationSeen.delete(id);
+    bookingNotificationRetryAt.delete(id);
+  }
+  void pollBookingNotifications();
+});
 async function loadBookingCenter(force=false){
     if(bookingState.loading||(!force&&bookingState.attempted))return;
     bookingState.loading=true;bookingState.attempted=true;bookingState.error='';
