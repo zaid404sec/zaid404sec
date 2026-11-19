@@ -51,6 +51,7 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119034723_booking_urgency_notifications_google_publication.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119041849_booking_notification_fk_indexes.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119080000_booking_rejected_status.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119160000_google_vault_setup_wizard.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
   throw new Error('One or more booking source, migration, API or public website files are missing.');
@@ -159,8 +160,45 @@ if (!googleReviewApiSource.includes("env('OPENROUTER_API_KEY')") ||
     googleReviewApiSource.includes('body.api_key') ||
     !googleReviewApiSource.includes('save-google-project-number') ||
     !googleReviewApiSource.includes('oauth_callback_url') ||
-    !googleReviewApiSource.includes('openrouter_api_key_configured')) {
-  throw new Error('Google setup must use server-side AI secrets and expose only safe configuration readiness flags.');
+    !googleReviewApiSource.includes('openrouter_api_key_configured') ||
+    !googleReviewApiSource.includes('save-google-oauth-config') ||
+    !googleReviewApiSource.includes('pac_store_google_oauth_app_config') ||
+    !googleReviewApiSource.includes('pac_get_google_oauth_app_config') ||
+    !googleReviewApiSource.includes('save-openrouter-key') ||
+    !googleReviewApiSource.includes('pac_store_openrouter_key') ||
+    !googleReviewApiSource.includes('save-google-pubsub-settings') ||
+    !googleReviewApiSource.includes('pac_store_google_review_worker_secret') ||
+    !googleReviewApiSource.includes('google_pubsub_audience')) {
+  throw new Error('Google setup must save OAuth, AI and Pub/Sub credentials through the paired owner session into Supabase Vault.');
+}
+if (!html.includes('google-oauth-client-id') ||
+    !html.includes('google-oauth-client-secret') ||
+    !html.includes('google-openrouter-api-key') ||
+    !html.includes('google-pubsub-topic') ||
+    !html.includes('google-pubsub-service-account') ||
+    !html.includes('google-review-save-oauth-config') ||
+    !html.includes('google-review-save-openrouter-key') ||
+    !html.includes('google-review-save-pubsub-settings') ||
+    !googleReviewClient.includes('saveGoogleOAuthConfig') ||
+    !googleReviewClient.includes('saveOpenRouterKey') ||
+    !googleReviewClient.includes('savePubSubSettings')) {
+  throw new Error('Google Review Center must expose the paired-session Vault setup fields and save actions.');
+}
+const googleVaultSetupMigration = await readFile(new URL('../supabase/migrations/20261119160000_google_vault_setup_wizard.sql', import.meta.url), 'utf8');
+if (!googleVaultSetupMigration.includes('ORIGINAL_WORKSPACE_OWNER_REQUIRED') ||
+    !googleVaultSetupMigration.includes('vault.create_secret') ||
+    !googleVaultSetupMigration.includes('vault.update_secret') ||
+    !googleVaultSetupMigration.includes('revoke all on function public.pac_store_google_review_worker_secret')) {
+  throw new Error('The internal Pub/Sub worker secret must be stored in Supabase Vault through an original-owner-only RPC.');
+}
+if (!googleReviewCallback.includes('pac_get_google_oauth_app_config') ||
+    !googleReviewWorkerSource.includes('pac_get_google_oauth_app_config') ||
+    !googleReviewWebhook.includes('google_pubsub_audience') ||
+    !googleReviewWebhook.includes('pac_get_google_review_worker_secret') ||
+    googleReviewWebhook.includes("env('GOOGLE_PUBSUB_AUDIENCE')") ||
+    googleReviewWebhook.includes("env('GOOGLE_REVIEW_WORKER_SECRET')") ||
+    !googleReviewWorkerSource.includes('pac_get_google_review_worker_secret')) {
+  throw new Error('Google OAuth callback and Pub/Sub event processing must load their per-workspace credentials from Vault.');
 }
 console.log('PASS: Google setup wizard uses paired session, original-owner OAuth and server-side AI secrets');
 if (!googleReviewWorkerSource.includes('readGoogleReplyModeration') ||
