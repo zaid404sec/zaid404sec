@@ -14,6 +14,23 @@ console.log('PASS: Android 2.12.0 retains the existing v24 application ID for an
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
+if (!html.includes("data-action=\"dashboard-refresh\"") ||
+    !html.includes("Dashboard > Refresh data") ||
+    !html.includes("pendingRemotePayload=remote") ||
+    !html.includes("return {__cloudSyncDeferred:true};")) {
+  throw new Error('Dashboard must queue realtime snapshots and refresh only on user request.');
+}
+const receiveStart=html.indexOf('function receiveCloudData(remote){');
+const receiveEnd=html.indexOf('async function connectCloud(e){',receiveStart);
+if(receiveStart<0||receiveEnd<0||html.slice(receiveStart,receiveEnd).includes('render()')) {
+  throw new Error('Realtime cloud updates must not trigger a full screen render.');
+}
+console.log('PASS: realtime snapshots do not reload the screen; dashboard refresh is user-controlled');
+if (!html.includes('color-scheme:dark') || !html.includes('backdrop-filter:blur(24px)') ||
+    !html.includes('deep liquid-glass')) {
+  throw new Error('Deep liquid-glass app theme is missing.');
+}
+
 if (!html.includes('Founder') || !html.includes('Owner Operator')) throw new Error('Founder and Owner Operator roles are missing.');
 console.log('PASS: Founder and Owner Operator roles');
 if (!html.includes('Personal / Household · Vehicle Petrol') || !html.includes('Personal / Household · House Light Bill') || !html.includes("expenseType==='personal'")) throw new Error('Personal and household expense classification is missing.');
