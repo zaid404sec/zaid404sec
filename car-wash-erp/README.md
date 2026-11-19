@@ -1,3 +1,17 @@
+# WashDesk 2.13.1 — Prime Auto Care
+
+## Current public endpoints
+- Business website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/
+- Customer booking: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
+- Legacy website endpoint redirects to the canonical Supabase website. GitHub Pages auto-deployment is disabled.
+
+## Current operational notes
+- Booking creation and accept/reject/cancel events are atomic in PostgreSQL; paired phones receive Supabase Realtime alerts and independent receipts.
+- The 2.13.1 CI APK is debug-signed with a runner-generated key and is not an in-place update for the existing v24 installation. See the Android signing status in the repository handover.
+- Google Basic API Access, original-owner OAuth and Pub/Sub/OIDC setup are owner-led prerequisites. Automatic replies remain disabled until review sync and moderation checks are verified.
+
+---
+
 ## Version 2.12.0 — booking operations and Google reply moderation (release candidate)
 
 - Adds a persisted urgent-priority flag to customer-submitted and staff-created bookings. The existing transaction-safe booking-slot reservation function is preserved and wrapped by a new service-role-only function; no existing bookings or business ledgers are reset.
