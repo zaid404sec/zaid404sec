@@ -21,7 +21,7 @@
 - Public booking is enabled for `prime-auto-care`, Asia/Kolkata, 08:00–19:00, 30-minute slots, capacity 1, 14-day horizon.
 - The booking database uses a per-workspace/per-day PostgreSQL advisory transaction lock and checks overlapping pending/confirmed/rescheduled bookings before insert. This prevents two simultaneous requests from claiming the same capacity slot.
 - Booking API v10 supports owner-issued one-time phone pairing codes (8 digits, 10-minute expiry, single use) and per-device receipts. Acknowledging an alert on one phone does not clear it for other phones.
-- Last database check: 34 paired workspace members, 1 authorised booking-notification device, 0 unused pairing codes, 0 per-device receipts, 0 booking records and 0 booking notification events. Generate a separate code on the original Owner phone for each additional device; each signed-in paired device redeems its own code.
+- Last database check: 34 paired workspace members, 1 non-owner notification admin plus the original Owner (2 authorised phones total), 0 unused pairing codes, 0 per-device receipts, 0 booking records and 0 booking notification events. Generate a separate code on the original Owner phone for each of the other two phones; each signed-in paired device redeems its own code.
 - Booking creation and accept/reject/cancel status changes now create notification events atomically in PostgreSQL. Paired devices subscribe to Supabase Realtime with fallback polling. Android local notifications require the app to be active and permission granted; background delivery while fully closed still requires remote push/FCM.
 
 ## Google Reviews setup
