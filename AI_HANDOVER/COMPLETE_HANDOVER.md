@@ -10,7 +10,7 @@ This section supersedes older release/status notes below. Preserve the existing 
 - Public website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/
 - Public booking page: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
 - Booking creation and accept/reject/cancel status changes write notification events atomically. Four-phone pairing uses one-time owner-issued codes and independent per-device receipts. Paired devices receive Supabase Realtime events and the app refreshes the booking list without a full dashboard reload.
-- Current database check: 34 workspace members, 1 authorised booking-notification device, 0 unused pairing codes, 0 per-device receipts, 0 booking records and 0 notification events. Pair the other three signed-in phones from Bookings → Phone notification access.
+- Current database check: 34 workspace members, 1 non-owner notification admin plus the original Owner (2 authorised phones total), 0 unused pairing codes, 0 per-device receipts, 0 booking records and 0 notification events. Pair the other three signed-in phones from Bookings → Phone notification access.
 - The 2.13.1 APK is a runner-generated debug build. Its signing certificate differs from the old 2.11.0 APK; Android will reject an in-place update. No original keystore was found. **Do not install over the existing v24 app.** See `AI_HANDOVER/ANDROID_SIGNING_STATUS.md`.
 - App-active booking notifications use Realtime plus Android local notifications. Background delivery with the app fully closed still requires FCM setup.
 - Google Basic API Access, original-owner OAuth consent, Pub/Sub/OIDC configuration and a replacement OpenRouter key remain external prerequisites. Auto-replies stay disabled. The OpenRouter key pasted in chat is compromised and must be revoked.
@@ -285,5 +285,5 @@ This section records the verified state for continuing the Prime Auto Care WashD
 - Deployed the latest booking API as `booking-api` v10 after the Deno Edge Function type-check passed.
 - The v10 booking API now supports owner-generated one-time phone codes, per-device notification receipts, and independent acknowledgement. One phone no longer marks the same alert as read for every phone.
 - The WashDesk Bookings page now includes the phone pairing panel. Generate a separate code on the Owner phone for each additional phone; each code expires after 10 minutes and can be redeemed once by an already-paired workspace member.
-- Last live access count: 34 workspace members, 1 authorised booking-notification device, 0 unused pairing codes, 0 per-device receipts. The other phones still need to be paired by their signed-in users.
+- Last live access count: 34 workspace members, 1 authorised booking-notification device, 0 unused pairing codes, 0 per-device receipts. The other two phones still need to be paired by their signed-in users.
 - Latest complete CI run [#445954](https://github.com/zaid404sec/zaid404sec/actions/runs/44595450691) passed Android, Windows, Edge Function type-check and release packaging.
