@@ -214,7 +214,7 @@ This section records the verified state for continuing the Prime Auto Care WashD
 - Repository: `zaid404sec/zaid404sec`
 - Production baseline: `main` commit `03191af76a703cb341eca88ac651bc331a935a32` (WashDesk 2.13).
 - Active development: PR [#68](https://github.com/zaid404sec/zaid404sec/pull/68), branch `feature/google-review-vault-pairing`.
-- Latest checkpoint commit at this note: `fa1c1f029dd9eb67a235a061d5c8ffc5da0add05`.
+- Latest application-code commit: `fa1c1f029dd9eb67a235a061d5c8ffc5da0add05`. The handover-only checkpoint update follows on the same branch.
 - Do not merge PR #68 until Android, Windows and Edge Function type-check workflows all pass. The latest run was still in progress when this checkpoint was written.
 
 ### Already merged in 2.13
@@ -235,7 +235,7 @@ This section records the verified state for continuing the Prime Auto Care WashD
 
 ### Supabase production state checked
 - Existing project: `jkjudmkqaebrgllemris`, region `ap-northeast-2`, status `ACTIVE_HEALTHY`. Preserve this project and its existing Workspace Owner.
-- Active Edge Functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v8, `prime-auto-care-website` v1, `prime-auto-care-booking` v1, `prime-auto-care-site` v3, and `public-reviews` v3.
+- Active Edge Functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v9, `prime-auto-care-website` v1, `prime-auto-care-booking` v1, `prime-auto-care-site` v3, and `public-reviews` v3.
 - Public business website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-website
 - Public customer booking page: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
 - Booking settings are enabled for slug `prime-auto-care`, timezone `Asia/Kolkata`, 08:00–19:00, 30-minute slots, capacity 1, 14-day booking horizon.
@@ -258,3 +258,11 @@ This section records the verified state for continuing the Prime Auto Care WashD
 5. Confirm Google Basic API Access approval and quota before attempting live review sync or reply publication.
 6. Run a production-safe test using a controlled booking test only with explicit approval; verify no overlapping reservation can be created and notifications appear on every authorised device.
 7. After all CI checks pass, merge PR #68, build the main-branch APK/EXE/source artifacts, verify SHA-256 hashes, and update the release handover with exact artifact IDs and checksums.
+
+
+### Post-deployment update (2026-11-20)
+- Deployed the latest booking API as `booking-api` v9 after the Deno Edge Function type-check passed.
+- The v9 booking API now supports owner-generated one-time phone codes, per-device notification receipts, and independent acknowledgement. One phone no longer marks the same alert as read for every phone.
+- The WashDesk Bookings page now includes the phone pairing panel. Generate a separate code on the Owner phone for each additional phone; each code expires after 10 minutes and can be redeemed once by an already-paired workspace member.
+- Last live access count: 34 workspace members, 1 authorised booking-notification device, 0 unused pairing codes, 0 per-device receipts. The other phones still need to be paired by their signed-in users.
+- Latest CI run for application-code commit `fa1c1f029dd9eb67a235a061d5c8ffc5da0add05`: Google Reviews/Booking Edge Function type-check passed; Android APK and Windows EXE builds were still running at the time of this update.
