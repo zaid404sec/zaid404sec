@@ -1,4 +1,10 @@
 -- Atomically enforce status transitions and create a notification event for all authorised devices.
+alter table public.pac_booking_notification_events
+  drop constraint if exists pac_booking_notification_events_event_type_check;
+alter table public.pac_booking_notification_events
+  add constraint pac_booking_notification_events_event_type_check
+  check (event_type in ('booking_created','booking_confirmed','booking_rejected','booking_cancelled'));
+
 create or replace function public.pac_update_booking_status_and_notify(
   p_workspace_id uuid,
   p_booking_id uuid,
