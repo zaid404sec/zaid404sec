@@ -1401,22 +1401,38 @@ tbody tr:hover{background:rgba(135,180,225,.09)}
   async function clearBookingFilters(){bookingState.filters={};await loadBookingCenter(true)}
   let bookingNotificationPollBusy=false;
   const bookingNotificationSeen=new Set();
+  async function handleBookingNotification(item){
+    if(!item?.id||bookingNotificationSeen.has(item.id))return;
+    bookingNotificationSeen.add(item.id);
+    if(bookingNotificationSeen.size>500)bookingNotificationSeen.clear();
+    const priority=item.is_urgent?'URGENT · ':'';
+    const eventLabel={booking_created:'New booking',booking_confirmed:'Booking confirmed',booking_rejected:'Booking rejected',booking_cancelled:'Booking cancelled'}[item.event_type]||'Booking update';
+    const actor=item.actor_label?' · by '+item.actor_label:'';
+    notify(priority+eventLabel+' '+(item.booking_code||'')+' — '+(item.customer_name||'Customer')+' · '+(item.vehicle_number||'Vehicle')+' · '+bookingDateLabel(item.booking_date)+' '+String(item.start_time||'').slice(0,5)+actor);
+    try{
+      const delivery=await window.PrimeAutoCareNotifications?.sendBookingAlertNotification?.(item);
+      if(delivery?.permissionDenied){
+        bookingNotificationSeen.delete(item.id);
+        notify('Allow notifications for Prime Auto Care on this phone to receive booking alerts.');
+        return;
+      }
+    }catch(error){
+      bookingNotificationSeen.delete(item.id);
+      console.warn('Android booking notification could not be shown:',error?.message||error);
+      return;
+    }
+    try{await window.PrimeAutoCareBookings.acknowledgeNotification(item.id)}catch(error){
+      console.warn('Booking alert receipt could not be saved on this device:',error?.message||error);
+      bookingNotificationSeen.delete(item.id);
+    }
+  }
   async function pollBookingNotifications(){
     if(!window.PrimeAutoCareBookings?.notifications||bookingNotificationPollBusy)return;
     bookingNotificationPollBusy=true;
     try{
       const result=await window.PrimeAutoCareBookings.notifications();
       const events=Array.isArray(result.notifications)?result.notifications:[];
-      for(const item of events.reverse()){
-        if(bookingNotificationSeen.has(item.id))continue;
-        bookingNotificationSeen.add(item.id);
-        const priority=item.is_urgent?'URGENT · ':'';
-        const eventLabel={booking_created:'New booking',booking_confirmed:'Booking confirmed',booking_rejected:'Booking rejected',booking_cancelled:'Booking cancelled'}[item.event_type]||'Booking update';
-        const actor=item.actor_label?' · by '+item.actor_label:'';
-        notify(priority+eventLabel+' '+(item.booking_code||'')+' — '+(item.customer_name||'Customer')+' · '+(item.vehicle_number||'Vehicle')+' · '+bookingDateLabel(item.booking_date)+' '+String(item.start_time||'').slice(0,5)+actor);
-        await window.PrimeAutoCareNotifications?.sendBookingAlertNotification?.(item).catch(error=>console.warn('Android booking notification could not be shown:',error?.message||error));
-        await window.PrimeAutoCareBookings.acknowledgeNotification(item.id).catch(()=>{});
-      }
+      for(const item of events.reverse())await handleBookingNotification(item);
     }catch(error){console.warn('Booking notification check failed:',error?.message||error)}
     finally{bookingNotificationPollBusy=false}
   }
@@ -1477,6 +1493,7 @@ tbody tr:hover{background:rgba(135,180,225,.09)}
       bookingState.pairCode='';
       notify(result.message||'This phone is paired for booking alerts.');
       await loadBookingCenter(true);
+      await window.WashDeskCloud?.subscribeBookingAlerts?.(handleBookingNotification);
       void pollBookingNotifications();
     }catch(error){notify(error?.message||'This phone could not be paired. Check the code and expiry.')}
     finally{if(button)button.disabled=false}
@@ -2609,6 +2626,7 @@ tbody tr:hover{background:rgba(135,180,225,.09)}
         onRemote:receiveCloudData
       });
       applyPendingRemoteData();
+      await window.WashDeskCloud?.subscribeBookingAlerts?.(handleBookingNotification);
       notify(result.message||'This device is paired with the shared Prime Auto Care database.');
       render();
     }catch(err){
@@ -2621,6 +2639,7 @@ tbody tr:hover{background:rgba(135,180,225,.09)}
     try{
       await window.WashDeskCloud?.resume?.({getLocal:()=>db,onRemote:receiveCloudData});
       applyPendingRemoteData();
+      await window.WashDeskCloud?.subscribeBookingAlerts?.(handleBookingNotification);
       const status=window.WashDeskCloud?.getStatus?.()||'Not connected';
       notify(status+' · Shared data refreshed.');render();
     }catch(err){notify(err?.message||'Could not refresh the cloud connection.')}
@@ -2649,7 +2668,7 @@ tbody tr:hover{background:rgba(135,180,225,.09)}
   document.getElementById('modal-close').addEventListener('click',closeModal);document.getElementById('modal-backdrop').addEventListener('click',e=>{if(e.target.id==='modal-backdrop')closeModal()});document.getElementById('hamb').addEventListener('click',()=>setSidebarOpen(!document.getElementById('sidebar').classList.contains('open')));document.getElementById('sidebar-backdrop').addEventListener('click',()=>setSidebarOpen(false));document.addEventListener('keydown',event=>{if(event.key==='Escape')setSidebarOpen(false)});window.addEventListener('resize',()=>{if(window.innerWidth>760)setSidebarOpen(false)});document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('button[data-page]');if(b)setPage(b.dataset.page)});document.getElementById('today-label').textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});document.getElementById('avatar').textContent=(db.business.name||'W').slice(0,1).toUpperCase();
   render();
   if(deviceReminder.enabled)void updateOpeningReminder(false).then(result=>{if(result?.permissionDenied)console.warn('Prime Auto Care notification permission is not granted. Enable it in Android settings.');if(page==='settings')void updateReminderStatusUI()}).catch(e=>console.warn('Prime Auto Care opening reminder restore:',e));
-  window.WashDeskCloud?.resume?.({getLocal:()=>db,onRemote:receiveCloudData}).then(()=>{if(applyPendingRemoteData()||page==='settings')render()}).catch(e=>console.warn('Cloud sync resume:',e));
+  window.WashDeskCloud?.resume?.({getLocal:()=>db,onRemote:receiveCloudData}).then(async()=>{if(applyPendingRemoteData()||page==='settings')render();await window.WashDeskCloud?.subscribeBookingAlerts?.(handleBookingNotification);void pollBookingNotifications()}).catch(e=>console.warn('Cloud sync resume:',e));
   if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
   void pollBookingNotifications();
