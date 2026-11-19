@@ -393,7 +393,7 @@ async function handle(req: Request, body: any) {
     if (receiptError) throw new Error('This phone\'s booking notification receipts could not be read.');
     const acknowledged = new Set((receipts || []).map((row: any) => String(row.notification_id)));
     const { data, error } = await ctx.admin.from('pac_booking_notification_events')
-      .select('id,booking_id,event_type,booking_code,customer_name,customer_phone,vehicle_number,vehicle_type,service_type,booking_date,start_time,is_urgent,source,created_at')
+      .select('id,booking_id,event_type,booking_code,customer_name,customer_phone,vehicle_number,vehicle_type,service_type,booking_date,start_time,is_urgent,source,actor_label,created_at')
       .eq('workspace_id', ctx.workspace.id)
       .order('created_at', { ascending: false })
       .limit(100);
