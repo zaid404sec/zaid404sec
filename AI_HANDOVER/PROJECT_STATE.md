@@ -1,6 +1,6 @@
 # Project state — Prime Auto Care / WashDesk
 
-_Last verified: 18 November 2026_
+_Last verified: 19 November 2026_
 
 ## Current source of truth
 
@@ -8,24 +8,24 @@ _Last verified: 18 November 2026_
 |---|---|
 | GitHub repository | https://github.com/zaid404sec/zaid404sec |
 | Default branch | `main` |
-| Current main commit | `f006415568af5960e25bd52ee562bccac02fa627` |
+| Current main commit | `dd88813195b1c3de25e3afb36a9f116e77c85830` |
 | Application folder | `car-wash-erp/` |
 | App name | Prime Auto Care |
-| App version | **2.9.3** |
+| App version | **2.11.0** |
 | Android application ID | `com.washdesk.carwash.v24` |
 | Capacitor | 8.x |
 | Build environment | Node 22, Python 3.12, Java 21 |
 | Release PR | [#58 — merged](https://github.com/zaid404sec/zaid404sec/pull/58) (scoped Google Reviews access) |
-| Main release build | [Run #233 — Android, Windows, backend check and release packaging succeeded](https://github.com/zaid404sec/zaid404sec/actions/runs/44269802537) |
-| Website deployment | [Pages run #69 — build succeeded, deployment failed](https://github.com/zaid404sec/zaid404sec/actions/runs/44269802677) |
+| Main release build | [Run #259 — Android, Windows, backend check and release packaging succeeded](https://github.com/zaid404sec/zaid404sec/actions/runs/44346528699) |
+| Website deployment | [Pages run #75 — build succeeded, deployment failed](https://github.com/zaid404sec/zaid404sec/actions/runs/44346528672) |
 | Supabase project | `jkjudmkqaebrgllemris` |
 | Supabase project URL | https://jkjudmkqaebrgllemris.supabase.co |
 
-The 2.9.3 Android APK retains package ID `com.washdesk.carwash.v24`. The CI workflow signs debug builds with a runner-generated key; package-ID continuity does not guarantee signature continuity. Do not uninstall v23 or v24, and do not overwrite the working v24 until the signing certificate matches and data continuity is checked.
+The 2.11.0 Android APK retains package ID `com.washdesk.carwash.v24`. The CI workflow signs debug builds with a runner-generated key; package-ID continuity does not guarantee signature continuity. Do not uninstall v23 or v24, and do not overwrite the working v24 until the signing certificate matches and data continuity is checked.
 
 ## Version 2.9.2 release summary (historical)
 
-The latest release is 2.9.3; see `RELEASE_2.9.3.md`.
+The latest main-branch release is 2.11.0; see the successful GitHub Actions run #259 and the 2.11.0 release artifacts.
 
 PR #56 added the Number & notification group manager under Offers & WhatsApp.
 
@@ -48,6 +48,12 @@ The production Supabase migration `20261118050000_add_message_recipients_sync_me
 - Daily/monthly reporting, CSV/Excel/PDF exports, dashboard analytics, backups and restore.
 - Local reminder notifications, offline app shell, shared Supabase sync and WhatsApp offers.
 - Google Review Center UI, AI analysis/copy generation, reply drafts and notification workflow source code. Live Google API integration is not yet operational; see the deployment state below.
+
+## WashDesk 2.12.0 development candidate (not yet released)
+
+The current feature branch is feature/washdesk-2.12.0-bookings-google-reviews and pull request #65. It extends 2.11.0 with persisted booking urgency, booking filters, private owner/paired-desk booking notifications, Android system alerts while the app is active, Google reply moderation-state tracking and a public Google reviews website feed. The paired v24 account remains a member and has a separate booking-notification permission; the original Workspace Owner is unchanged. It must not be treated as the current main release until PR #65 is merged and the main-branch APK/EXE/source artifacts pass verification.
+
+Production-side additive migrations have been applied for booking urgency/notifications, foreign-key indexes, and the scoped paired booking-alert permission. The deployed booking API is version 2 (the candidate v24 alert-permission check still needs deployment after merge); Google Review API version 7, Google review worker version 4, and public-reviews feed version 1 are active. The v24 member has one active booking-notification grant and remains a member. Google OAuth credentials, synced reviews and Pub/Sub events are still zero; no auto-reply is enabled. WhatsApp booking alerts are not configured: booking settings default to in-app and there is no WhatsApp sender/recipient/template configuration on the workspace yet.
 
 ## Production Supabase database state
 
@@ -97,19 +103,19 @@ Google's current prerequisites include managing a verified Business Profile that
 - Keep v23 installed while checking v24. Confirm same workspace pairing or restore a verified backup before moving business operations to v24.
 - CI success is not manual Android handset testing. Verify PDFs/WhatsApp handoff, notification permissions, cloud sync after offline/online transitions and backup restoration on a real device.
 
-## Release artifacts from main run #233 (current 2.9.3)
+## Release artifacts from main run #259 (current 2.11.0)
 
-Workflow: https://github.com/zaid404sec/zaid404sec/actions/runs/44269802537
+Workflow: https://github.com/zaid404sec/zaid404sec/actions/runs/44346528699
 
 Workflow: https://github.com/zaid404sec/zaid404sec/actions/runs/44269802537
 
 | Artifact | GitHub Actions artifact ID |
 |---|---:|
-| Android APK | `14412485729` |
-| Windows installer | `14411937193` |
-| Application source ZIP | `14411384233` |
-| Complete repository / AI handover ZIP | `14412151974` |
-| Combined APK + EXE + source + handover package | `14412600584` |
+| Android APK | `14445443985` |
+| Windows installer | `14447435137` |
+| Application source ZIP | `14446197184` |
+| Complete repository / AI handover ZIP | `14445219150` |
+| Combined APK + EXE + source + handover package | `14446242152` |
 
 Artifact archives expire under GitHub's retention policy; download and keep a local copy. SHA-256 files are included inside the combined release package.
 

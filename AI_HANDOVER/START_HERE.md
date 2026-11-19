@@ -1,6 +1,6 @@
 # Prime Auto Care — Portable AI Handover Kit
 
-_Last verified: 16 November 2026_
+_Last verified: 19 November 2026_
 
 ## The one link to give a new AI
 
@@ -13,8 +13,9 @@ https://github.com/zaid404sec/zaid404sec/tree/main/car-wash-erp
 **This handover folder:**  
 https://github.com/zaid404sec/zaid404sec/tree/main/AI_HANDOVER
 
-**Latest baseline:** version **2.8.4**, branch `main`, commit  
-`b5c9954e71aef18cf9195ce4d0a47fbe4b23e834` (PR #47, merged).
+**Latest main-branch baseline:** version **2.11.0**, branch main, commit  
+`dd88813195b1c3de25e3afb36a9f116e77c85830` (GitHub Actions run #259 succeeded).  
+**Current development candidate:** WashDesk 2.12.0 on feature branch feature/washdesk-2.12.0-bookings-google-reviews; do not treat it as released until its pull request is merged and the main-branch build artifacts are verified.
 
 This documentation is a portable project memory, not a replacement for the repository. The application source code in `car-wash-erp/` is the authoritative implementation. The newest main-branch source ZIP is available at https://github.com/zaid404sec/zaid404sec/archive/refs/heads/main.zip. Always re-read the current `main` branch before editing; a ZIP or old chat can become outdated.
 
@@ -24,7 +25,7 @@ Give it either:
 1. This handover ZIP, if you have it saved; or
 2. The repository link above; ideally give both.
 
-Then paste the complete text from [NEW_CHAT_PROMPT.md](NEW_CHAT_PROMPT.md), followed by the new feature you want. For example: "Add an appointment booking feature to the existing app."
+Then paste the complete text from [NEW_CHAT_PROMPT.md](NEW_CHAT_PROMPT.md), followed by the new feature you want. The 2.11.0 baseline already includes customer booking foundations and Google Reviews UI; the 2.12.0 feature branch extends booking urgency, notifications, filters and Google reply moderation.
 
 **Your part should be simple:** attach the handover ZIP (or give the repository link), paste the prompt, and describe the feature. The AI should inspect the live source, edit through the connected GitHub workflow, run CI, and return the new APK. You should not need an SSH key, terminal, Git CLI, Android Studio or manual source editing. If the AI environment has no GitHub access, it must say that clearly; a ZIP by itself does not grant permission to push changes or run GitHub Actions.
 

@@ -48,6 +48,7 @@ button,input,select,textarea{font:inherit}a{color:inherit}.shell{max-width:1080p
           <div class="hint" id="slot-hint">Availability is checked live. A slot is reserved only after the request is accepted by the server and then confirmed by our team.</div>
         </div>
         <div class="field full"><label for="notes">Notes (optional)</label><textarea id="notes" name="notes" maxlength="600" placeholder="Anything we should know about your vehicle?"></textarea></div>
+        <div class="field full" style="flex-direction:row;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fffaf0"><input id="is_urgent" name="is_urgent" type="checkbox" style="width:18px;min-height:18px;margin:2px 0 0;accent-color:#b58b43"><label for="is_urgent" style="font-size:12px;line-height:1.5">This request is urgent / I need the earliest suitable appointment<br><span class="hint">We will highlight your request for the booking desk. The selected time remains pending until Prime Auto Care confirms it.</span></label></div>
         <div class="hp" aria-hidden="true"><label for="website">Leave this field empty</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
         <div class="field full"><button class="submit" id="submit-btn" type="submit">Send booking request</button></div>
       </div>
@@ -139,7 +140,7 @@ button,input,select,textarea{font:inherit}a{color:inherit}.shell{max-width:1080p
       const result=await request('create-public',{booking:{
         customer_name:data.customer_name,customer_phone:data.customer_phone,vehicle_number:data.vehicle_number,
         vehicle_type:data.vehicle_type,service_type:data.service_type,booking_date:data.booking_date,
-        start_time:selectedSlot,notes:data.notes,website:data.website
+        start_time:selectedSlot,notes:data.notes,is_urgent:$('is_urgent').checked===true,website:data.website
       }});
       const b=result.booking||{};
       form.reset();selectedSlot='';$('start_time').value='';$('booking_date').min=localDate();$('booking_date').value=localDate();

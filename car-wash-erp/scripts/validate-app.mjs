@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.11.0') throw new Error('The package version must be 2.11.0.');
+if (packageJson.version !== '2.12.0') throw new Error('The package version must be 2.12.0.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.11.0 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
+  throw new Error('The 2.12.0 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
 }
-console.log('PASS: Android 2.11.0 retains the existing v24 application ID for an in-place upgrade.');
+console.log('PASS: Android 2.12.0 retains the existing v24 application ID for an in-place upgrade.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -21,7 +21,9 @@ console.log('PASS: personal and household expense separation');
 if (!html.includes('https://share.google/6g3f0aJqTezi6JH5T') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
 if (!html.includes('data-page="bookings"') || !html.includes("function bookings(){") ||
     !html.includes("function loadBookingCenter(") || !html.includes("submitBookingQuickForm") ||
-    !html.includes("saveBookingSettingsForm") || !html.includes("PUBLIC_BOOKING_URL")) {
+    !html.includes("saveBookingSettingsForm") || !html.includes("PUBLIC_BOOKING_URL") ||
+    !html.includes('id="booking-filter-form"') || !html.includes('bookingNotificationSeen') ||
+    !html.includes('is_urgent') || !html.includes('notification_whatsapp_template')) {
   throw new Error('WashDesk Bookings page, staff booking workflow or public link is incomplete.');
 }
 if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
@@ -29,10 +31,29 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/booking-api/index.ts', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261118190000_prime_auto_care_bookings.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261118193000_google_review_auto_reply.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119034723_booking_urgency_notifications_google_publication.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119041849_booking_notification_fk_indexes.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
   throw new Error('One or more booking source, migration, API or public website files are missing.');
 }
 console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
+const bookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
+const bookingNotificationMigration = await readFile(new URL('../supabase/migrations/20261119043635_booking_notification_admin_access.sql', import.meta.url), 'utf8');
+for (const token of ['canManageBookingNotifications','pac_booking_notification_admins','action === \'notifications\'','action === \'acknowledge-notification\'']) {
+  if (!bookingApiSource.includes(token)) throw new Error('Booking alert API is missing scoped notification access: '+token);
+}
+for (const token of ['pac_booking_notification_admins','booking_notifications_admin','enable row level security','revoke all on public.pac_booking_notification_admins from public, anon, authenticated','grant all on public.pac_booking_notification_admins to service_role','pac_google_review_admins','on conflict (workspace_id, auth_user_id) do nothing']) {
+  if (!bookingNotificationMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Booking notification permission migration is incomplete: '+token);
+}
+console.log('PASS: the paired booking desk receives scoped alerts without changing the original Workspace Owner');
+const localNotificationsSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
+if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
+    !localNotificationsSource.includes('BOOKING_ALERT_CHANNEL_ID') ||
+    !html.includes('sendBookingAlertNotification')) {
+  throw new Error('Native Android booking notifications are missing from the app polling flow.');
+}
+console.log('PASS: new booking alerts can show as Android system notifications when the app is active and permission is granted');
 const bookingWebsite = await readFile(new URL('../website/booking/index.html', import.meta.url), 'utf8');
 if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes('function request(action') ||
@@ -40,6 +61,8 @@ if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes("'availability'") ||
     !bookingWebsite.includes("'create-public'") ||
     !bookingWebsite.includes('PENDING until Prime Auto Care confirms') ||
+    !bookingWebsite.includes('id="is_urgent"') ||
+    !bookingWebsite.includes("is_urgent:$('is_urgent').checked===true") ||
     !bookingWebsite.includes('src="../../prime-auto-care-logo.jpg"') ||
     !existsSync(new URL('../prime-auto-care-logo.jpg', import.meta.url))) {
   throw new Error('Customer booking page is missing its public API flow or pending-confirmation safeguard.');
@@ -50,12 +73,44 @@ for (const match of bookingInlineScripts) {
   await transform(match[1], { loader: 'js', target: 'es2020', logLevel: 'silent' });
 }
 console.log('PASS: public customer booking HTML and JavaScript syntax');
+const businessWebsite = await readFile(new URL('../website/index.html', import.meta.url), 'utf8');
+if (!businessWebsite.includes('id="reviews"') ||
+    !businessWebsite.includes('google-review-feed') ||
+    !businessWebsite.includes('/functions/v1/public-reviews') ||
+    !businessWebsite.includes('Google-approved reply')) {
+  throw new Error('Public business website is missing its live Google review feed and approved-reply safeguard.');
+}
+const websiteScripts = [...businessWebsite.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
+const websiteJsonLd = websiteScripts.filter(match => /\btype=["']application\/ld\+json["']/i.test(match[1]));
+if (!websiteJsonLd.length) throw new Error('Public business website is missing its Schema.org JSON-LD structured data.');
+for (const match of websiteJsonLd) JSON.parse(match[2]);
+const websiteInlineScripts = websiteScripts.filter(match => !/\btype=["']application\/ld\+json["']/i.test(match[1]));
+if (!websiteInlineScripts.length) throw new Error('Public business website has no inline application script.');
+for (const match of websiteInlineScripts) {
+  await transform(match[2], { loader: 'js', target: 'es2020', logLevel: 'silent' });
+}
+console.log('PASS: public business website review feed, DOM rendering, Schema.org JSON-LD and JavaScript syntax');
 
 if (!html.includes('google-auto-reply-enabled') || !html.includes('google-review-save-auto-reply') ||
     !html.includes('Only the original Workspace Owner') ||
     !existsSync(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url))) {
   throw new Error('Owner-controlled event-driven Google AI reply workflow is incomplete.');
 }
+const googleReviewWorkerSource = await readFile(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url), 'utf8');
+const googleReviewApiSource = await readFile(new URL('../supabase/functions/google-review-api/index.ts', import.meta.url), 'utf8');
+if (!googleReviewWorkerSource.includes('readGoogleReplyModeration') ||
+    !googleReviewWorkerSource.includes('reviewReplyState') ||
+    !googleReviewWorkerSource.includes('publication_state') ||
+    !googleReviewApiSource.includes('readGoogleReplyModeration') ||
+    !googleReviewApiSource.includes('reviewReplyState') ||
+    !googleReviewApiSource.includes('publication_state')) {
+  throw new Error('Google public and AI-generated replies must record moderation states after submission.');
+}
+console.log('PASS: Google AI auto-reply and manual reply both track moderation status from Google');
+if (!html.includes('replyPublicationPill') || !html.includes('Google moderation state')) {
+  throw new Error('Google Review Center must display the moderation status for each public reply.');
+}
+console.log('PASS: Google Review Center displays pending, approved and rejected publication states');
 console.log('PASS: AI auto-reply controls are owner-only, off by default and have a server-side worker');
 
 
@@ -321,11 +376,14 @@ if (inlineStart < 0 || inlineEnd < 0) throw new Error('No inline application scr
 const inlineSource = html.slice(inlineStart + '<script>'.length, inlineEnd);
 await transform(inlineSource, { loader: 'js', target: 'es2020', logLevel: 'silent' });
 console.log('PASS: inline application JavaScript syntax');
-for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','communications.bundle.js','native-links.bundle.js','google-reviews.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
+for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bundle.js','exceljs.bundle.min.js','report-export.bundle.js','cloud-sync.bundle.js','notifications-native.bundle.js','communications.bundle.js','native-links.bundle.js','google-reviews.bundle.js','bookings.bundle.js','prime-auto-care-logo.jpg','prime-auto-care-car-photo.jpg']) {
   const path = new URL('../' + asset, import.meta.url);
   if (!existsSync(path) || statSync(path).size < 500) throw new Error('Missing or empty bundled asset: ' + asset);
   console.log('PASS: bundled asset ' + asset);
 }
+const serviceWorkerSource = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
+if (!serviceWorkerSource.includes('prime-auto-care-shell-v33') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v33 and precache the booking bundle.');
+console.log('PASS: offline shell cache version and booking bundle precache');
 const pdfFontsBundle = await readFile(new URL('../pdfmake-vfs.js', import.meta.url), 'utf8');
 if (!pdfFontsBundle.includes('__primeAutoCarePdfFontsReady') || !pdfFontsBundle.includes('addVirtualFileSystem(vfs)')) {
   throw new Error('PDFMake font bundle does not register the virtual font system.');
@@ -769,7 +827,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v32')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v33')) {
   throw new Error('The offline app cache is missing the original Prime Auto Care branding or v32 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
@@ -1021,7 +1079,6 @@ console.log('PASS: WhatsApp group link is persisted, displayed and opened extern
 
 
 const googleReviewClient = await readFile(new URL('../src/google-reviews.js', import.meta.url), 'utf8');
-const googleReviewApi = await readFile(new URL('../supabase/functions/google-review-api/index.ts', import.meta.url), 'utf8');
 const googleReviewCallback = await readFile(new URL('../supabase/functions/google-review-oauth-callback/index.ts', import.meta.url), 'utf8');
 const googleReviewWorker = await readFile(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url), 'utf8');
 const googleReviewWebhook = await readFile(new URL('../supabase/functions/google-review-pubsub-webhook/index.ts', import.meta.url), 'utf8');
@@ -1060,7 +1117,7 @@ for (const token of ['pac_google_review_admins','google_reviews_admin','workspac
 for (const token of ['auth.getUser(token)','GOOGLE_TOKEN_ENCRYPTION_KEY','GOOGLE_OAUTH_CLIENT_SECRET',
   'business.manage','mybusiness.googleapis.com/v4','level1-chat','level2-analyze','level3-copilot',
   'approved !== true','requireGoogleReviewAdmin(ctx)','pac_google_review_admins','GEMINI_API_KEY']) {
-  if (!googleReviewApi.includes(token)) throw new Error('Google Review API missing authentication/AI/platform safeguard: '+token);
+  if (!googleReviewApiSource.includes(token)) throw new Error('Google Review API missing authentication/AI/platform safeguard: '+token);
 }
 for (const token of ['oauth2.googleapis.com/token','email_verified','business.manage','encrypted_refresh_token','consumed_at','pac_google_review_admins','initiated_by']) {
   if (!googleReviewCallback.includes(token)) throw new Error('Google OAuth callback missing: '+token);
@@ -1084,12 +1141,12 @@ for (const token of ['notifications_enabled','notifications_last_event_at','pac_
     throw new Error('Pub/Sub migration is missing: '+token);
   }
 }
-if (!googleReviewApi.includes('enable-notifications') || !googleReviewApi.includes('mybusinessnotifications.googleapis.com/v1/')) {
+if (!googleReviewApiSource.includes('enable-notifications') || !googleReviewApiSource.includes('mybusinessnotifications.googleapis.com/v1/')) {
   throw new Error('Google Notifications API registration is missing.');
 }
 if (!googleReviewDeploy.includes('google-review-pubsub-webhook')) throw new Error('Pub/Sub webhook is not included in deployment.');
 if (!googleReviewPage.includes('API sync') || !googleReviewPage.includes('optional') ||
-    !googleReviewApi.includes('enable-notifications') ||
+    !googleReviewApiSource.includes('enable-notifications') ||
     !googleReviewPubSubMigration.includes('notifications_last_event_at')) {
   throw new Error('Google API automation must remain an optional backend capability while manual replies work without it.');
 }
