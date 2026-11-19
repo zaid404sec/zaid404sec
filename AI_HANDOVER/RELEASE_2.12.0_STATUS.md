@@ -21,7 +21,7 @@ This is a feature-branch candidate, not a released APK. Do not replace a working
 - Added customer urgent-request checkbox and staff-created urgent booking checkbox.
 - Added filters: date range, status, vehicle type, service type, urgent/normal, and text search across booking reference, customer name, mobile and vehicle registration.
 - Added private pac_booking_notification_events with idempotency by workspace/booking/event.
-- The paired original Workspace Owner device polls for unread booking events and displays customer, contact, vehicle, service, date/time, source and urgency. Only the original owner can read/acknowledge alerts.
+- The original Workspace Owner and one separately-scoped paired booking-desk device can read/acknowledge booking events. The v24 device remains a `member`; its notification grant does not promote it to Workspace Owner or expose owner-only schedule settings. The APK polls while active and displays a native Android system alert when notification permission is granted.
 - Added owner-configurable optional WhatsApp alert destination and approved template name. Messages queue through the existing communications worker only when the WhatsApp sender, server credentials and an approved utility template are configured. The event remains in-app even without WhatsApp configuration.
 - Public bookings remain Pending until staff confirms them. Urgency does not override opening hours, bay capacity, slot conflicts or server validation.
 - Payment/deposit processing is not included.
@@ -40,14 +40,14 @@ This is a feature-branch candidate, not a released APK. Do not replace a working
 
 ## Production database change
 
-The additive migration 20261119034723_booking_urgency_notifications_google_publication is applied and appears in the live Supabase migration history. It adds the booking urgency column, owner notification settings/event table, safe RPC wrapper, and Google moderation-state columns. The production database was not reset or reseeded. The existing Workspace Owner and historic business records were preserved.
+The additive migrations `20261119034723_booking_urgency_notifications_google_publication`, `20261119041849_booking_notification_fk_indexes` and `20261119043635_booking_notification_admin_access` are applied and appear in the live Supabase migration history. They add booking urgency, private notification events, supporting indexes, Google moderation columns and a separate server-only booking-notification permission for the paired v24 desk. The active v24 notification grant is derived from the already-authorised Google Reviews admin record; its workspace role remains `member`. RLS is enabled and `anon`/`authenticated` have no direct table access. The existing Workspace Owner and historic business records were preserved.
 
-The public public-reviews Edge Function is deployed ACTIVE (version 1, verify_jwt=false) and serves only the limited public review feed. The booking API, worker and Google API changes in this branch still require CI validation and release deployment before they are considered the active app backend.
+The public public-reviews Edge Function is deployed ACTIVE (version 1, verify_jwt=false) and serves only the limited public review feed. The latest candidate source includes the scoped booking-alert permission check. The production `booking-api` was still v2 at the time of this status update; deploy the candidate function after merge and verify it is active before treating v24 booking alerts as operational.
 
 ## Booking alert configuration
 
-- In-app notification: enabled by default via private events and owner-only polling in the app.
-- WhatsApp alert: owner must select WhatsApp in Booking Settings, enter the owner mobile number and the exact approved Meta utility template name.
+- In-app notification: enabled by default via private events. The original Workspace Owner and the specifically-granted v24 booking desk can read/acknowledge the event. The app polls every 25 seconds while running and can show a native Android notification if the device has granted notification permission.
+- WhatsApp alert: not configured in production. The Workspace Owner must select WhatsApp in Booking Settings and configure the destination number, Meta sender credentials and exact approved Meta utility template name. No recipient number or template is currently stored.
 - Existing server-side messaging requirements remain: META_ACCESS_TOKEN, META_GRAPH_API_VERSION, and configured WhatsApp Phone Number ID. Meta must have approved the selected template with the two body variables used by the existing communications worker.
 - A queued WhatsApp job is not proof of delivery; provider status is tracked by the existing communications system.
 
@@ -76,7 +76,7 @@ Owner must open https://github.com/zaid404sec/zaid404sec/settings/pages and set 
 - Run npm run validate in car-wash-erp/.
 - Deno type-check all five Google/booking/public feed Edge Functions.
 - CI Android APK, Windows EXE, backend type check, source ZIP and full release packaging must all succeed.
-- Run actual booking tests (public and staff), urgent flag persistence, date/status/search filters, slot conflict handling, owner notification and WhatsApp provider delivery when configured.
+- Run actual booking tests (public and staff), urgent flag persistence, date/status/search filters, slot conflict handling, v24 native system notification with permission granted, and WhatsApp provider delivery only after credentials/template are configured.
 - Test review reply submission with a real Google test review and verify PENDING then APPROVED/REJECTED state after subsequent sync.
 - Verify website deployment and public booking page from a phone.
 - Do not claim one-second Google public reply; Pub/Sub, AI inference and Google moderation have variable latency.
