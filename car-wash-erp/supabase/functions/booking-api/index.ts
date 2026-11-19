@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
 const allowedOrigins = new Set([
+  'https://jkjudmkqaebrgllemris.supabase.co',
   'https://zaid404sec.github.io',
   'capacitor://localhost',
   'http://localhost',
