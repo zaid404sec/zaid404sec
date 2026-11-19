@@ -116,6 +116,18 @@ async function authenticate(req: Request) {
     isOwner: member.role === 'owner' && workspace.owner_auth_user_id === data.user.id
   };
 }
+async function canManageBookingNotifications(ctx: any) {
+  if (ctx.isOwner) return true;
+  const { data, error } = await ctx.admin.from('pac_booking_notification_admins')
+    .select('auth_user_id')
+    .eq('workspace_id', ctx.workspace.id)
+    .eq('auth_user_id', ctx.user.id)
+    .eq('permission', 'booking_notifications_admin')
+    .is('revoked_at', null)
+    .maybeSingle();
+  if (error) throw new Error('Booking notification permission could not be verified.');
+  return !!data;
+}
 async function publicSettings(admin: any, slug: string) {
   const { data, error } = await admin.from('pac_booking_settings').select('*').eq('public_slug', slug).maybeSingle();
   if (error) throw error;
@@ -311,7 +323,7 @@ async function handle(req: Request, body: any) {
 
   const ctx = await authenticate(req);
   if (action === 'notifications') {
-    if (!ctx.isOwner) throw new Error('Only the original Workspace Owner can view booking alerts.');
+    if (!(await canManageBookingNotifications(ctx))) throw new Error('This device is not authorised to receive Prime Auto Care booking alerts.');
     const { data, error } = await ctx.admin.from('pac_booking_notification_events')
       .select('id,booking_id,event_type,booking_code,customer_name,customer_phone,vehicle_number,vehicle_type,service_type,booking_date,start_time,is_urgent,source,created_at')
       .eq('workspace_id', ctx.workspace.id)
@@ -322,7 +334,7 @@ async function handle(req: Request, body: any) {
     return { notifications: data || [] };
   }
   if (action === 'acknowledge-notification') {
-    if (!ctx.isOwner) throw new Error('Only the original Workspace Owner can acknowledge booking alerts.');
+    if (!(await canManageBookingNotifications(ctx))) throw new Error('This device is not authorised to acknowledge Prime Auto Care booking alerts.');
     const id = String(body.id || '');
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Select a valid booking notification.');
     const { error } = await ctx.admin.from('pac_booking_notification_events').update({
