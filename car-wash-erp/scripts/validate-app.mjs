@@ -113,7 +113,7 @@ if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes('PENDING until Prime Auto Care confirms') ||
     !bookingWebsite.includes('id="is_urgent"') ||
     !bookingWebsite.includes("is_urgent:$('is_urgent').checked===true") ||
-    !bookingWebsite.includes('src="../../prime-auto-care-logo.jpg"') ||
+    !bookingWebsite.includes('src="https://raw.githubusercontent.com/zaid404sec/zaid404sec/main/car-wash-erp/prime-auto-care-logo.jpg"') ||
     !existsSync(new URL('../prime-auto-care-logo.jpg', import.meta.url))) {
   throw new Error('Customer booking page is missing its public API flow or pending-confirmation safeguard.');
 }
