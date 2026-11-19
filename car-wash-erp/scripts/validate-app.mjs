@@ -873,10 +873,15 @@ console.log('PASS: remote cloud updates preserve the active bill form, text focu
 for (const token of [
   'pairDevice', 'signInAnonymously()', 'washdesk_join_workspace',
   'washdesk_get_workspace', 'washdesk_merge_sync', 'washdesk_next_invoice_number',
-  'postgres_changes', 'startSafetyRefresh', 'Offline',
-  'Offline'
+  'postgres_changes', 'pac_booking_notification_events', 'washdesk-booking-notification',
+  'startSafetyRefresh', 'Offline'
 ]) {
   if (!cloudSource.includes(token)) throw new Error('Shared device pairing / cloud sync hook is missing: ' + token);
+}
+if (!html.includes("window.addEventListener('washdesk-booking-notification'") ||
+    !html.includes('bookingNotificationSeen.delete(id)') ||
+    !html.includes('void pollBookingNotifications()')) {
+  throw new Error('Live booking events must immediately trigger the per-device notification poller.');
 }
 for (const obsolete of ['requestEmailOtp', 'verifyEmailOtp', 'emailRedirectTo', 'AUTH_REDIRECT_URL', 'exchangeCodeForSession']) {
   if (cloudSource.includes(obsolete)) throw new Error('Legacy email-link authentication remains in the cloud module: ' + obsolete);
