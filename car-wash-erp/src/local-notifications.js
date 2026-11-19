@@ -71,14 +71,22 @@ export async function sendBookingAlertNotification(booking = {}) {
   await registerListeners();
   await ensureBookingAlertChannel();
   const urgent = booking.is_urgent === true;
-  const title = urgent ? 'URGENT BOOKING · Prime Auto Care' : 'New booking · Prime Auto Care';
+  const eventType = String(booking.event_type || 'booking_created');
+  const titles = {
+    booking_created: urgent ? 'URGENT BOOKING · Prime Auto Care' : 'New booking · Prime Auto Care',
+    booking_confirmed: 'BOOKING ACCEPTED · Prime Auto Care',
+    booking_rejected: 'BOOKING REJECTED · Prime Auto Care',
+    booking_cancelled: 'BOOKING CANCELLED · Prime Auto Care'
+  };
+  const title = titles[eventType] || 'Booking update · Prime Auto Care';
   const bookingCode = String(booking.booking_code || '').slice(0, 40);
   const customer = String(booking.customer_name || 'Customer').slice(0, 60);
   const vehicle = String(booking.vehicle_number || 'Vehicle').slice(0, 20);
   const service = String(booking.service_type || 'Wash service').slice(0, 40);
   const date = String(booking.booking_date || '').slice(0, 10);
   const time = String(booking.start_time || '').slice(0, 5);
-  const body = [bookingCode, customer, vehicle, service, date + (time ? ' ' + time : '')].filter(Boolean).join(' · ').slice(0, 240);
+  const actor = String(booking.actor_label || '').slice(0, 60);
+  const body = [bookingCode, customer, vehicle, service, date + (time ? ' ' + time : ''), actor ? 'By ' + actor : ''].filter(Boolean).join(' · ').slice(0, 240);
   const id = bookingNotificationId(booking.id || booking.booking_code || (customer + vehicle + date + time));
   await LocalNotifications.schedule({ notifications: [{
     id,
