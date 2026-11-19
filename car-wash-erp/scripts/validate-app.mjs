@@ -8,7 +8,7 @@ const packageJson = JSON.parse(await readFile(new URL('../package.json', import.
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
 if (packageJson.version !== '2.12.0') throw new Error('The package version must be 2.12.0.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.11.0 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
+  throw new Error('The 2.12.0 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
 }
 console.log('PASS: Android 2.12.0 retains the existing v24 application ID for an in-place upgrade.');
 
@@ -63,7 +63,7 @@ if (!businessWebsite.includes('id="reviews"') ||
     !businessWebsite.includes('Google-approved reply')) {
   throw new Error('Public business website is missing its live Google review feed and approved-reply safeguard.');
 }
-const websiteInlineScripts = [...businessWebsite.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+const websiteInlineScripts = [...businessWebsite.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
 if (!websiteInlineScripts.length) throw new Error('Public business website has no inline application script.');
 for (const match of websiteInlineScripts) {
   await transform(match[1], { loader: 'js', target: 'es2020', logLevel: 'silent' });
