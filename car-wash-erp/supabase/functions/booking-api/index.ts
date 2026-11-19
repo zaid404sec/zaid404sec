@@ -131,6 +131,52 @@ async function canManageBookingNotifications(ctx: any) {
   if (error) throw new Error('Booking notification permission could not be verified.');
   return !!data;
 }
+
+async function bookingNotificationPairHash(workspaceId: string, code: string) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(workspaceId + ':' + code));
+  return Array.from(new Uint8Array(bytes)).map(value => value.toString(16).padStart(2, '0')).join('');
+}
+async function createBookingNotificationPairCode(ctx: any) {
+  if (!ctx.isOwner) throw new Error('Only the original Workspace Owner can authorise another phone.');
+  const random = crypto.getRandomValues(new Uint32Array(1))[0] % 100000000;
+  const code = String(random).padStart(8, '0');
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  const codeHash = await bookingNotificationPairHash(ctx.workspace.id, code);
+  const { error: revokeError } = await ctx.admin.from('pac_booking_notification_pair_codes')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('workspace_id', ctx.workspace.id).is('redeemed_at', null).is('revoked_at', null);
+  if (revokeError) throw new Error('Previous phone pairing codes could not be closed.');
+  const { error } = await ctx.admin.from('pac_booking_notification_pair_codes').insert({
+    workspace_id: ctx.workspace.id, code_hash: codeHash, created_by: ctx.user.id, expires_at: expiresAt
+  });
+  if (error) throw new Error('A secure phone pairing code could not be created.');
+  return { code, expires_at: expiresAt, expires_in_seconds: 600 };
+}
+async function redeemBookingNotificationPairCode(ctx: any, value: unknown) {
+  const code = String(value || '').replace(/\D/g, '').slice(0, 8);
+  if (!/^\d{8}$/.test(code)) throw new Error('Enter the 8-digit code generated on the original Workspace Owner phone.');
+  if (ctx.isOwner) return { ok: true, already_authorised: true };
+  const codeHash = await bookingNotificationPairHash(ctx.workspace.id, code);
+  const now = new Date().toISOString();
+  const { data: pair, error: lookupError } = await ctx.admin.from('pac_booking_notification_pair_codes')
+    .select('id,created_by,expires_at')
+    .eq('workspace_id', ctx.workspace.id).eq('code_hash', codeHash)
+    .is('redeemed_at', null).is('revoked_at', null).gt('expires_at', now).maybeSingle();
+  if (lookupError) throw new Error('Phone pairing could not be checked. Try again.');
+  if (!pair) throw new Error('This code is invalid, expired or already used. Generate a new code on the owner phone.');
+  const { data: claimed, error: claimError } = await ctx.admin.from('pac_booking_notification_pair_codes')
+    .update({ redeemed_by: ctx.user.id, redeemed_at: now })
+    .eq('id', pair.id).is('redeemed_at', null).is('revoked_at', null)
+    .gt('expires_at', now).select('id').maybeSingle();
+  if (claimError || !claimed) throw new Error('This code was already used. Generate a new code on the owner phone.');
+  const { error: grantError } = await ctx.admin.from('pac_booking_notification_admins').upsert({
+    workspace_id: ctx.workspace.id, auth_user_id: ctx.user.id,
+    permission: 'booking_notifications_admin', granted_by: pair.created_by,
+    granted_at: now, revoked_at: null
+  }, { onConflict: 'workspace_id,auth_user_id' });
+  if (grantError) throw new Error('The phone was paired, but booking-alert permission could not be saved. Contact the owner.');
+  return { ok: true, authorised: true };
+}
 async function publicSettings(admin: any, slug: string) {
   const { data, error } = await admin.from('pac_booking_settings').select('*').eq('public_slug', slug).maybeSingle();
   if (error) throw error;
@@ -325,26 +371,47 @@ async function handle(req: Request, body: any) {
   }
 
   const ctx = await authenticate(req);
+  if (action === 'create-notification-pair-code') {
+    return await createBookingNotificationPairCode(ctx);
+  }
+  if (action === 'redeem-notification-pair-code') {
+    return await redeemBookingNotificationPairCode(ctx, body.code);
+  }
+  if (action === 'revoke-notification-device') {
+    if (!ctx.isOwner) throw new Error('Only the original Workspace Owner can remove booking-alert access.');
+    const target = String(body.user_id || '');
+    if (!/^[0-9a-f-]{36}$/i.test(target) || target === ctx.user.id) throw new Error('Select a valid non-owner device.');
+    const { error } = await ctx.admin.from('pac_booking_notification_admins').update({ revoked_at: new Date().toISOString() })
+      .eq('workspace_id', ctx.workspace.id).eq('auth_user_id', target).is('revoked_at', null);
+    if (error) throw new Error('Booking-alert access could not be revoked.');
+    return { ok: true };
+  }
   if (action === 'notifications') {
-    if (!(await canManageBookingNotifications(ctx))) throw new Error('This device is not authorised to receive Prime Auto Care booking alerts.');
+    if (!(await canManageBookingNotifications(ctx))) throw new Error('This phone is not authorised to receive Prime Auto Care booking alerts. Ask the owner for a one-time pairing code.');
+    const { data: receipts, error: receiptError } = await ctx.admin.from('pac_booking_notification_receipts')
+      .select('notification_id').eq('workspace_id', ctx.workspace.id).eq('auth_user_id', ctx.user.id);
+    if (receiptError) throw new Error('This phone\'s booking notification receipts could not be read.');
+    const acknowledged = new Set((receipts || []).map((row: any) => String(row.notification_id)));
     const { data, error } = await ctx.admin.from('pac_booking_notification_events')
       .select('id,booking_id,event_type,booking_code,customer_name,customer_phone,vehicle_number,vehicle_type,service_type,booking_date,start_time,is_urgent,source,created_at')
       .eq('workspace_id', ctx.workspace.id)
-      .is('acknowledged_at', null)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(100);
     if (error) throw error;
-    return { notifications: data || [] };
+    return { notifications: (data || []).filter((item: any) => !acknowledged.has(String(item.id))).slice(0, 20) };
   }
   if (action === 'acknowledge-notification') {
-    if (!(await canManageBookingNotifications(ctx))) throw new Error('This device is not authorised to acknowledge Prime Auto Care booking alerts.');
+    if (!(await canManageBookingNotifications(ctx))) throw new Error('This phone is not authorised to acknowledge Prime Auto Care booking alerts.');
     const id = String(body.id || '');
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Select a valid booking notification.');
-    const { error } = await ctx.admin.from('pac_booking_notification_events').update({
-      acknowledged_at: new Date().toISOString(), acknowledged_by: ctx.user.id
-    }).eq('workspace_id', ctx.workspace.id).eq('id', id).is('acknowledged_at', null);
-    if (error) throw error;
-    return { ok: true };
+    const { data: event, error: eventError } = await ctx.admin.from('pac_booking_notification_events')
+      .select('id').eq('workspace_id', ctx.workspace.id).eq('id', id).maybeSingle();
+    if (eventError || !event) throw new Error('Booking notification was not found in this workspace.');
+    const { error } = await ctx.admin.from('pac_booking_notification_receipts').upsert({
+      workspace_id: ctx.workspace.id, notification_id: id, auth_user_id: ctx.user.id
+    }, { onConflict: 'notification_id,auth_user_id' });
+    if (error) throw new Error('This phone\'s notification receipt could not be saved. The alert will remain pending.');
+    return { ok: true, device_acknowledged: true };
   }
   if (action === 'list') {
     let query = ctx.admin.from('pac_bookings').select('*')
