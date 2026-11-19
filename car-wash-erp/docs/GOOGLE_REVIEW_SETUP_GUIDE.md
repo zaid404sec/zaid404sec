@@ -55,25 +55,21 @@ After Google approves the project, open <https://console.cloud.google.com/apis/l
 
 Google's Basic setup guide: <https://developers.google.com/my-business/content/basic-setup>.
 
-## 5. Create the OAuth Web Client
+## 5. Create the OAuth Web Client and save it securely inside WashDesk
 
 1. Open <https://console.cloud.google.com/auth/clients>.
 2. Choose **Create client → Web application**.
 3. Add the exact authorised redirect URI displayed in the WashDesk setup wizard:
 
-   \`https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-oauth-callback\`
+   `https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-oauth-callback`
 
 4. Create the client and copy the **Client ID** and **Client Secret**.
-5. In <https://supabase.com/dashboard/project/jkjudmkqaebrgllemris/functions/secrets>, add the following Edge Function Secrets:
+5. Return to **WashDesk → Google Review Center → Setup wizard** on the original Workspace Owner device.
+6. Paste both values into **Google OAuth Web Client ID** and **Google OAuth Web Client Secret**, then press **Save OAuth credentials securely**.
+7. WashDesk stores both credentials and a generated 32-byte token-encryption key in Supabase Vault. The values are never returned to the app, written to GitHub or stored in browser local storage.
+8. Confirm the OAuth Client ID, Client Secret, Redirect URI and Token encryption key all show **Ready**.
 
-| Secret name | Value |
-|---|---|
-| \`GOOGLE_OAUTH_CLIENT_ID\` | OAuth Web Client ID |
-| \`GOOGLE_OAUTH_CLIENT_SECRET\` | OAuth Web Client Secret |
-| \`GOOGLE_OAUTH_REDIRECT_URI\` | Exact callback URI above |
-| \`GOOGLE_TOKEN_ENCRYPTION_KEY\` | Base64 encoding of 32 random bytes |
-
-Do not put any of these values in a source file, APK, browser field, screenshot or GitHub repository. Supabase Edge Function Secrets is the server-side location for them.
+You do not need to open Supabase Edge Function Secrets for Google OAuth credentials.
 
 ## 6. Connect the original Google Business Profile owner in WashDesk
 
@@ -88,31 +84,27 @@ Do not put any of these values in a source file, APK, browser field, screenshot 
 
 The existing WashDesk pairing/session authenticates the app to its own workspace. It does not replace Google's separate consent for access to the Business Profile. WashDesk must never ask the user to type a Google password into the app.
 
-## 7. Configure Google Pub/Sub notifications
+## 7. Configure Google Pub/Sub notifications (no Supabase Secrets dashboard)
 
 This enables event-driven review updates. Google still controls delivery timing; it is not a guaranteed one-second response service.
 
 1. In the same Google Cloud project, open <https://console.cloud.google.com/cloudpubsub>.
-2. Create a topic such as \`prime-auto-care-reviews\` and copy its full resource name:
-   \`projects/PROJECT_ID/topics/prime-auto-care-reviews\`.
-3. Grant the Google Business Profile publisher identity \`mybusiness-api-pubsub@system.gserviceaccount.com\` the **Pub/Sub Publisher** role on that topic.
+2. Create a topic such as `prime-auto-care-reviews` and copy its full resource name:
+   `projects/PROJECT_ID/topics/prime-auto-care-reviews`.
+3. Grant the Google Business Profile publisher identity `mybusiness-api-pubsub@system.gserviceaccount.com` the **Pub/Sub Publisher** role on that topic.
 4. Create an authenticated push subscription targeting:
 
-   \`https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-pubsub-webhook\`
+   `https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-pubsub-webhook`
 
 5. Use a dedicated push service account and set its OIDC audience to the exact webhook URL above.
 6. Grant the Pub/Sub service agent permission to mint tokens for that push service account (the Service Account Token Creator role on that service account).
-7. In Supabase Edge Function Secrets, add:
-
-| Secret name | Purpose |
-|---|---|
-| \`GOOGLE_REVIEW_WORKER_SECRET\` | Long random secret used only for internal worker calls |
-| \`GOOGLE_PUBSUB_TOPIC_NAME\` | Full Pub/Sub topic resource name |
-| \`GOOGLE_PUBSUB_AUDIENCE\` | Exact webhook URL |
-| \`GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT\` | Push service account email |
-
-8. Return to WashDesk → Setup wizard and refresh status. Once the Pub/Sub items are ready, press **Enable Google review alerts**.
-9. Run a test event and confirm the event appears in the Google Review event table and the worker sync log.
+7. Copy the full topic resource name and the push service account email.
+8. Return to **WashDesk → Google Review Center → Setup wizard** on the original Workspace Owner device.
+9. Paste the topic resource name into **Pub/Sub topic resource name** and the email into **Pub/Sub push service account email**, then press **Save Pub/Sub settings securely**.
+10. WashDesk generates the internal worker secret and stores it encrypted in Supabase Vault. The OIDC audience is generated automatically and displayed in the wizard.
+11. Create the authenticated push subscription using the exact audience shown in WashDesk and the push service account email you saved.
+12. Refresh setup status. Once all Pub/Sub items are Ready, press **Enable Google review alerts**.
+13. Run a test event and confirm the event appears in the Google Review event table and worker sync log.
 
 Google notification guide: <https://developers.google.com/my-business/content/notification-setup>.
 
@@ -144,7 +136,7 @@ There is no guaranteed one-second publication SLA. Pub/Sub delivery, AI generati
 
 | What you see | What to check |
 |---|---|
-| OAuth button disabled | Set all four OAuth secrets and confirm the redirect URI is an exact match. The OpenRouter AI key is configured separately inside the Setup wizard. |
+| OAuth button disabled | Save the Google OAuth Client ID and Client Secret in the WashDesk Setup wizard, confirm the callback URI is exact, and check that Basic API Access is approved. |
 | Google returns 403 / access pending | Basic API Access is not yet approved, the wrong Cloud project is used, or the required API has not been enabled. |
 | Google authorises the wrong account | Reconnect with the original PRIME AUTO CARE Business Profile owner account. |
 | Notifications stay disabled | Check the topic publisher permission, push subscription, OIDC audience/service account, and four Pub/Sub secrets. |
