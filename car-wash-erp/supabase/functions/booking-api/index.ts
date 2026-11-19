@@ -430,7 +430,8 @@ async function handle(req: Request, body: any) {
       slot_minutes: settings.slot_minutes, slot_capacity: settings.slot_capacity,
       horizon_days: settings.horizon_days, public_enabled: settings.public_enabled
     };
-    return { bookings: data || [], settings: visibleSettings, permissions: { is_owner: ctx.isOwner } };
+    const canManageNotifications = await canManageBookingNotifications(ctx);
+    return { bookings: data || [], settings: visibleSettings, permissions: { is_owner: ctx.isOwner, can_manage_notifications: canManageNotifications } };
   }
   if (action === 'create-staff') {
     const settingsResult = await ctx.admin.from('pac_booking_settings').select('*').eq('workspace_id', ctx.workspace.id).single();
