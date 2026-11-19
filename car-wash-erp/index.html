@@ -1371,25 +1371,50 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
   }
   async function clearBookingFilters(){bookingState.filters={};await loadBookingCenter(true)}
   let bookingNotificationPollBusy=false;
-  const bookingNotificationSeen=new Set();
-  async function pollBookingNotifications(){
-    if(!window.PrimeAutoCareBookings?.notifications||bookingNotificationPollBusy)return;
-    bookingNotificationPollBusy=true;
-    try{
-      const result=await window.PrimeAutoCareBookings.notifications();
-      const events=Array.isArray(result.notifications)?result.notifications:[];
-      for(const item of events.reverse()){
-        if(bookingNotificationSeen.has(item.id))continue;
-        bookingNotificationSeen.add(item.id);
-        const priority=item.is_urgent?'URGENT · ':'';
-        notify(priority+'New booking '+(item.booking_code||'')+' — '+(item.customer_name||'Customer')+' · '+(item.vehicle_number||'Vehicle')+' · '+bookingDateLabel(item.booking_date)+' '+String(item.start_time||'').slice(0,5));
-        await window.PrimeAutoCareNotifications?.sendBookingAlertNotification?.(item).catch(error=>console.warn('Android booking notification could not be shown:',error?.message||error));
-        await window.PrimeAutoCareBookings.acknowledgeNotification(item.id).catch(()=>{});
+const bookingNotificationSeen=new Set();
+const bookingNotificationRetryAt=new Map();
+async function pollBookingNotifications(){
+  if(!window.PrimeAutoCareBookings?.notifications||bookingNotificationPollBusy)return;
+  bookingNotificationPollBusy=true;
+  try{
+    const result=await window.PrimeAutoCareBookings.notifications();
+    const events=Array.isArray(result.notifications)?result.notifications:[];
+    for(const item of events.reverse()){
+      const id=String(item.id||'');
+      if(!id||bookingNotificationSeen.has(id)||(bookingNotificationRetryAt.get(id)||0)>Date.now())continue;
+      const priority=item.is_urgent?'URGENT · ':'';
+      const summary=priority+'New booking '+(item.booking_code||'')+' — '+(item.customer_name||'Customer')+' · '+(item.vehicle_number||'Vehicle')+' · '+bookingDateLabel(item.booking_date)+' '+String(item.start_time||'').slice(0,5);
+      try{
+        const sendAlert=window.PrimeAutoCareNotifications?.sendBookingAlertNotification;
+        if(typeof sendAlert!=='function')throw new Error('Booking alert notification service is unavailable on this device.');
+        const delivery=await sendAlert(item);
+        if(delivery?.permissionDenied){
+          bookingNotificationSeen.add(id);
+          notify(summary+' · Turn on notifications for WashDesk in Android Settings.');
+          continue;
+        }
+        if(delivery?.supported===true&&delivery?.scheduled!==true)throw new Error('Android did not confirm that the booking alert was scheduled.');
+        bookingNotificationSeen.add(id);
+        bookingNotificationRetryAt.delete(id);
+        notify(summary);
+        await window.PrimeAutoCareBookings.acknowledgeNotification(id).catch(error=>console.warn('Booking alert was shown, but its per-device receipt could not be saved:',error?.message||error));
+      }catch(error){
+        bookingNotificationRetryAt.set(id,Date.now()+60000);
+        notify('Booking alert is still pending on this device. It has not been marked as read.');
+        console.warn('Booking notification delivery failed; the event remains available for retry:',error?.message||error);
       }
-    }catch(error){console.warn('Booking notification check failed:',error?.message||error)}
-    finally{bookingNotificationPollBusy=false}
+    }
+  }catch(error){console.warn('Booking notification check failed:',error?.message||error)}
+  finally{bookingNotificationPollBusy=false}
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){
+    bookingNotificationSeen.clear();
+    bookingNotificationRetryAt.clear();
+    void pollBookingNotifications();
   }
-  async function loadBookingCenter(force=false){
+});
+async function loadBookingCenter(force=false){
     if(bookingState.loading||(!force&&bookingState.attempted))return;
     bookingState.loading=true;bookingState.attempted=true;bookingState.error='';
     try{
