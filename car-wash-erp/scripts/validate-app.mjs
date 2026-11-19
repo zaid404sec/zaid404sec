@@ -1055,7 +1055,6 @@ console.log('PASS: WhatsApp group link is persisted, displayed and opened extern
 
 
 const googleReviewClient = await readFile(new URL('../src/google-reviews.js', import.meta.url), 'utf8');
-const googleReviewApi = await readFile(new URL('../supabase/functions/google-review-api/index.ts', import.meta.url), 'utf8');
 const googleReviewCallback = await readFile(new URL('../supabase/functions/google-review-oauth-callback/index.ts', import.meta.url), 'utf8');
 const googleReviewWorker = await readFile(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url), 'utf8');
 const googleReviewWebhook = await readFile(new URL('../supabase/functions/google-review-pubsub-webhook/index.ts', import.meta.url), 'utf8');
