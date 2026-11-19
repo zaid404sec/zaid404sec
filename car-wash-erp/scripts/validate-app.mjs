@@ -47,6 +47,13 @@ for (const token of ['pac_booking_notification_admins','booking_notifications_ad
   if (!bookingNotificationMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Booking notification permission migration is incomplete: '+token);
 }
 console.log('PASS: the paired booking desk receives scoped alerts without changing the original Workspace Owner');
+const localNotificationsSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
+if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
+    !localNotificationsSource.includes('BOOKING_ALERT_CHANNEL_ID') ||
+    !html.includes('sendBookingAlertNotification')) {
+  throw new Error('Native Android booking notifications are missing from the app polling flow.');
+}
+console.log('PASS: new booking alerts can show as Android system notifications when the app is active and permission is granted');
 const bookingWebsite = await readFile(new URL('../website/booking/index.html', import.meta.url), 'utf8');
 if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes('function request(action') ||
