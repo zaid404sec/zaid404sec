@@ -1101,7 +1101,7 @@ for (const token of ['pac_google_review_admins','google_reviews_admin','workspac
 for (const token of ['auth.getUser(token)','GOOGLE_TOKEN_ENCRYPTION_KEY','GOOGLE_OAUTH_CLIENT_SECRET',
   'business.manage','mybusiness.googleapis.com/v4','level1-chat','level2-analyze','level3-copilot',
   'approved !== true','requireGoogleReviewAdmin(ctx)','pac_google_review_admins','GEMINI_API_KEY']) {
-  if (!googleReviewApi.includes(token)) throw new Error('Google Review API missing authentication/AI/platform safeguard: '+token);
+  if (!googleReviewApiSource.includes(token)) throw new Error('Google Review API missing authentication/AI/platform safeguard: '+token);
 }
 for (const token of ['oauth2.googleapis.com/token','email_verified','business.manage','encrypted_refresh_token','consumed_at','pac_google_review_admins','initiated_by']) {
   if (!googleReviewCallback.includes(token)) throw new Error('Google OAuth callback missing: '+token);
