@@ -212,7 +212,37 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
 @media(max-width:760px){.topbar{background:rgba(255,251,242,.92);padding-inline:14px}.content{padding:18px 14px 36px}.card,.stat{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}.growth-auto-note{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.btn,.growth-post,.nav button{transition:none!important;scroll-behavior:auto!important}}
 
-</style>
+
+    /* WashDesk 2.13 — deep liquid-glass workspace. Invoice print surfaces remain paper-white. */
+    :root{color-scheme:dark;--bg:#080b11;--panel:rgba(255,255,255,.065);--ink:#f4f1e9;--muted:#a9b0bd;--line:rgba(255,255,255,.13);--nav:#090c12;--blue:#d7b66e;--blue2:rgba(215,182,110,.16);--teal:#54d6a2;--red:#ff7777;--amber:#f1c46c;--shadow:0 18px 55px rgba(0,0,0,.32);--radius:20px}
+    html,body{background:radial-gradient(ellipse at 12% 0%,rgba(74,100,145,.18),transparent 38%),radial-gradient(ellipse at 92% 12%,rgba(190,145,64,.13),transparent 32%),#080b11!important;color:var(--ink)}
+    .main{background:transparent}.topbar{background:rgba(11,15,23,.68)!important;border-bottom:1px solid var(--line)!important;backdrop-filter:blur(28px) saturate(165%);-webkit-backdrop-filter:blur(28px) saturate(165%)}
+    .topbar h1,.page-head h2,.card-head h3,.stat-value,.strong{color:#f7f3e9}
+    .topbar p,.page-head p,.help,.muted{color:#a9b0bd}
+    .sidebar{background:rgba(7,10,16,.88)!important;border-right:1px solid var(--line);backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%)}
+    .nav button:hover,.nav button.active{background:rgba(215,182,110,.16)!important;color:#fff}
+    .stat,.card,.dashboard-quick-link,.visit-card,.google-review-feed,.modal{background:rgba(255,255,255,.065)!important;border:1px solid rgba(255,255,255,.14)!important;box-shadow:0 18px 48px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.10)!important;backdrop-filter:blur(24px) saturate(155%);-webkit-backdrop-filter:blur(24px) saturate(155%);color:#f4f1e9}
+    .stat-icon,.dashboard-quick-link>span{background:rgba(215,182,110,.14)!important;color:#f0d18d!important}
+    .dashboard-hero{background:linear-gradient(125deg,rgba(16,23,37,.78),rgba(45,35,21,.62))!important;border:1px solid rgba(215,182,110,.32);backdrop-filter:blur(26px)}
+    .dashboard-insight,.notice,.success-note{background:rgba(255,255,255,.07)!important;border-color:rgba(255,255,255,.14)!important;color:#eee5d2}
+    .field input,.field select,.field textarea,.search input,.staff-attendance-row select,.pill,.btn{background:rgba(255,255,255,.075)!important;border-color:rgba(255,255,255,.17)!important;color:#f5f1e8!important}
+    .field label,.field-grid label,.staff-attendance-person b{color:#e8dfcd}
+    .field input::placeholder,.field textarea::placeholder,.search input::placeholder{color:#9da6b4}
+    .btn.primary{background:linear-gradient(135deg,#efd49a,#b88b3e)!important;border-color:#d1ac67!important;color:#17120a!important}
+    .btn:hover,.dashboard-quick-link:hover{border-color:rgba(239,212,154,.65)!important;background:rgba(255,255,255,.12)!important}
+    .btn.primary:hover{background:linear-gradient(135deg,#f6dfae,#c69b50)!important}
+    .table-wrap{border-radius:14px}th{color:#d6c9ac;border-color:var(--line)}td{color:#eee9df;border-color:rgba(255,255,255,.09)}
+    .stock-alert,.staff-attendance-row,.payroll-table-wrap tr{border-color:rgba(255,255,255,.10)!important}
+    .empty{border-color:rgba(255,255,255,.18);color:#b9c0ca}.empty b{color:#f4f1e9}
+    .modal-backdrop{background:rgba(0,0,0,.66)!important;backdrop-filter:blur(8px)}
+    .modal{background:rgba(17,22,32,.94)!important}
+    .close{background:rgba(255,255,255,.1)!important;color:#fff}
+    .toast{background:rgba(17,22,32,.94);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(20px)}
+    .badge{background:rgba(90,140,230,.18);color:#b9d2ff}.badge.green{background:rgba(37,190,135,.16);color:#83e8bd}.badge.red{background:rgba(230,80,80,.16);color:#ffaaaa}.badge.amber{background:rgba(220,165,65,.16);color:#f4d28b}
+    .invoice-preview,.premium-invoice-header,.invoice-title-strip,.invoice-party-card,.premium-invoice-table td,.invoice-preview table{color:#211d15}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+  </style>
 </head>
 <body>
 <div class="shell">
