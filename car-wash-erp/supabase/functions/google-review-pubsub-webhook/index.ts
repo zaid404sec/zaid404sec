@@ -46,7 +46,7 @@ async function verifyPushIdentity(req: Request, service: any) {
   const { data, error } = await service.from('pac_google_review_settings')
     .select('workspace_id')
     .eq('google_pubsub_audience', audience)
-    .ilike('pubsub_push_service_account', email)
+    .eq('pubsub_push_service_account', email)
     .maybeSingle();
   if (error || !data?.workspace_id) throw new Error('Google Pub/Sub identity does not match the configured Prime Auto Care subscription.');
   return String(data.workspace_id);
