@@ -1,6 +1,6 @@
 # Prime Auto Care — public one-page website
 
-This mobile-first public website is stored at `car-wash-erp/website/` and is included in the repository's existing GitHub Pages deployment.
+This mobile-first public website is stored at `car-wash-erp/website/` and is served from the Supabase Edge Function `prime-auto-care-site`; the GitHub Pages workflow remains a source-preview fallback.
 
 ## Included
 - Responsive black-and-gold Prime Auto Care identity.
@@ -12,17 +12,15 @@ This mobile-first public website is stored at `car-wash-erp/website/` and is inc
 - LocalBusiness / AutoWash structured data.
 
 ## Expected public URL
-`https://zaid404sec.github.io/zaid404sec/website/`
+`https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/`
 
-The repository already has `.github/workflows/pages.yml`, which builds and publishes the full `car-wash-erp/` folder. That workflow now also generates the app's PWA/Windows icon assets before running validation. This website is deployed as the `/website/` path within that existing Pages site; do not create a second, competing Pages deployment workflow.
+The repository retains `.github/workflows/pages.yml` as a secondary preview workflow; the customer-facing links use the independent Supabase-hosted site. That workflow now also generates the app's PWA/Windows icon assets before running validation. This website is deployed as the `/website/` path within that existing Pages site; do not create a second, competing Pages deployment workflow.
 
 ## Publish and verify
-1. Merge the website and app changes after the feature pull request passes checks.
-2. In GitHub, open repository **Settings → Pages** and set **Build and deployment → Source** to **GitHub Actions**. GitHub requires this for a custom Actions publishing workflow. See the [GitHub Pages publishing-source instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
-3. Wait for the existing **Deploy WashDesk to GitHub Pages** workflow to complete successfully.
-4. Open the expected public URL on a phone. Check that the images, telephone links, WhatsApp button and Google Profile button work.
-5. Sign in to the Google account that owns Prime Auto Care. Open the Business Profile and choose **Edit profile → Contact → Website**. Add the live public URL and save it.
-6. Confirm the website link appears on the public Business Profile in Google Search / Maps.
+1. Deploy the `prime-auto-care-site` Edge Function from the repository source.
+2. Open the expected public URL on a phone. Check the booking form, images, telephone links, WhatsApp button, Google Profile button and real review feed.
+3. Sign in to the Google account that owns Prime Auto Care. Open the Business Profile and choose **Edit profile → Contact → Website**. Add the live public URL and save it.
+4. Confirm the website link appears on the public Business Profile in Google Search / Maps.
 
 
 ## Live Google reviews
