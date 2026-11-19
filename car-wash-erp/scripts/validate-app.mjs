@@ -91,7 +91,7 @@ console.log('PASS: the paired booking desk receives scoped alerts without changi
 for (const token of ['create-notification-pair-code','redeem-notification-pair-code','pac_booking_notification_pair_codes','pac_booking_notification_receipts','notification_id','auth_user_id','device_acknowledged']) {
   if (!bookingApiSource.includes(token)) throw new Error('Per-device booking notification pairing/receipt support is missing: '+token);
 }
-if (bookingApiSource.includes(".from('pac_booking_notification_events').update({\\n      acknowledged_at")) {
+if (bookingApiSource.includes('acknowledged_at: new Date().toISOString(), acknowledged_by: ctx.user.id')) {
   throw new Error('Booking acknowledgement must be per-device, not a global event acknowledgement.');
 }
 if (!html.includes('booking-notification-create-code') ||
