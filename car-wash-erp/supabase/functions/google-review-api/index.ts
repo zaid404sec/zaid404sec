@@ -137,7 +137,7 @@ async function saveAutoReplySettings(ctx: Context, settings: any) {
 async function saveGoogleProjectNumber(ctx: Context, value: unknown) {
   requireGoogleReviewAdmin(ctx);
   const projectNumber = String(value || '').trim();
-  if (!/^\\d{6,24}$/.test(projectNumber)) {
+  if (!/^\d{6,24}$/.test(projectNumber)) {
     throw new Error('Enter the numeric Google Cloud Project Number (6–24 digits), not the Project ID.');
   }
   const { error } = await ctx.service.from('pac_google_review_settings').upsert({
@@ -763,12 +763,12 @@ async function status(ctx: Context) {
   const sent = logs.filter((row: any) => row.status === 'sent_confirmed');
   const prepared = logs.filter((row: any) => row.status === 'prepared');
   const redirectUri = env('GOOGLE_OAUTH_REDIRECT_URI')
-    || (env('SUPABASE_URL') ? env('SUPABASE_URL').replace(/\\/$/, '') + '/functions/v1/google-review-oauth-callback' : '');
+    || (env('SUPABASE_URL') ? env('SUPABASE_URL').replace(/\/$/, '') + '/functions/v1/google-review-oauth-callback' : '');
   const oauthClientIdReady = !!env('GOOGLE_OAUTH_CLIENT_ID');
   const oauthClientSecretReady = !!env('GOOGLE_OAUTH_CLIENT_SECRET');
   const oauthRedirectReady = !!env('GOOGLE_OAUTH_REDIRECT_URI');
   const encryptionKeyReady = !!env('GOOGLE_TOKEN_ENCRYPTION_KEY');
-  const pubsubTopicReady = /^projects\\/[a-zA-Z0-9._:-]+\\/topics\\/[a-zA-Z0-9._-]+$/.test(env('GOOGLE_PUBSUB_TOPIC_NAME') || String(settings.pubsub_topic_name || ''));
+  const pubsubTopicReady = /^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(env('GOOGLE_PUBSUB_TOPIC_NAME') || String(settings.pubsub_topic_name || ''));
   const pubsubAudienceReady = !!env('GOOGLE_PUBSUB_AUDIENCE');
   const pubsubPushAccountReady = !!env('GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT');
   const workerSecretReady = !!env('GOOGLE_REVIEW_WORKER_SECRET');
