@@ -750,10 +750,13 @@ const remoteReceiveStart = html.indexOf('function receiveCloudData(');
 const remoteReceiveEnd = html.indexOf('async function connectCloud', remoteReceiveStart);
 if (remoteReceiveStart < 0 || remoteReceiveEnd < 0) throw new Error('Remote sync handler not found.');
 const remoteReceive = html.slice(remoteReceiveStart, remoteReceiveEnd);
-if (!remoteReceive.includes('if(shouldDeferRemoteUpdate())') ||
+if (!remoteReceive.includes('pendingRemotePayload=remote;') ||
+    !remoteReceive.includes('remoteRenderPending=true;') ||
     !remoteReceive.includes('return {__cloudSyncDeferred:true}') ||
-    remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db));render();')) {
-  throw new Error('A remote sync event can still mutate local data or the active app DOM during billing.');
+    remoteReceive.includes('db=mergeWashDeskData') ||
+    remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db))') ||
+    remoteReceive.includes('render()')) {
+  throw new Error('Realtime snapshots must be queued without changing local data or rerendering the active screen.');
 }
 if (!html.includes('let pendingRemotePayload=null;') ||
     !html.includes('function applyPendingRemoteData()') ||
