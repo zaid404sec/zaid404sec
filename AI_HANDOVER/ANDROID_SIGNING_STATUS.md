@@ -2,7 +2,7 @@
 
 ## Verified APK certificate comparison
 - Existing 2.11.0 APK artifact: SHA-256 signing-certificate fingerprint starts `dcc0d72b5524`.
-- New 2.13.1 CI APK: SHA-256 signing-certificate fingerprint starts `0100feb9239a`.
+- Example 2.13.1 CI APK from run #445954: SHA-256 signing-certificate fingerprint starts `0100feb9239a`. Each fresh GitHub runner can generate a different debug certificate, so this fingerprint is not a stable release identity.
 - These certificates do not match. Android will reject 2.13.1 as an in-place update over the existing 2.11.0/v24 installation, despite the same package ID `com.washdesk.carwash.v24` and a higher version code.
 
 ## Signing-key availability
