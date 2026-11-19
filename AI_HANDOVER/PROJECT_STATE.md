@@ -12,7 +12,7 @@
 
 ## Production Supabase
 - Project: `jkjudmkqaebrgllemris`, status `ACTIVE_HEALTHY`, region `ap-northeast-2`.
-- Active functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v10, `prime-auto-care-website` v1, `prime-auto-care-booking` v1, `prime-auto-care-site` v3, `public-reviews` v3.
+- Active functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v10, `prime-auto-care-website` v2, `prime-auto-care-booking` v2, `prime-auto-care-site` v3, `public-reviews` v3.
 - Business website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/
 - Public booking page: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
 - Google Review Center's saved `website_url` already points to the Supabase business website, not GitHub Pages.
