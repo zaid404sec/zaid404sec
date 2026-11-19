@@ -1515,13 +1515,16 @@ tbody tr:hover{background:rgba(135,180,225,.09)}
           line('Business Profile API access',approved,'Current backend status: '+String(setup.api_status||'access_pending')+'. Google must approve the Cloud project before live review sync and publishing can work.')+
           '<div class="field"><label>Google Cloud Project Number</label><input id="google-cloud-project-number" inputmode="numeric" maxlength="24" value="'+esc(project)+'" placeholder="Numeric project number only" '+(!permissions.google_reviews_admin?'disabled':'')+'></div>'+
           (permissions.google_reviews_admin?'<button class="btn small" data-action="google-review-save-project-number">Save project number</button>':'<p class="help">This device needs the scoped Google Reviews administrator permission to save the Cloud project number. The original Workspace Owner record is not changed.</p>')+
-          '<p class="help"><a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Open Google Cloud Console ↗</a> · <a href="https://developers.google.com/my-business/content/prereqs" target="_blank" rel="noopener">Basic API Access prerequisites ↗</a></p>'+
+          '<p class="help">Google requires a verified Business Profile that has been active for 60+ days and has your live business website listed. Submit the request using an email that is an owner or manager of the Profile. Google approval cannot be bypassed by an API key.</p>'+
+          '<p class="help"><a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Open Google Cloud Console ↗</a> · <a href="https://developers.google.com/my-business/content/prereqs" target="_blank" rel="noopener">Official prerequisites ↗</a> · <a href="https://support.google.com/business/contact/api_default" target="_blank" rel="noopener">Request Basic API Access ↗</a></p>'+
+          '<p class="help">Approval check: 0 QPM means not approved; 300 QPM means approved. Google sends its decision by email.</p>'+
         '</div>'+
         '<div><h4>2 · Google OAuth Web Client</h4>'+
-          line('OAuth Client ID',ready(setup.oauth_client_id_configured),'Set GOOGLE_OAUTH_CLIENT_ID in Supabase Edge Function Secrets.')+
-          line('OAuth Client Secret',ready(setup.oauth_client_secret_configured),'Set GOOGLE_OAUTH_CLIENT_SECRET in Supabase Edge Function Secrets.')+
-          line('Redirect URI',ready(setup.oauth_redirect_uri_configured),'The exact URI below must be saved in the Google OAuth Web Client and Supabase Secrets.')+
-          line('Token encryption key',ready(setup.token_encryption_key_configured),'Set GOOGLE_TOKEN_ENCRYPTION_KEY to Base64 of 32 random bytes.')+
+          line('OAuth Client ID',ready(setup.oauth_client_id_configured),'Create a Web application OAuth client in Google Cloud Console and add the Client ID to Supabase Edge Function Secrets.')+
+          line('OAuth Client Secret',ready(setup.oauth_client_secret_configured),'Copy the Client Secret from that same Web application client into Supabase Edge Function Secrets.')+
+          line('Redirect URI',ready(setup.oauth_redirect_uri_configured),'Add the exact callback URL below under Authorized redirect URIs in the Google OAuth Web Client, then save it in Supabase Secrets.')+
+          line('Token encryption key',ready(setup.token_encryption_key_configured),'A 32-byte Base64 encryption key is required to protect Google refresh tokens.')+
+          '<p class="help">Google Cloud Console → APIs & Services → Credentials → Create Credentials → OAuth client ID → Web application. Use the callback URL shown below exactly; do not use a JavaScript origin in place of the redirect URI.</p>'+
           '<div class="field"><label>Authorised redirect URI</label><input id="google-oauth-redirect-uri" readonly value="'+esc(callback)+'"></div>'+
           '<button class="btn small" data-action="google-review-copy-oauth-callback">Copy redirect URI</button>'+
           '<p class="help"><a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">Open OAuth clients ↗</a> · <a href="https://developers.google.com/my-business/content/basic-setup" target="_blank" rel="noopener">Google OAuth setup guide ↗</a></p>'+
@@ -1535,7 +1538,7 @@ tbody tr:hover{background:rgba(135,180,225,.09)}
           '<p class="help">The button opens Google’s official consent page. It does not ask for a Google password inside WashDesk.</p>'+
         '</div>'+
         '<div><h4>4 · Live review alerts and AI</h4>'+
-          line('Pub/Sub topic, audience and push identity',pubsubReady,'Requires GOOGLE_PUBSUB_TOPIC_NAME, GOOGLE_PUBSUB_AUDIENCE, GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT and GOOGLE_REVIEW_WORKER_SECRET.')+
+          line('Pub/Sub topic, audience and push identity',pubsubReady,'Create a Pub/Sub topic, grant mybusiness-api-pubsub@system.gserviceaccount.com the Pub/Sub Publisher role, then create a push subscription to the WashDesk webhook. Configure its audience and push service-account email in the server settings.')+
           line('Google review notifications',ready(setup.notifications_enabled),'Enable notifications only after OAuth and the Pub/Sub subscription are working.')+
           line('OpenRouter AI key',aiReady,'Saved encrypted in Supabase Vault. The key is never returned to the app or written to GitHub.')+
           (permissions.workspace_owner?'<div class="field"><label>Replacement OpenRouter API key</label><input id="google-openrouter-key" type="password" maxlength="512" autocomplete="new-password" spellcheck="false" placeholder="sk-or-v1-…"></div><button class="btn small" data-action="google-review-save-ai-key">Save AI key securely</button><p class="help">Paste a newly rotated key here. WashDesk sends it over HTTPS directly to the owner-only backend, stores it encrypted in Supabase Vault, and clears the input. It is not stored in local storage.</p>':'<p class="help">Only the original Workspace Owner can add or replace the AI provider key.</p>')+
