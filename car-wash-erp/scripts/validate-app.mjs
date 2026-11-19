@@ -121,12 +121,12 @@ const notificationPoll = html.slice(notificationPollStart, notificationPollEnd);
 const deliveryIndex = notificationPoll.indexOf('const delivery=await sendAlert(item);');
 const receiptIndex = notificationPoll.indexOf('acknowledgeNotification(id)');
 const deniedIndex = notificationPoll.indexOf('if(delivery?.permissionDenied)');
-const deniedEnd = notificationPoll.indexOf('if(delivery?.supported===true', deniedIndex);
+const deliveryGuardIndex = notificationPoll.indexOf('if(delivery?.supported!==true||delivery?.scheduled!==true)');
 if (deliveryIndex < 0 || receiptIndex < deliveryIndex || deniedIndex < 0 ||
-    deniedEnd < deniedIndex || notificationPoll.slice(deniedIndex, deniedEnd).includes('acknowledgeNotification') ||
+    deliveryGuardIndex < deniedIndex || notificationPoll.slice(deniedIndex, deliveryGuardIndex).includes('acknowledgeNotification') ||
     !notificationPoll.includes('bookingNotificationRetryAt.set(id,Date.now()+60000)') ||
-    !notificationPoll.includes('delivery?.supported!==true||delivery?.scheduled!==true') ||
-    !notificationPoll.includes("document.addEventListener('visibilitychange'")) {
+    deliveryGuardIndex < deliveryIndex ||
+    !html.includes("document.addEventListener('visibilitychange'")) {
   throw new Error('Booking alerts must remain unread when Android delivery fails and retry after the app resumes.');
 }
 console.log('PASS: booking alert receipts are acknowledged only after delivery; denied/failed alerts remain retryable');
