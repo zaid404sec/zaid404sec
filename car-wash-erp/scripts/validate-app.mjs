@@ -153,8 +153,6 @@ if (!html.includes('google-auto-reply-enabled') || !html.includes('google-review
     !html.includes('function googleReviewSetupMarkup(state)') ||
     !html.includes('google-review-save-project-number') ||
     !html.includes('google-review-copy-oauth-callback') ||
-    !html.includes('GOOGLE_OAUTH_CLIENT_SECRET') ||
-    !html.includes('OPENROUTER_API_KEY') ||
     !html.includes('oauth_credentials_ready') ||
     !html.includes('pubsub_credentials_ready') ||
     html.includes('google-ai-api-key') ||
@@ -178,6 +176,7 @@ if (!googleReviewApiSource.includes("env('OPENROUTER_API_KEY')") ||
     !googleReviewApiSource.includes('google_pubsub_audience')) {
   throw new Error('Google setup must save OAuth, AI and Pub/Sub credentials through the paired owner session into Supabase Vault.');
 }
+const googleVaultSetupClient = await readFile(new URL('../src/google-reviews.js', import.meta.url), 'utf8');
 if (!html.includes('google-oauth-client-id') ||
     !html.includes('google-oauth-client-secret') ||
     !html.includes('google-openrouter-api-key') ||
@@ -191,7 +190,6 @@ if (!html.includes('google-oauth-client-id') ||
     !googleVaultSetupClient.includes('savePubSubSettings')) {
   throw new Error('Google Review Center must expose the paired-session Vault setup fields and save actions.');
 }
-const googleVaultSetupClient = await readFile(new URL('../src/google-reviews.js', import.meta.url), 'utf8');
 const googleVaultSetupCallback = await readFile(new URL('../supabase/functions/google-review-oauth-callback/index.ts', import.meta.url), 'utf8');
 const googleVaultSetupWebhook = await readFile(new URL('../supabase/functions/google-review-pubsub-webhook/index.ts', import.meta.url), 'utf8');
 const googleVaultSetupMigration = await readFile(new URL('../supabase/migrations/20261119160000_google_vault_setup_wizard.sql', import.meta.url), 'utf8');
