@@ -30,6 +30,37 @@ async function requestGoogle(url:string,token:string,init:RequestInit={}) {
   if(!response.ok)throw new Error('Google API '+response.status+': '+String(data?.error?.message||'Request failed.'));
   return data;
 }
+async function readGoogleReplyModeration(token:string,accountName:string,locationName:string,reviewResource:string,expectedReply:string) {
+  const expectedId=reviewResource.split('/').pop();
+  let lastState='PENDING_VERIFICATION',policyViolation:string|null=null,checkedAt=new Date().toISOString();
+  for(let attempt=0;attempt<3;attempt++){
+    let pageToken='';
+    for(let page=0;page<10;page++){
+      const params=new URLSearchParams({pageSize:'50',orderBy:'updateTime desc'});
+      if(pageToken)params.set('pageToken',pageToken);
+      const data=await requestGoogle('https://mybusiness.googleapis.com/v4/'+accountName+'/locations/'+locationName.split('/').pop()+'/reviews?'+params.toString(),token);
+      const item=(data.reviews||[]).find((r:any)=>{
+        const resource=String(r.name||'');
+        const id=String(r.reviewId||resource.split('/').pop()||'');
+        return resource===reviewResource||id===expectedId;
+      });
+      if(item){
+        const moderation=item.reviewReply||{};
+        const returnedComment=String(moderation.comment||'');
+        if(returnedComment&&returnedComment!==expectedReply){
+          return {state:'REPLY_MISMATCH',policyViolation:null,checkedAt:new Date().toISOString()};
+        }
+        const state=String(moderation.reviewReplyState||'REVIEW_REPLY_STATE_UNSPECIFIED');
+        return {state,policyViolation:moderation.policyViolation?String(moderation.policyViolation):null,checkedAt:new Date().toISOString()};
+      }
+      pageToken=String(data.nextPageToken||'');
+      if(!pageToken)break;
+    }
+    if(attempt<2)await new Promise(resolve=>setTimeout(resolve,800*(attempt+1)));
+  }
+  return {state:lastState,policyViolation,checkedAt};
+}
+
 async function setAutoReplyClaim(service:any,workspaceId:string,googleReviewId:string,state:string,detail:string|null) {
   const {error}=await service.from('pac_google_review_auto_reply_claims').update({
     state,finished_at:new Date().toISOString(),detail:detail?detail.slice(0,900):null
@@ -95,6 +126,9 @@ async function autoReplyForReview(service:any,settings:any,token:string,accountN
     if(!reviewId)throw new Error('Google review resource ID is invalid.');
     const endpoint='https://mybusiness.googleapis.com/v4/'+accountName+'/locations/'+locationName.split('/').pop()+'/reviews/'+reviewId+'/reply';
     await requestGoogle(endpoint,token,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({comment:reply})});
+    // Google accepts reply updates asynchronously. Re-read the review with reviews.list
+    // and persist its output-only reviewReplyState instead of assuming HTTP 200 is public.
+    const moderation=await readGoogleReplyModeration(token,accountName,locationName,googleReviewId,reply);
     const now=new Date().toISOString();
     const {error:draftError}=await service.from('pac_review_reply_drafts').insert({
       workspace_id:settings.workspace_id,
@@ -104,18 +138,23 @@ async function autoReplyForReview(service:any,settings:any,token:string,accountN
       model_provider:comment?'openrouter':'rule-based',
       model_name:modelName,
       published_at:now,
-      google_reply_update_time:now
+      google_reply_update_time:now,
+      publication_state:moderation.state,
+      publication_policy_violation:moderation.policyViolation,
+      publication_checked_at:moderation.checkedAt,
+      publication_error:null
     });
     if(draftError)throw draftError;
     const {error:reviewError}=await service.from('pac_google_reviews').update({
-      reply_comment:reply,reply_updated_at:now,updated_at:now
+      reply_comment:reply,reply_updated_at:now,reply_publication_state:moderation.state,
+      reply_policy_violation:moderation.policyViolation,reply_state_checked_at:moderation.checkedAt,updated_at:now
     }).eq('workspace_id',settings.workspace_id).eq('id',reviewRow.id);
     if(reviewError)throw reviewError;
     await setAutoReplyClaim(service,settings.workspace_id,googleReviewId,'published',null);
     await service.from('pac_google_review_settings').update({
       auto_reply_last_error:null,auto_reply_last_sent_at:now
     }).eq('workspace_id',settings.workspace_id);
-    return {status:'published',rating,model:modelName};
+    return {status:'submitted',publication_state:moderation.state,policy_violation:moderation.policyViolation,rating,model:modelName};
   } catch(error) {
     const message=error instanceof Error?error.message:'Automatic reply failed.';
     await setAutoReplyClaim(service,settings.workspace_id,googleReviewId,'failed',message);
@@ -186,6 +225,9 @@ async function syncWorkspace(service:any,settings:any,targetReviewName:string|nu
         reviewer_profile_url:item.reviewer?.profilePhotoUrl||null,star_rating:ratingNumber(item.starRating),
         comment:item.comment||'',google_created_at:item.createTime||null,google_updated_at:item.updateTime||null,
         reply_comment:item.reviewReply?.comment||null,reply_updated_at:item.reviewReply?.updateTime||null,
+        reply_publication_state:item.reviewReply?.reviewReplyState||'REVIEW_REPLY_STATE_UNSPECIFIED',
+        reply_policy_violation:item.reviewReply?.policyViolation||null,
+        reply_state_checked_at:item.reviewReply?.reviewReplyState?new Date().toISOString():null,
         is_removed:false,raw_payload:item,last_fetched_at:new Date().toISOString(),updated_at:new Date().toISOString()
       },{onConflict:'workspace_id,google_review_id'}).select('id,reply_comment').single();
       if(upsertError)throw upsertError;
