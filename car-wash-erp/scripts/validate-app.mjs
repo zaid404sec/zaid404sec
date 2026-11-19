@@ -80,14 +80,14 @@ if (!html.includes('google-auto-reply-enabled') || !html.includes('google-review
     !existsSync(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url))) {
   throw new Error('Owner-controlled event-driven Google AI reply workflow is incomplete.');
 }
-const googleWorker = await readFile(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url), 'utf8');
-const googleReviewApi = await readFile(new URL('../supabase/functions/google-review-api/index.ts', import.meta.url), 'utf8');
-if (!googleWorker.includes('readGoogleReplyModeration') ||
-    !googleWorker.includes('reviewReplyState') ||
-    !googleWorker.includes('publication_state') ||
-    !googleReviewApi.includes('readGoogleReplyModeration') ||
-    !googleReviewApi.includes('reviewReplyState') ||
-    !googleReviewApi.includes('publication_state')) {
+const googleReviewWorkerSource = await readFile(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url), 'utf8');
+const googleReviewApiSource = await readFile(new URL('../supabase/functions/google-review-api/index.ts', import.meta.url), 'utf8');
+if (!googleReviewWorkerSource.includes('readGoogleReplyModeration') ||
+    !googleReviewWorkerSource.includes('reviewReplyState') ||
+    !googleReviewWorkerSource.includes('publication_state') ||
+    !googleReviewApiSource.includes('readGoogleReplyModeration') ||
+    !googleReviewApiSource.includes('reviewReplyState') ||
+    !googleReviewApiSource.includes('publication_state')) {
   throw new Error('Google public and AI-generated replies must record moderation states after submission.');
 }
 console.log('PASS: Google AI auto-reply and manual reply both track moderation status from Google');
