@@ -68,6 +68,18 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase functions deploy google-review-worker --no-verify-jwt
 
+      - name: Deploy customer booking API
+        working-directory: car-wash-erp
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy booking-api --no-verify-jwt
+
+      - name: Deploy public Google reviews feed
+        working-directory: car-wash-erp
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy public-reviews --no-verify-jwt
+
       - name: Deploy Google Pub/Sub review notification receiver
         working-directory: car-wash-erp
         env:
