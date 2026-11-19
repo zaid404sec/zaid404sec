@@ -151,6 +151,39 @@ async function saveOpenRouterKey(ctx: Context, value: unknown) {
   if (error || data !== true) throw new Error('The AI key could not be stored securely in Supabase Vault.');
   return { saved: true, provider: 'openrouter', key_configured: true, secret_storage: 'Supabase Vault' };
 }
+async function saveGooglePubSubConfig(ctx: Context, input: any) {
+  requireOriginalWorkspaceOwner(ctx);
+  const topic = String(input?.topic_name || '').trim();
+  const audience = String(input?.audience || '').trim();
+  const pushAccount = String(input?.push_service_account || '').trim().toLowerCase();
+  const baseUrl = env('SUPABASE_URL').replace(/\/$/, '');
+  const webhook = baseUrl + '/functions/v1/google-review-pubsub-webhook';
+  if (!/^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(topic)) {
+    throw new Error('Enter the full Pub/Sub topic name, for example projects/your-project-id/topics/prime-auto-care-reviews.');
+  }
+  if (audience !== webhook) throw new Error('The Pub/Sub OIDC audience must exactly match the webhook URL displayed in this wizard.');
+  if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.iam\.gserviceaccount\.com$/.test(pushAccount)) {
+    throw new Error('Enter the dedicated Google Cloud Pub/Sub push service-account email.');
+  }
+  const workerSecret = randomToken(48);
+  const { data, error } = await ctx.service.rpc('pac_store_google_review_worker_secret', {
+    p_workspace_id: ctx.workspace.id,
+    p_auth_user_id: ctx.user.id,
+    p_secret: workerSecret
+  });
+  if (error || data !== true) throw new Error('The internal review worker token could not be stored in Supabase Vault.');
+  const { error: saveError } = await ctx.service.from('pac_google_review_settings').upsert({
+    workspace_id: ctx.workspace.id,
+    pubsub_topic_name: topic,
+    google_pubsub_audience: audience,
+    pubsub_push_service_account: pushAccount,
+    notifications_enabled: false,
+    notifications_last_error: null,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'workspace_id' });
+  if (saveError) throw saveError;
+  return { saved: true, topic_name: topic, audience, push_service_account: pushAccount, webhook_url: webhook, internal_worker_secret_configured: true };
+}
 async function saveAutoReplySettings(ctx: Context, settings: any) {
   requireOriginalWorkspaceOwner(ctx);
   const enabled = settings?.enabled === true;
@@ -172,9 +205,9 @@ async function saveAutoReplySettings(ctx: Context, settings: any) {
     if (!(await getOpenRouterKey(ctx))) {
       throw new Error('Save a replacement OpenRouter AI key in Google Review Center → Setup wizard before enabling automatic replies.');
     }
-    if (!Deno.env.get('GOOGLE_REVIEW_WORKER_SECRET')?.trim()) {
-      throw new Error('Configure GOOGLE_REVIEW_WORKER_SECRET in Supabase before enabling automatic replies.');
-    }
+    const { data: workerSecret } = await ctx.service.rpc('pac_get_google_review_worker_secret', { p_workspace_id: ctx.workspace.id });
+    if (!workerSecret) throw new Error('Save the internal Pub/Sub worker token in Google Review Center → Setup wizard.');
+
   }
   const { error } = await ctx.service.from('pac_google_review_settings').upsert({
     workspace_id: ctx.workspace.id,
@@ -822,10 +855,11 @@ async function status(ctx: Context) {
   const oauthClientSecretReady = !!oauth.client_secret;
   const oauthRedirectReady = !!oauth.redirect_uri;
   const encryptionKeyReady = !!oauth.encryption_key;
-  const pubsubTopicReady = /^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(env('GOOGLE_PUBSUB_TOPIC_NAME') || String(settings.pubsub_topic_name || ''));
-  const pubsubAudienceReady = !!env('GOOGLE_PUBSUB_AUDIENCE');
-  const pubsubPushAccountReady = !!env('GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT');
-  const workerSecretReady = !!env('GOOGLE_REVIEW_WORKER_SECRET');
+  const pubsubTopicReady = /^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(String(settings.pubsub_topic_name || ''));
+  const pubsubAudienceReady = String(settings.google_pubsub_audience || '') === env('SUPABASE_URL').replace(/\/$/, '') + '/functions/v1/google-review-pubsub-webhook';
+  const pubsubPushAccountReady = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.iam\.gserviceaccount\.com$/i.test(String(settings.pubsub_push_service_account || ''));
+  const { data: workerSecret } = await ctx.service.rpc('pac_get_google_review_worker_secret', { p_workspace_id: ctx.workspace.id });
+  const workerSecretReady = !!workerSecret;
   const openRouterKeyReady = !!(await getOpenRouterKey(ctx).catch(() => ''));
   const oauthCredentialsReady = oauthClientIdReady && oauthClientSecretReady && oauthRedirectReady && encryptionKeyReady;
   const pubsubCredentialsReady = pubsubTopicReady && pubsubAudienceReady && pubsubPushAccountReady && workerSecretReady;
@@ -898,16 +932,22 @@ async function handle(ctx: Context, body: any) {
   if (action === 'save-settings') return ownerSettings(ctx, body.settings || {});
   if (action === 'save-google-project-number') return saveGoogleProjectNumber(ctx, body.project_number);
   if (action === 'save-google-oauth-config') return saveGoogleOAuthConfig(ctx, body.credentials || {});
-  if (action === 'save-openrouter-key') return saveOpenRouterKey(ctx, body.api_key);
+  if (action === 'save-openrouter-key') return saveOpenRouterKey(ctx, body.secret);
+  if (action === 'save-google-pubsub-settings') return saveGooglePubSubConfig(ctx, body.settings || {});
   if (action === 'save-auto-reply-settings') return saveAutoReplySettings(ctx, body.settings || {});
   if (action === 'connect') return startOAuth(ctx);
   if (action === 'enable-notifications') {
     requireGoogleReviewAdmin(ctx);
     const settings = await getSettings(ctx);
-    const topicName = env('GOOGLE_PUBSUB_TOPIC_NAME') || String(settings.pubsub_topic_name || '');
-    if (!/^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(topicName)) {
-      throw new Error('Set GOOGLE_PUBSUB_TOPIC_NAME in Supabase Function secrets to a topic like projects/PROJECT_ID/topics/prime-auto-care-reviews.');
+    const topicName = String(settings.pubsub_topic_name || '');
+    if (!/^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(topicName) ||
+        String(settings.google_pubsub_audience || '') !== env('SUPABASE_URL').replace(/\/$/, '') + '/functions/v1/google-review-pubsub-webhook' ||
+        !settings.pubsub_push_service_account) {
+      throw new Error('Complete Pub/Sub topic, webhook audience and push service-account details in the Setup wizard first.');
     }
+    const { data: internalWorkerSecret } = await ctx.service.rpc('pac_get_google_review_worker_secret', { p_workspace_id: ctx.workspace.id });
+    if (!internalWorkerSecret) throw new Error('The internal Pub/Sub worker token is missing from Supabase Vault. Save the Pub/Sub setup again.');
+
     const token = await googleAccessToken(ctx);
     const location = await resolveGoogleLocation(ctx, token, settings);
     const accountId = location.accountName.split('/').pop();
