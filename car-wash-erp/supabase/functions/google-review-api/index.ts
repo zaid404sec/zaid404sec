@@ -135,7 +135,7 @@ async function saveAutoReplySettings(ctx: Context, settings: any) {
   return { saved: true, enabled, min_rating: minRating };
 }
 async function saveGoogleProjectNumber(ctx: Context, value: unknown) {
-  requireOriginalWorkspaceOwner(ctx);
+  requireGoogleReviewAdmin(ctx);
   const projectNumber = String(value || '').trim();
   if (!/^\\d{6,24}$/.test(projectNumber)) {
     throw new Error('Enter the numeric Google Cloud Project Number (6–24 digits), not the Project ID.');
