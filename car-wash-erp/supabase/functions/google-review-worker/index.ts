@@ -287,8 +287,19 @@ Deno.serve(async req=>{
       targetReviewName=String(event.review_name||'')||null;
       if(!['NEW_REVIEW','UPDATED_REVIEW'].includes(String(event.notification_type||'')))targetReviewName=null;
     } else {
-      const scheduledSecret=env('GOOGLE_REVIEW_WORKER_SECRET');
-      if(!scheduledSecret||suppliedSecret!==scheduledSecret)return new Response('Unauthorized',{status:401});
+      const {data:activeWorkspaces,error:workspaceError}=await service.from('pac_google_review_settings')
+        .select('workspace_id').in('api_status',['connected','error']);
+      if(workspaceError)throw workspaceError;
+      let matchedWorkspace='';
+      for(const row of activeWorkspaces||[]){
+        const {data:expectedSecret,error:secretError}=await service.rpc('pac_get_google_review_worker_secret',{p_workspace_id:row.workspace_id});
+        if(!secretError&&expectedSecret&&suppliedSecret===String(expectedSecret)){
+          matchedWorkspace=String(row.workspace_id);
+          break;
+        }
+      }
+      if(!matchedWorkspace)return new Response('Unauthorized',{status:401});
+      workspaceFilter=matchedWorkspace;
     }
     let query=service.from('pac_google_review_settings').select('*').in('api_status',['connected','error']);
     if(workspaceFilter)query=query.eq('workspace_id',workspaceFilter);
