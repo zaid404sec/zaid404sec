@@ -188,7 +188,7 @@
       async function loadGoogleReviews(){
         if(!reviewFeed)return;
         try{
-          const response=await fetch(reviewFeedUrl,{headers:{Accept:'application/json'}});
+          const response=await fetch(reviewFeedUrl,{headers:{Accept:'application/json',apikey:'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw'}});
           const payload=await response.json().catch(()=>({}));
           if(!response.ok)throw new Error(payload.error||'Google reviews are temporarily unavailable.');
           reviewFeed.replaceChildren();
