@@ -40,7 +40,8 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
 }
 console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
 const bookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
-if (!bookingApiSource.includes("'Private Car / SUV'") ||
+if (!bookingApiSource.includes("'Private Car'") ||
+    !bookingApiSource.includes("'Private SUV'") ||
     !bookingApiSource.includes("'Taxi'") ||
     !bookingApiSource.includes("'Commercial Transport / Traveller'") ||
     bookingApiSource.includes("'Taxi / Commercial'") ||
@@ -394,7 +395,7 @@ const mustContain = [
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'pairDevice', 'pairingCode', 'Connect / Pair this device', 'Prime-Auto-Care-',
-  'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'function staffMonthDayCount', 'function staffAttendanceSummary', 'function staffPayrollBreakdown', 'Monthly payroll calculator', 'function staffAttendanceForDate', 'function setStaffAttendanceEntry', 'function removeStaffMember', 'function staffShiftEnd', 'function staffManagerPinDigest', 'function verifyStaffManagerPin', 'staff-attendance-row', 'Manager PIN', 'Daily staff attendance', 'Present', 'Absent', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
+  'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'function staffMonthDayCount', 'function staffAttendanceSummary', 'function staffPayrollBreakdown', 'Monthly payroll calculator', 'function staffAttendanceForDate', 'function setStaffAttendanceEntry', 'function removeStaffMember', 'function staffShiftEnd', 'function staffManagerPinDigest', 'function verifyStaffManagerPin', 'staff-attendance-row', 'Manager PIN', 'Daily staff attendance', 'Present', 'Half Day', 'Absent', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -1213,7 +1214,8 @@ console.log('PASS: browser and APK no longer store OpenRouter keys; AI runs thro
 for (const token of ['canonical','og:title','twitter:card','AutoWash','openingHoursSpecification','Prime Auto Care','wash-enquiry-form','WhatsApp','href="./booking/"','08:00 AM – 07:00 PM']) {
   if (!website.includes(token)) throw new Error('Public website SEO or enquiry markup is missing: '+token);
 }
-if (!html.includes('--bg:#f3efe6') || !html.includes('backdrop-filter:blur(22px)')) throw new Error('The warm liquid-glass interface styles are missing.');
+if (!html.includes('--bg:#f3efe6') || !html.includes('backdrop-filter:blur(22px)') || !html.includes('--bg:#080f1b') || !html.includes('Half Day (0.5 day)')) throw new Error('The deep Liquid Glass interface or half-day attendance is missing.');
+if (!html.includes('absenceEquivalentDays') || !html.includes("attendanceStatus==='Half Day'")) throw new Error('Half-day payroll must deduct exactly half of one daily rate.');
 console.log('PASS: AI Growth Studio, daily workspace idempotency, privacy redaction, real-photo poster, warm glass UI and website SEO/enquiry checks');
 
 console.log('PASS: Excel and Supabase sync dependencies declared');
