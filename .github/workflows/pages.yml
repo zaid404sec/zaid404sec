@@ -1,7 +1,12 @@
-name: Deploy WashDesk to GitHub Pages
+name: Validate and package WashDesk public site
 
 on:
   push:
+    branches: [main]
+    paths:
+      - 'car-wash-erp/**'
+      - '.github/workflows/pages.yml'
+  pull_request:
     branches: [main]
     paths:
       - 'car-wash-erp/**'
@@ -10,15 +15,14 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: washdesk-public-site
   cancel-in-progress: true
 
 jobs:
   build:
+    name: Validate website and booking portal
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -45,19 +49,12 @@ jobs:
       - name: Validate app syntax and business calculations
         working-directory: car-wash-erp
         run: npm run validate
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-      - name: Upload site artifact
-        uses: actions/upload-pages-artifact@v4
+      - name: Package website and booking portal preview
+        uses: actions/upload-artifact@v4
         with:
-          path: ./car-wash-erp
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          name: prime-auto-care-public-site-preview
+          path: |
+            car-wash-erp/website/
+            car-wash-erp/prime-auto-care-logo.jpg
+            car-wash-erp/prime-auto-care-car-photo.jpg
+          if-no-files-found: error
