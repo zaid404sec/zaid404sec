@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.12.1') throw new Error('The package version must be 2.12.1.');
+if (packageJson.version !== '2.13.0') throw new Error('The package version must be 2.13.0.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.12.1 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
+  throw new Error('The 2.13.0 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
 }
-console.log('PASS: Android 2.12.0 retains the existing v24 application ID for an in-place upgrade.');
+console.log('PASS: Android 2.13.0 retains the existing v24 application ID for an in-place upgrade.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -34,11 +34,25 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119034723_booking_urgency_notifications_google_publication.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119041849_booking_notification_fk_indexes.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119080000_booking_rejected_status.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119090000_booking_multi_device_notifications.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119090500_booking_status_actor_attribution.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119091500_booking_status_atomic_notifications.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119093000_google_ai_key_vault_setup.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/functions/prime-auto-care-site/index.ts', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
   throw new Error('One or more booking source, migration, API or public website files are missing.');
 }
-console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
+if (!html.includes('Half Day (0.5 day)') || !html.includes('absenceEquivalentDays') || !html.includes("attendanceStatus==='Half Day'")) {
+  throw new Error('Half-day attendance and proportional payroll calculation are incomplete.');
+}
+if (!html.includes('https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/booking/')) {
+  throw new Error('Customer booking link must use the independent Supabase-hosted portal.');
+}
+if (!bookingApiSource.includes('actor_label') || !bookingApiSource.includes('can_manage_notifications')) {
+  throw new Error('Booking decision attribution or per-device alert permission checks are missing.');
+}
+console.log('PASS: half-day attendance, independent customer hosting, per-device booking alert pairing and decision audit');
 const bookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
 if (!bookingApiSource.includes("'Private Car'") ||
     !bookingApiSource.includes("'Private SUV'") ||
@@ -46,9 +60,12 @@ if (!bookingApiSource.includes("'Private Car'") ||
     !bookingApiSource.includes("'Commercial Transport / Traveller'") ||
     bookingApiSource.includes("'Taxi / Commercial'") ||
     !bookingApiSource.includes("'rejected'") ||
-    !bookingApiSource.includes("updates.rejected_at") ||
-    !bookingApiSource.includes("updates.rejected_by") ||
-    !bookingApiSource.includes(".in('status', allowedCurrent)") ||
+    !bookingApiSource.includes("pac_update_booking_status_and_notify") ||
+    !bookingApiSource.includes("booking_rejected") ||
+    !bookingApiSource.includes("pac_booking_notification_receipts") ||
+    !bookingApiSource.includes("pac_redeem_booking_notification_pair_code") ||
+    !html.includes("booking-pair-alerts-form") ||
+    !html.includes("booking-create-alert-code") ||
     !html.includes("data-status=\"rejected\"") ||
     !html.includes("rejected:'red'") ||
     !html.includes("'Commercial Transport / Traveller'")) {
@@ -1218,5 +1235,35 @@ if (!html.includes('--bg:#f3efe6') || !html.includes('backdrop-filter:blur(22px)
 if (!html.includes('absenceEquivalentDays') || !html.includes("attendanceStatus==='Half Day'")) throw new Error('Half-day payroll must deduct exactly half of one daily rate.');
 console.log('PASS: AI Growth Studio, daily workspace idempotency, privacy redaction, real-photo poster, warm glass UI and website SEO/enquiry checks');
 
+const payrollStart = html.indexOf('function staffAdvancesOutstanding(');
+const payrollEnd = html.indexOf('function staffSalaryDue(', payrollStart);
+if (payrollStart < 0 || payrollEnd < 0) throw new Error('Staff payroll calculation functions were not found.');
+const payrollFunctions = html.slice(payrollStart, payrollEnd);
+const payrollResult = vm.runInNewContext(
+  payrollFunctions + String.fromCharCode(10) +
+  "staffPayrollBreakdown({id:'worker-1',salary:31000},'2026-11')",
+  {
+    db: {
+      attendance: [
+        {staffId:'worker-1',date:'2026-11-01',status:'Present',updatedAt:1},
+        {staffId:'worker-1',date:'2026-11-02',status:'Half Day',updatedAt:1},
+        {staffId:'worker-1',date:'2026-11-03',status:'Absent',updatedAt:1}
+      ],
+      expenses: [],
+      staffAdvances: []
+    },
+    sum: (rows, fn) => rows.reduce((total, row) => total + fn(row), 0),
+    monthKey: () => '2026-11',
+    today: () => '2026-11-19'
+  }
+);
+if (payrollResult.halfDays !== 1 || payrollResult.absentDays !== 1 ||
+    payrollResult.absenceEquivalentDays !== 1.5 ||
+    payrollResult.absenceDeduction !== 1550 ||
+    payrollResult.earnedDays !== 17.5 ||
+    payrollResult.earnedSalary !== 18083.33) {
+  throw new Error('Half-day payroll must deduct exactly 50% of one daily salary rate: '+JSON.stringify(payrollResult));
+}
+console.log('PASS: half-day attendance reduces salary by exactly 0.5 daily rate');
 console.log('PASS: Excel and Supabase sync dependencies declared');
 console.log('Prime Auto Care validation complete.');
