@@ -278,15 +278,16 @@ function listenForChanges() {
       const incoming = event.new?.payload;
       if (!incoming || !remoteHandler) return;
       try {
-        // The app can defer this event while a billing form is active. Do not
-        // stringify/clone the full business payload on that keystroke-sensitive path.
+        // Reject duplicate snapshots before invoking the app merge handler.
+        // The handler may update local storage and render the entire UI, so doing
+        // this check first prevents unchanged Realtime events from causing flicker.
+        const incomingText = stableStringify(incoming);
+        if (incomingText === lastPayloadString) return;
         const merged = applyRemote(incoming);
         if (!merged) {
           setStatus('Connected · update queued until you leave the current screen');
           return;
         }
-        const incomingText = stableStringify(incoming);
-        if (incomingText === lastPayloadString) return;
         if (stableStringify(merged) !== incomingText) schedulePush(merged);
         else setStatus('Connected · live update received');
       } catch (error) {
@@ -342,10 +343,10 @@ function startSafetyRefresh() {
         .maybeSingle();
       if (error || !data?.payload) return;
       if (!remoteHandler) return;
-      const merged = applyRemote(data.payload);
-      if (!merged) return;
       const incomingText = stableStringify(data.payload);
       if (incomingText === lastPayloadString) return;
+      const merged = applyRemote(data.payload);
+      if (!merged) return;
       if (stableStringify(merged) !== incomingText) await publishPayload(merged);
       else {
         lastPayloadString = incomingText;
