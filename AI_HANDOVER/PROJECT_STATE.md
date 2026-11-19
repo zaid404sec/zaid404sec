@@ -6,8 +6,8 @@
 - Repository: https://github.com/zaid404sec/zaid404sec
 - Production baseline: `main` commit `03191af76a703cb341eca88ac651bc331a935a32`, WashDesk 2.13.
 - Active PR: [#68 — Google Review Vault pairing and booking fixes](https://github.com/zaid404sec/zaid404sec/pull/68).
-- Current application-code commit: `086989293e4a723b4f593de42299a7c88437c857` (WashDesk 2.13.1).
-- Latest complete CI run: [Run #445954](https://github.com/zaid404sec/zaid404sec/actions/runs/44595450691); Android APK, Windows installer, Google/Booking Edge Function type-check, and full release packaging all passed.
+- Current application-code commit: `39b2205860587b52cbadb5a1933e91c2ab497014` (WashDesk 2.13.1).
+- Latest complete CI run: [Run #445972](https://github.com/zaid404sec/zaid404sec/actions/runs/44597254275); Android APK, Windows installer, Google/Booking Edge Function type-check, and full release packaging all passed.
 - Main app package remains `com.washdesk.carwash.v24`.
 
 ## Production Supabase
