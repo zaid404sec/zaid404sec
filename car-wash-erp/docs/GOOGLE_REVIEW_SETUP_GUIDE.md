@@ -51,7 +51,6 @@ After Google approves the project, open <https://console.cloud.google.com/apis/l
 5. My Business Notifications API
 6. My Business Verifications API
 7. My Business Business Information API
-8. My Business Q&A API
 
 Google's Basic setup guide: <https://developers.google.com/my-business/content/basic-setup>.
 
