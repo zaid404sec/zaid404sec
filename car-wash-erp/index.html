@@ -1408,8 +1408,9 @@ async function pollBookingNotifications(){
     for(const item of events.reverse()){
       const id=String(item.id||'');
       if(!id||bookingNotificationSeen.has(id)||(bookingNotificationRetryAt.get(id)||0)>Date.now())continue;
-      const priority=item.is_urgent?'URGENT · ':'';
-      const summary=priority+'New booking '+(item.booking_code||'')+' — '+(item.customer_name||'Customer')+' · '+(item.vehicle_number||'Vehicle')+' · '+bookingDateLabel(item.booking_date)+' '+String(item.start_time||'').slice(0,5);
+      const eventType=String(item.event_type||'booking_created');
+      const eventLabels={booking_created:item.is_urgent?'URGENT · NEW BOOKING':'NEW BOOKING',booking_confirmed:'BOOKING ACCEPTED',booking_rejected:'BOOKING REJECTED',booking_cancelled:'BOOKING CANCELLED'};
+      const summary=(eventLabels[eventType]||'BOOKING UPDATE')+' '+(item.booking_code||'')+' — '+(item.customer_name||'Customer')+' · '+(item.vehicle_number||'Vehicle')+' · '+bookingDateLabel(item.booking_date)+' '+String(item.start_time||'').slice(0,5)+(item.actor_label?' · By '+item.actor_label:'');
       try{
         const sendAlert=window.PrimeAutoCareNotifications?.sendBookingAlertNotification;
         if(typeof sendAlert!=='function')throw new Error('Booking alert notification service is unavailable on this device.');
