@@ -38,6 +38,15 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
   throw new Error('One or more booking source, migration, API or public website files are missing.');
 }
 console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
+const bookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
+const bookingNotificationMigration = await readFile(new URL('../supabase/migrations/20261119043635_booking_notification_admin_access.sql', import.meta.url), 'utf8');
+for (const token of ['canManageBookingNotifications','pac_booking_notification_admins','action === \'notifications\'','action === \'acknowledge-notification\'']) {
+  if (!bookingApiSource.includes(token)) throw new Error('Booking alert API is missing scoped notification access: '+token);
+}
+for (const token of ['pac_booking_notification_admins','booking_notifications_admin','enable row level security','revoke all on public.pac_booking_notification_admins from public, anon, authenticated','grant all on public.pac_booking_notification_admins to service_role','pac_google_review_admins','on conflict (workspace_id, auth_user_id) do nothing']) {
+  if (!bookingNotificationMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Booking notification permission migration is incomplete: '+token);
+}
+console.log('PASS: the paired booking desk receives scoped alerts without changing the original Workspace Owner');
 const bookingWebsite = await readFile(new URL('../website/booking/index.html', import.meta.url), 'utf8');
 if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes('function request(action') ||
