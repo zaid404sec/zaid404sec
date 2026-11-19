@@ -4,7 +4,7 @@ This section supersedes older release/status notes below. Preserve the existing 
 
 - Current app release target: **WashDesk 2.13.1**, package ID `com.washdesk.carwash.v24`.
 - Active development PR: [#68](https://github.com/zaid404sec/zaid404sec/pull/68), branch `feature/google-review-vault-pairing`.
-- Complete CI run: [#445954](https://github.com/zaid404sec/zaid404sec/actions/runs/44595450691) — Android APK, Windows installer, Edge Function type-check and full release package all succeeded.
+- Complete CI run: [#445972](https://github.com/zaid404sec/zaid404sec/actions/runs/44597254275) — Android APK, Windows installer, Edge Function type-check and full release package all succeeded.
 - Production Supabase project: `jkjudmkqaebrgllemris`, `ACTIVE_HEALTHY`, region `ap-northeast-2`.
 - Active functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v10, `prime-auto-care-site` v3, `prime-auto-care-website` v2, `prime-auto-care-booking` v2, `public-reviews` v3.
 - Public website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/
