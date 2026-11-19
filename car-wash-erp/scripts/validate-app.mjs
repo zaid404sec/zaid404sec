@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.12.1') throw new Error('The package version must be 2.12.1.');
+if (packageJson.version !== '2.13.1') throw new Error('The package version must be 2.13.1.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.12.1 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
+  throw new Error('The 2.13.1 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
 }
 console.log('PASS: Android 2.12.0 retains the existing v24 application ID for an in-place upgrade.');
 
