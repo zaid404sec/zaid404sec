@@ -1125,12 +1125,12 @@ for (const token of ['notifications_enabled','notifications_last_event_at','pac_
     throw new Error('Pub/Sub migration is missing: '+token);
   }
 }
-if (!googleReviewApi.includes('enable-notifications') || !googleReviewApi.includes('mybusinessnotifications.googleapis.com/v1/')) {
+if (!googleReviewApiSource.includes('enable-notifications') || !googleReviewApiSource.includes('mybusinessnotifications.googleapis.com/v1/')) {
   throw new Error('Google Notifications API registration is missing.');
 }
 if (!googleReviewDeploy.includes('google-review-pubsub-webhook')) throw new Error('Pub/Sub webhook is not included in deployment.');
 if (!googleReviewPage.includes('API sync') || !googleReviewPage.includes('optional') ||
-    !googleReviewApi.includes('enable-notifications') ||
+    !googleReviewApiSource.includes('enable-notifications') ||
     !googleReviewPubSubMigration.includes('notifications_last_event_at')) {
   throw new Error('Google API automation must remain an optional backend capability while manual replies work without it.');
 }
