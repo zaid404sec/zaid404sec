@@ -1255,7 +1255,7 @@ for (const token of ['auth.getUser(token)','GOOGLE_TOKEN_ENCRYPTION_KEY','GOOGLE
 for (const token of ['oauth2.googleapis.com/token','email_verified','business.manage','encrypted_refresh_token','consumed_at','pac_google_review_admins','initiated_by']) {
   if (!googleReviewCallback.includes(token)) throw new Error('Google OAuth callback missing: '+token);
 }
-for (const token of ['GOOGLE_REVIEW_WORKER_SECRET','api_status','last_successful_sync_at','pac_google_reviews']) {
+for (const token of ['pac_get_google_review_worker_secret','api_status','last_successful_sync_at','pac_google_reviews']) {
   if (!googleReviewWorker.includes(token)) throw new Error('Scheduled Google review worker missing: '+token);
 }
 for (const token of ['google-review-api','google-review-oauth-callback','google-review-worker','google-review-pubsub-webhook','supabase db push']) {
@@ -1266,8 +1266,12 @@ if (!googleReviewCron.includes('pg_cron') || !googleReviewCron.includes('pg_net'
     !googleReviewCron.includes('prime-auto-care-google-reviews-worker')) {
   throw new Error('Vault-backed scheduled Google review catch-up sync is incomplete.');
 }
-for (const token of ['GOOGLE_PUBSUB_AUDIENCE','GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT','tokeninfo?id_token=','NEW_REVIEW','UPDATED_REVIEW','google-review-worker','pac_google_review_events','nested.type','nested.location','nested.review']) {
+for (const token of ['google_pubsub_audience','pubsub_push_service_account','tokeninfo?id_token=','NEW_REVIEW','UPDATED_REVIEW','google-review-worker','pac_google_review_events','nested.type','nested.location','nested.review']) {
   if (!googleReviewWebhook.includes(token)) throw new Error('Pub/Sub notification receiver is missing safeguard: '+token);
+}
+if (googleReviewWebhook.includes("env('GOOGLE_PUBSUB_AUDIENCE')") ||
+    googleReviewWebhook.includes("env('GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT')")) {
+  throw new Error('Pub/Sub identity must be verified against workspace-scoped database configuration.');
 }
 for (const token of ['notifications_enabled','notifications_last_event_at','pac_google_review_events','pac_is_workspace_member']) {
   if (!googleReviewPubSubMigration.includes(token)) {
