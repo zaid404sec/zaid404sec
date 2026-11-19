@@ -565,6 +565,21 @@ if (februaryPayroll.calendarDays !== 28 || februaryPayroll.absentDays !== 1 ||
   throw new Error('28-day payroll calculation failed: ' + JSON.stringify(februaryPayroll));
 }
 console.log('PASS: 28-day payroll uses the correct calendar-day rate');
+const halfDayPayroll = vm.runInNewContext(
+  payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2026-11')",
+  { db: { staffAdvances:[], attendance:[
+    {staffId:'staff-1',date:'2026-11-02',status:'Half Day',updatedAt:1},
+    {staffId:'staff-1',date:'2026-11-03',status:'Absent',updatedAt:1},
+    {staffId:'staff-1',date:'2026-11-04',status:'Present',updatedAt:1}
+  ], expenses:[] }, today:()=> '2026-11-15', monthKey:d=>(d||'2026-11-15').slice(0,7),
+    staffMonthDayCount, staffAccruedDays, staffAttendanceSummary, staffSalaryPaid, staffAdvancesOutstanding }
+);
+if(halfDayPayroll.halfDays!==1 || halfDayPayroll.absentDays!==1 ||
+   Math.abs(halfDayPayroll.halfDayDeduction-233.33)>0.01 ||
+   Math.abs(halfDayPayroll.earnedSalary-6300)>0.01) {
+  throw new Error('Half-day payroll must deduct exactly 0.5 of one calendar-day rate: '+JSON.stringify(halfDayPayroll));
+}
+console.log('PASS: half-day attendance deducts exactly 50% of the daily salary rate');
 const negativePayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:10000},'2026-11')",
   {
