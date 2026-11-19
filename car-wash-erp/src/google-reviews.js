@@ -26,6 +26,7 @@ window.PrimeAutoCareGoogleReviews = {
   status: () => request('status'),
   list: () => request('reviews'),
   saveSettings: settings => request('save-settings', { settings }),
+  saveGoogleProjectNumber: projectNumber => request('save-google-project-number', { project_number: projectNumber }),
   saveAutoReplySettings: settings => request('save-auto-reply-settings', { settings }),
   connect: () => request('connect'),
   sync: () => request('sync'),

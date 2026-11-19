@@ -16,10 +16,9 @@ const services = [
   { name: 'Outside Wash', duration_minutes: 30 }
 ];
 const vehicleTypes = [
-  'Private Car',
-  'Private SUV / 7-Seater',
-  'Taxi / Commercial',
-  'Transport / Traveller',
+  'Private Car / SUV',
+  'Taxi',
+  'Commercial Transport / Traveller',
   'Auto Rickshaw',
   'Other'
 ];
@@ -351,7 +350,7 @@ async function handle(req: Request, body: any) {
       .limit(300);
     if (body.from_date) query = query.gte('booking_date', parseDate(body.from_date));
     if (body.to_date) query = query.lte('booking_date', parseDate(body.to_date));
-    if (body.status && ['pending','confirmed','rescheduled','cancelled','completed','no_show'].includes(String(body.status))) {
+    if (body.status && ['pending','confirmed','rescheduled','cancelled','completed','no_show','rejected'].includes(String(body.status))) {
       query = query.eq('status', String(body.status));
     }
     if (body.vehicle_type && vehicleTypes.includes(String(body.vehicle_type))) query = query.eq('vehicle_type', String(body.vehicle_type));
@@ -381,18 +380,34 @@ async function handle(req: Request, body: any) {
     return { ok: true, booking };
   }
   if (action === 'update-status') {
-    const allowed = new Set(['confirmed', 'cancelled', 'completed', 'no_show']);
+    const allowed = new Set(['confirmed', 'rejected', 'cancelled', 'completed', 'no_show']);
     const status = String(body.status || '');
     const id = String(body.id || '');
     if (!allowed.has(status) || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid booking update.');
-    const updates: any = { status, updated_at: new Date().toISOString() };
-    if (status === 'confirmed') updates.confirmed_at = new Date().toISOString();
-    if (status === 'cancelled') updates.cancelled_at = new Date().toISOString();
-    if (status === 'completed') updates.completed_at = new Date().toISOString();
+
+    // Status transitions are enforced on the server. Confirm/reject can only act on
+    // a Pending request; terminal or completed bookings cannot be overwritten.
+    const allowedCurrent = status === 'confirmed' || status === 'rejected'
+      ? ['pending']
+      : status === 'cancelled'
+        ? ['pending', 'confirmed', 'rescheduled']
+        : ['confirmed', 'rescheduled'];
+    const now = new Date().toISOString();
+    const updates: any = { status, updated_at: now };
+    if (status === 'confirmed') updates.confirmed_at = now;
+    if (status === 'rejected') {
+      updates.rejected_at = now;
+      updates.rejected_by = ctx.user.id;
+    }
+    if (status === 'cancelled') updates.cancelled_at = now;
+    if (status === 'completed') updates.completed_at = now;
     updates.status_note = String(body.status_note || '').trim().slice(0, 300) || null;
+
     const { data, error } = await ctx.admin.from('pac_bookings').update(updates)
-      .eq('workspace_id', ctx.workspace.id).eq('id', id).select('*').maybeSingle();
-    if (error || !data) throw new Error(error?.message || 'Booking not found.');
+      .eq('workspace_id', ctx.workspace.id).eq('id', id).in('status', allowedCurrent)
+      .select('*').maybeSingle();
+    if (error) throw new Error(error.message || 'Booking update failed.');
+    if (!data) throw new Error('Booking was not found or its status changed. Refresh the list before trying again.');
     return { ok: true, booking: data };
   }
   if (action === 'save-settings') {

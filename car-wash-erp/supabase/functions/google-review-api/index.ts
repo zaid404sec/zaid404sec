@@ -134,6 +134,20 @@ async function saveAutoReplySettings(ctx: Context, settings: any) {
   if (error) throw error;
   return { saved: true, enabled, min_rating: minRating };
 }
+async function saveGoogleProjectNumber(ctx: Context, value: unknown) {
+  requireGoogleReviewAdmin(ctx);
+  const projectNumber = String(value || '').trim();
+  if (!/^\d{6,24}$/.test(projectNumber)) {
+    throw new Error('Enter the numeric Google Cloud Project Number (6–24 digits), not the Project ID.');
+  }
+  const { error } = await ctx.service.from('pac_google_review_settings').upsert({
+    workspace_id: ctx.workspace.id,
+    google_cloud_project_number: projectNumber,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'workspace_id' });
+  if (error) throw error;
+  return { saved: true, google_cloud_project_number: projectNumber };
+}
 async function getSettings(ctx: Context) {
   const { data, error } = await ctx.service.from('pac_google_review_settings')
     .select('*').eq('workspace_id', ctx.workspace.id).maybeSingle();
@@ -391,8 +405,10 @@ async function runFreeAi(ctx: Context, body: any) {
   requireGoogleReviewAdmin(ctx);
   const provider = String(body.provider || 'openrouter');
   if (provider !== 'openrouter') throw new Error('This build supports the OpenRouter free-model route only.');
-  const apiKey = String(body.api_key || '').trim();
-  if (apiKey.length < 20 || apiKey.length > 512) throw new Error('Enter your OpenRouter API key in AI Settings on this device.');
+  const apiKey = env('OPENROUTER_API_KEY');
+  if (!apiKey || apiKey.length < 20 || apiKey.length > 512) {
+    throw new Error('The server-side free AI key is not configured. The original Workspace Owner must add OPENROUTER_API_KEY in Supabase Edge Function Secrets. Do not paste keys into the app.');
+  }
   const model = String(body.model || 'openrouter/free').trim();
   if (model !== 'openrouter/free' && !model.endsWith(':free')) throw new Error('Paid model IDs are blocked. Use openrouter/free or a model whose ID ends in :free.');
   const task = String(body.task || '');
@@ -484,7 +500,6 @@ async function ensureDailyGrowthPosts(ctx: Context, body: any) {
     const ai = await runFreeAi(ctx, {
       provider: body.provider || 'openrouter',
       model: body.model || 'openrouter/free',
-      api_key: body.api_key,
       task: 'daily-posts',
       context: { ...(body.context || {}), date: dateKey, posts_needed: remaining }
     });
@@ -747,14 +762,47 @@ async function status(ctx: Context) {
   ratings.forEach((rating: number) => distribution[String(rating)]++);
   const sent = logs.filter((row: any) => row.status === 'sent_confirmed');
   const prepared = logs.filter((row: any) => row.status === 'prepared');
+  const redirectUri = env('GOOGLE_OAUTH_REDIRECT_URI')
+    || (env('SUPABASE_URL') ? env('SUPABASE_URL').replace(/\/$/, '') + '/functions/v1/google-review-oauth-callback' : '');
+  const oauthClientIdReady = !!env('GOOGLE_OAUTH_CLIENT_ID');
+  const oauthClientSecretReady = !!env('GOOGLE_OAUTH_CLIENT_SECRET');
+  const oauthRedirectReady = !!env('GOOGLE_OAUTH_REDIRECT_URI');
+  const encryptionKeyReady = !!env('GOOGLE_TOKEN_ENCRYPTION_KEY');
+  const pubsubTopicReady = /^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(env('GOOGLE_PUBSUB_TOPIC_NAME') || String(settings.pubsub_topic_name || ''));
+  const pubsubAudienceReady = !!env('GOOGLE_PUBSUB_AUDIENCE');
+  const pubsubPushAccountReady = !!env('GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT');
+  const workerSecretReady = !!env('GOOGLE_REVIEW_WORKER_SECRET');
+  const openRouterKeyReady = !!env('OPENROUTER_API_KEY');
+  const oauthCredentialsReady = oauthClientIdReady && oauthClientSecretReady && oauthRedirectReady && encryptionKeyReady;
+  const pubsubCredentialsReady = pubsubTopicReady && pubsubAudienceReady && pubsubPushAccountReady && workerSecretReady;
   return {
+    setup: {
+      google_cloud_project_number: settings.google_cloud_project_number || null,
+      api_status: settings.api_status || 'access_pending',
+      api_access_approved: settings.api_status === 'connected',
+      oauth_client_id_configured: oauthClientIdReady,
+      oauth_client_secret_configured: oauthClientSecretReady,
+      oauth_redirect_uri_configured: oauthRedirectReady,
+      token_encryption_key_configured: encryptionKeyReady,
+      oauth_credentials_ready: oauthCredentialsReady,
+      oauth_callback_url: redirectUri,
+      oauth_connected: !!credentials.data?.workspace_id,
+      pubsub_topic_configured: pubsubTopicReady,
+      pubsub_audience_configured: pubsubAudienceReady,
+      pubsub_push_service_account_configured: pubsubPushAccountReady,
+      worker_secret_configured: workerSecretReady,
+      pubsub_credentials_ready: pubsubCredentialsReady,
+      notifications_enabled: settings.notifications_enabled === true,
+      openrouter_api_key_configured: openRouterKeyReady,
+      auto_reply_enabled: settings.auto_reply_enabled === true
+    },
     permissions: {
       google_reviews_admin: ctx.googleReviewAdmin,
       workspace_role: ctx.member.role,
       workspace_owner: ctx.member.role === 'owner' && ctx.workspace.owner_auth_user_id === ctx.user.id,
       workspace_owner_unchanged: true
     },
-    settings: { google_account_email: settings.google_account_email || null, google_business_profile_id: settings.google_business_profile_id || '13506481990772076097', google_business_profile_url: settings.google_business_profile_url || 'https://share.google/6g3f0aJqTezi6JH5T', website_url: settings.website_url || null, review_link: settings.review_link || null, pubsub_topic_name: settings.pubsub_topic_name || null, notifications_enabled: settings.notifications_enabled === true, notifications_last_event_at: settings.notifications_last_event_at || null, notifications_last_error: settings.notifications_last_error || null, auto_reply_enabled: settings.auto_reply_enabled === true, auto_reply_min_rating: Number(settings.auto_reply_min_rating || 5), auto_reply_last_error: settings.auto_reply_last_error || null, auto_reply_last_sent_at: settings.auto_reply_last_sent_at || null },
+    settings: { google_cloud_project_number: settings.google_cloud_project_number || null, google_account_email: settings.google_account_email || null, google_business_profile_id: settings.google_business_profile_id || '13506481990772076097', google_business_profile_url: settings.google_business_profile_url || 'https://share.google/6g3f0aJqTezi6JH5T', website_url: settings.website_url || null, review_link: settings.review_link || null, pubsub_topic_name: settings.pubsub_topic_name || null, notifications_enabled: settings.notifications_enabled === true, notifications_last_event_at: settings.notifications_last_event_at || null, notifications_last_error: settings.notifications_last_error || null, auto_reply_enabled: settings.auto_reply_enabled === true, auto_reply_min_rating: Number(settings.auto_reply_min_rating || 5), auto_reply_last_error: settings.auto_reply_last_error || null, auto_reply_last_sent_at: settings.auto_reply_last_sent_at || null },
     connection: {
       status: settings.api_status || 'access_pending',
       oauth_connected: !!credentials.data?.workspace_id,
@@ -794,6 +842,7 @@ async function handle(ctx: Context, body: any) {
     return {archived:true};
   }
   if (action === 'save-settings') return ownerSettings(ctx, body.settings || {});
+  if (action === 'save-google-project-number') return saveGoogleProjectNumber(ctx, body.project_number);
   if (action === 'save-auto-reply-settings') return saveAutoReplySettings(ctx, body.settings || {});
   if (action === 'connect') return startOAuth(ctx);
   if (action === 'enable-notifications') {
