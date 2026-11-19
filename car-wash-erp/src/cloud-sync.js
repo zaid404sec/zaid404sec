@@ -12,6 +12,7 @@ let activeConfigFingerprint = '';
 let user = null;
 let workspace = null;
 let channel = null;
+let bookingAlertChannel = null;
 let localProvider = null;
 let remoteHandler = null;
 let pushTimer = null;
@@ -300,6 +301,33 @@ function listenForChanges() {
       else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') setStatus('Reconnecting live sync…');
     });
 }
+async function subscribeBookingAlerts(onEvent) {
+  if (!supabase || !user || !workspace) return false;
+  if (bookingAlertChannel) {
+    try { await supabase.removeChannel(bookingAlertChannel); } catch { /* replace stale listener */ }
+    bookingAlertChannel = null;
+  }
+  bookingAlertChannel = supabase
+    .channel('washdesk-booking-alerts:' + workspace.id + ':' + user.id)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'pac_booking_notification_events',
+      filter: 'workspace_id=eq.' + workspace.id
+    }, payload => {
+      const event = payload?.new;
+      if (!event || event.workspace_id !== workspace.id || typeof onEvent !== 'function') return;
+      Promise.resolve().then(() => onEvent(event)).catch(error => {
+        console.warn('Prime Auto Care realtime booking alert handler:', error?.message || error);
+      });
+    })
+    .subscribe(state => {
+      if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') {
+        console.warn('Prime Auto Care booking alert realtime channel:', state);
+      }
+    });
+  return true;
+}
 async function initialSync() {
   if (!supabase || !user || !workspace) throw new Error('Pair this device with the shared Prime Auto Care business first.');
   stockLedgerSchemaReady = false;
@@ -424,10 +452,12 @@ async function disconnect() {
   clearTimeout(pushTimer);
   clearInterval(pollingTimer);
   if (channel && supabase) await supabase.removeChannel(channel);
+  if (bookingAlertChannel && supabase) await supabase.removeChannel(bookingAlertChannel);
   if (supabase) {
     try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* local records stay available */ }
   }
   channel = null;
+  bookingAlertChannel = null;
   user = null;
   workspace = null;
   lastPayloadString = '';
@@ -454,6 +484,7 @@ async function getApiContext() {
 }
 window.WashDeskCloud = {
   getApiContext,
+  subscribeBookingAlerts,
   pairDevice,
   resume,
   schedulePush,
