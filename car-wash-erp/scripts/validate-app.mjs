@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.11.0') throw new Error('The package version must be 2.11.0.');
+if (packageJson.version !== '2.12.0') throw new Error('The package version must be 2.12.0.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
   throw new Error('The 2.11.0 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
 }
-console.log('PASS: Android 2.11.0 retains the existing v24 application ID for an in-place upgrade.');
+console.log('PASS: Android 2.12.0 retains the existing v24 application ID for an in-place upgrade.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -21,7 +21,9 @@ console.log('PASS: personal and household expense separation');
 if (!html.includes('https://share.google/6g3f0aJqTezi6JH5T') || !html.includes('google-review-form') || !html.includes('google-review-whatsapp') || !html.includes('invoice-review-footer')) throw new Error('Google review workflow is incomplete.');
 if (!html.includes('data-page="bookings"') || !html.includes("function bookings(){") ||
     !html.includes("function loadBookingCenter(") || !html.includes("submitBookingQuickForm") ||
-    !html.includes("saveBookingSettingsForm") || !html.includes("PUBLIC_BOOKING_URL")) {
+    !html.includes("saveBookingSettingsForm") || !html.includes("PUBLIC_BOOKING_URL") ||
+    !html.includes('id="booking-filter-form"') || !html.includes('bookingNotificationSeen') ||
+    !html.includes('is_urgent') || !html.includes('notification_whatsapp_template')) {
   throw new Error('WashDesk Bookings page, staff booking workflow or public link is incomplete.');
 }
 if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
@@ -29,6 +31,8 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/booking-api/index.ts', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261118190000_prime_auto_care_bookings.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261118193000_google_review_auto_reply.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119000100_booking_urgency_notifications_google_publication.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
   throw new Error('One or more booking source, migration, API or public website files are missing.');
 }
@@ -40,6 +44,8 @@ if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes("'availability'") ||
     !bookingWebsite.includes("'create-public'") ||
     !bookingWebsite.includes('PENDING until Prime Auto Care confirms') ||
+    !bookingWebsite.includes('id="is_urgent"') ||
+    !bookingWebsite.includes("is_urgent:$('is_urgent').checked===true") ||
     !bookingWebsite.includes('src="../../prime-auto-care-logo.jpg"') ||
     !existsSync(new URL('../prime-auto-care-logo.jpg', import.meta.url))) {
   throw new Error('Customer booking page is missing its public API flow or pending-confirmation safeguard.');
@@ -50,12 +56,40 @@ for (const match of bookingInlineScripts) {
   await transform(match[1], { loader: 'js', target: 'es2020', logLevel: 'silent' });
 }
 console.log('PASS: public customer booking HTML and JavaScript syntax');
+const businessWebsite = await readFile(new URL('../website/index.html', import.meta.url), 'utf8');
+if (!businessWebsite.includes('id="reviews"') ||
+    !businessWebsite.includes('google-review-feed') ||
+    !businessWebsite.includes('/functions/v1/public-reviews') ||
+    !businessWebsite.includes('Google-approved reply')) {
+  throw new Error('Public business website is missing its live Google review feed and approved-reply safeguard.');
+}
+const websiteInlineScripts = [...businessWebsite.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+if (!websiteInlineScripts.length) throw new Error('Public business website has no inline application script.');
+for (const match of websiteInlineScripts) {
+  await transform(match[1], { loader: 'js', target: 'es2020', logLevel: 'silent' });
+}
+console.log('PASS: public business website review feed, DOM rendering and JavaScript syntax');
 
 if (!html.includes('google-auto-reply-enabled') || !html.includes('google-review-save-auto-reply') ||
     !html.includes('Only the original Workspace Owner') ||
     !existsSync(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url))) {
   throw new Error('Owner-controlled event-driven Google AI reply workflow is incomplete.');
 }
+const googleWorker = await readFile(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url), 'utf8');
+const googleReviewApi = await readFile(new URL('../supabase/functions/google-review-api/index.ts', import.meta.url), 'utf8');
+if (!googleWorker.includes('readGoogleReplyModeration') ||
+    !googleWorker.includes('reviewReplyState') ||
+    !googleWorker.includes('publication_state') ||
+    !googleReviewApi.includes('readGoogleReplyModeration') ||
+    !googleReviewApi.includes('reviewReplyState') ||
+    !googleReviewApi.includes('publication_state')) {
+  throw new Error('Google public and AI-generated replies must record moderation states after submission.');
+}
+console.log('PASS: Google AI auto-reply and manual reply both track moderation status from Google');
+if (!html.includes('replyPublicationPill') || !html.includes('Google moderation state')) {
+  throw new Error('Google Review Center must display the moderation status for each public reply.');
+}
+console.log('PASS: Google Review Center displays pending, approved and rejected publication states');
 console.log('PASS: AI auto-reply controls are owner-only, off by default and have a server-side worker');
 
 
