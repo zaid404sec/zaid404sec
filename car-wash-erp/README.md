@@ -1,3 +1,17 @@
+## Version 2.12.0 — booking operations and Google reply moderation (release candidate)
+
+- Adds a persisted urgent-priority flag to customer-submitted and staff-created bookings. The existing transaction-safe booking-slot reservation function is preserved and wrapped by a new service-role-only function; no existing bookings or business ledgers are reset.
+- Adds booking filters for date range, status, vehicle category, service type, urgent/normal priority, and search across customer name, mobile number, vehicle registration and booking reference.
+- Adds private booking notification events. The paired original Workspace Owner device polls for unread requests and shows the booking reference, customer/mobile, vehicle, date/time and urgency. Acknowledgement is restricted to the original Workspace Owner.
+- Adds optional WhatsApp owner alerts through the existing communication queue. They are queued only after the owner configures a destination phone number, WhatsApp sender credentials and an approved utility template. In-app alerts remain available without WhatsApp credentials. A queued message is not represented as delivered.
+- Extends the public booking form with an optional urgent-request flag. All customer requests remain Pending until staff confirms them; urgency does not bypass availability, capacity or opening-hour checks. The booking page can be copied or shared as a link.
+- Adds a privacy-limited public Google review feed for the business website. It displays only genuine synced reviews; a business reply is shown publicly only when Google reports its reply state as APPROVED. No sample testimonials or fabricated ratings are used.
+- Stores and displays Google's reply moderation state (PENDING, APPROVED, REJECTED, or not yet confirmed) after both AI-generated and manually approved replies. HTTP 200 from updateReply is not treated as proof of public approval.
+- Adds regression checks for booking urgency, filter hooks, website review feed markup/scripts and Google moderation state handling. Adds the public-reviews Edge Function to backend type-checks and deployment.
+- Preserves Android application ID com.washdesk.carwash.v24 and the existing Supabase workspace/owner. The new migration is additive only.
+
+External activation still required: Google Business Profile Basic API Access approval; original Google Business Profile owner OAuth; Cloud Pub/Sub publisher/topic and authenticated push subscription; replacement OPENROUTER_API_KEY in Supabase Edge Function Secrets; and GitHub Pages Source = GitHub Actions. These are not silently activated by code changes. The Android CI currently builds a debug-signed APK; signing-certificate continuity for an in-place update must be verified before replacing the working installation.
+
 ## Version 2.10.1 — npm dependency pin and CI repair
 
 - Pins app SDK @supabase/supabase-js to exact 2.119.0 and overrides @supabase/storage-js to exact 2.119.0 to prevent npm resolving the unavailable 2.119.1 tarball seen in the post-merge 2.10.0 build.
