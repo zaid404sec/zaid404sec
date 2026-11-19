@@ -13,6 +13,36 @@ button,input,select,textarea{font:inherit}a{color:inherit}.shell{max-width:1080p
 @media(max-width:760px){.shell{padding:10px 12px 36px}.top{padding:8px 2px 14px}.main-grid{grid-template-columns:1fr}.glass{padding:18px}.hero{border-radius:22px}.slots{grid-template-columns:repeat(3,minmax(0,1fr))}.side{grid-template-columns:1fr 1fr}}
 @media(max-width:440px){.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.side{grid-template-columns:1fr}.top-actions .pill:first-child{display:none}.brand{font-size:11px}.hero h1{font-size:34px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+/* Prime Auto Care Liquid Glass booking surface */
+:root{color-scheme:dark;--ink:#f4f3ef;--muted:#b1b4bc;--gold:#d5b16a;--gold2:#f0d79f;--line:rgba(255,255,255,.14);--paper:#080b12;--glass:rgba(20,25,35,.56)}
+body{background:radial-gradient(ellipse at 12% 0%,rgba(82,110,157,.24),transparent 36%),radial-gradient(ellipse at 88% 12%,rgba(214,179,108,.14),transparent 32%),linear-gradient(145deg,#080b12,#101622 54%,#090d15);color:var(--ink)}
+.top{background:rgba(10,14,22,.48);border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:12px 14px;margin-bottom:12px;backdrop-filter:blur(24px) saturate(155%);-webkit-backdrop-filter:blur(24px) saturate(155%)}
+.brand small{color:#d6bd8d}
+.pill{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:#f5f1e8;backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px)}
+.hero{background:linear-gradient(125deg,rgba(8,12,20,.84),rgba(34,30,24,.64)),radial-gradient(circle at 86% 0%,rgba(214,179,108,.22),transparent 35%);border:1px solid rgba(214,179,108,.28);box-shadow:0 26px 70px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.12);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%)}
+.hero p{color:#dddfe5}.hero-note span{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);color:#f3e4c2}
+.glass{background:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 48px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.14);backdrop-filter:blur(26px) saturate(165%);-webkit-backdrop-filter:blur(26px) saturate(165%);color:#f4f3ef}
+.card-title h2,.side h3{color:#f6f2e9}.field label{color:#e2d6bc}
+.field input,.field select,.field textarea{color:#f5f3ed;background:rgba(255,255,255,.065);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.field input::placeholder,.field textarea::placeholder{color:#9ca5b3}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:rgba(232,203,142,.75);box-shadow:0 0 0 3px rgba(214,179,108,.16)}
+.field select option{background:#141b27;color:#fff}
+.hint,.fine,.side p,.footer{color:#aab3c1}
+.step{background:rgba(214,179,108,.14);border:1px solid rgba(214,179,108,.22);color:#f0d69e}
+.slot{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.14);color:#eee6d6}
+.slot[aria-pressed=true]{background:linear-gradient(130deg,#f0d79f,#b58b43);border-color:#e7c781;color:#1d170c;box-shadow:0 8px 20px rgba(181,139,67,.2)}
+.slot:disabled{opacity:.26}
+.empty-slots{border-color:rgba(255,255,255,.18);color:#aab3c1;background:rgba(255,255,255,.02)}
+.side-row{border-bottom-color:rgba(255,255,255,.10);color:#c6cad2}.side-row b{color:#f3eee4}
+.trust{background:rgba(77,214,162,.08);border:1px solid rgba(77,214,162,.18);color:#d5eee2}
+.trust b{color:#eafff4}
+.notice{background:rgba(77,214,162,.10);border-color:rgba(77,214,162,.22);color:#d4f3e3}
+.notice.error{background:rgba(255,119,119,.09);border-color:rgba(255,119,119,.24);color:#ffd1d1}
+.submit{background:linear-gradient(130deg,#f0d79f,#b58b43);color:#1c160b;box-shadow:0 11px 28px rgba(181,139,67,.24)}
+.submit:disabled{opacity:.48}
+@media(prefers-reduced-motion:no-preference){.glass,.pill,.slot,.submit{transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease}.slot:not(:disabled):hover{transform:translateY(-1px);border-color:rgba(232,203,142,.5)}}
+
 </style>
 </head>
 <body>
