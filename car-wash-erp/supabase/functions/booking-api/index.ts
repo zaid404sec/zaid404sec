@@ -209,7 +209,7 @@ async function recordBookingCreated(admin: any, settings: any, booking: any, det
       'Date/time: ' + details.booking_date + ' ' + details.start_time,
       'Source: ' + (details.source === 'staff' ? 'Staff / phone booking' : 'Customer website'),
       'Status: Pending — confirm in WashDesk'
-    ].join('\\n');
+    ].join('\n');
     const { data: job, error: jobError } = await admin.from('pac_communication_jobs').insert({
       workspace_id: settings.workspace_id,
       campaign_id: null,
@@ -311,6 +311,7 @@ async function handle(req: Request, body: any) {
 
   const ctx = await authenticate(req);
   if (action === 'notifications') {
+    if (!ctx.isOwner) throw new Error('Only the original Workspace Owner can view booking alerts.');
     const { data, error } = await ctx.admin.from('pac_booking_notification_events')
       .select('id,booking_id,event_type,booking_code,customer_name,customer_phone,vehicle_number,vehicle_type,service_type,booking_date,start_time,is_urgent,source,created_at')
       .eq('workspace_id', ctx.workspace.id)
@@ -321,6 +322,7 @@ async function handle(req: Request, body: any) {
     return { notifications: data || [] };
   }
   if (action === 'acknowledge-notification') {
+    if (!ctx.isOwner) throw new Error('Only the original Workspace Owner can acknowledge booking alerts.');
     const id = String(body.id || '');
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Select a valid booking notification.');
     const { error } = await ctx.admin.from('pac_booking_notification_events').update({
@@ -353,7 +355,12 @@ async function handle(req: Request, body: any) {
     const { data: settings, error: settingsError } = await ctx.admin.from('pac_booking_settings')
       .select('*').eq('workspace_id', ctx.workspace.id).single();
     if (settingsError) throw settingsError;
-    return { bookings: data || [], settings, permissions: { is_owner: ctx.isOwner } };
+    const visibleSettings = ctx.isOwner ? settings : {
+      timezone: settings.timezone, opening_time: settings.opening_time, closing_time: settings.closing_time,
+      slot_minutes: settings.slot_minutes, slot_capacity: settings.slot_capacity,
+      horizon_days: settings.horizon_days, public_enabled: settings.public_enabled
+    };
+    return { bookings: data || [], settings: visibleSettings, permissions: { is_owner: ctx.isOwner } };
   }
   if (action === 'create-staff') {
     const settingsResult = await ctx.admin.from('pac_booking_settings').select('*').eq('workspace_id', ctx.workspace.id).single();
