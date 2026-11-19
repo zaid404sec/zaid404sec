@@ -29,7 +29,7 @@ function serviceClient() {
 }
 async function verifyPushIdentity(req: Request, service: any) {
   const auth = req.headers.get('Authorization') || '';
-  const match = auth.match(/^Bearer\\s+(.+)$/i);
+  const match = auth.match(/^Bearer\s+(.+)$/i);
   if (!match) throw new Error('Google Pub/Sub OIDC token is missing.');
   const token = match[1];
   if (token.length > 12000) throw new Error('Google Pub/Sub OIDC token is too large.');
