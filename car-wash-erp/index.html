@@ -1387,8 +1387,14 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
   async function updateBookingRecord(id,status){
     const labels={confirmed:'confirm',rejected:'reject',cancelled:'cancel',completed:'mark as completed'};
     if(!id||!status)return;
+    let statusNote='';
+    if(status==='rejected'){
+      const answer=window.prompt('Optional reason for rejecting this booking request:','');
+      if(answer===null)return;
+      statusNote=String(answer).trim().slice(0,300);
+    }
     if(!confirm('Are you sure you want to '+(labels[status]||status)+' this booking?'))return;
-    try{await window.PrimeAutoCareBookings.updateStatus(id,status);notify('Booking updated.');await loadBookingCenter(true)}
+    try{await window.PrimeAutoCareBookings.updateStatus(id,status,statusNote);notify(status==='rejected'?'Booking rejected. The slot is now available again.':'Booking updated.');await loadBookingCenter(true)}
     catch(error){notify(error?.message||'Booking update failed.')}
   }
   async function saveBookingSettingsForm(event){
