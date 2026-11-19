@@ -13,13 +13,43 @@ button,input,select,textarea{font:inherit}a{color:inherit}.shell{max-width:1080p
 @media(max-width:760px){.shell{padding:10px 12px 36px}.top{padding:8px 2px 14px}.main-grid{grid-template-columns:1fr}.glass{padding:18px}.hero{border-radius:22px}.slots{grid-template-columns:repeat(3,minmax(0,1fr))}.side{grid-template-columns:1fr 1fr}}
 @media(max-width:440px){.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.side{grid-template-columns:1fr}.top-actions .pill:first-child{display:none}.brand{font-size:11px}.hero h1{font-size:34px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+/* Prime Auto Care liquid-glass booking experience */
+:root{color-scheme:dark;--ink:#f7f2e8;--muted:#b6bdc9;--gold:#c89a45;--gold2:#f3d79d;--line:rgba(232,198,135,.22);--paper:#080c13;--glass:rgba(22,28,39,.62)}
+html,body{background:radial-gradient(ellipse at 15% 0%,rgba(192,146,65,.17),transparent 38%),radial-gradient(ellipse at 92% 10%,rgba(78,112,162,.15),transparent 34%),linear-gradient(145deg,#080b12,#121b29 60%,#080b12);color:var(--ink)}
+body{background-attachment:fixed}
+.top{background:rgba(8,12,20,.45);border:1px solid rgba(232,198,135,.12);border-radius:20px;padding:12px 14px;margin-bottom:12px;backdrop-filter:blur(24px) saturate(155%);-webkit-backdrop-filter:blur(24px) saturate(155%)}
+.brand small{color:#c6b48f}
+.pill{background:rgba(255,255,255,.07);color:#f4ead7;border-color:rgba(232,198,135,.23);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.hero{background:radial-gradient(circle at 88% 5%,rgba(216,177,103,.35),transparent 32%),linear-gradient(130deg,rgba(11,16,25,.96),rgba(27,34,47,.84) 70%,rgba(75,57,28,.82));border:1px solid rgba(232,198,135,.24);box-shadow:0 28px 70px rgba(0,0,0,.36),inset 0 1px rgba(255,255,255,.13);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+.glass{background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(255,255,255,.035));border:1px solid rgba(232,198,135,.21);box-shadow:0 22px 58px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.13);backdrop-filter:blur(28px) saturate(160%);-webkit-backdrop-filter:blur(28px) saturate(160%)}
+.card-title h2,.side h3{color:#fff8ea}
+.step{color:#f0d69f;background:rgba(211,169,91,.14);border:1px solid rgba(232,198,135,.24)}
+.field label{color:#ded3bd}
+.field input,.field select,.field textarea{background:rgba(255,255,255,.065);border-color:rgba(232,198,135,.23);color:#f8f3ea}
+.field input::placeholder,.field textarea::placeholder{color:#aeb7c5}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:rgba(243,215,157,.8);box-shadow:0 0 0 3px rgba(224,185,112,.15)}
+.field select option{background:#151e2b;color:#f8f3ea}
+.hint,.fine,.side p{color:#b6bdc9}
+.side-row{border-color:rgba(232,198,135,.14);color:#d9d0c0}
+.trust{background:rgba(218,177,94,.1);border-color:rgba(232,198,135,.2);color:#ead7b5}
+.slot{background:rgba(255,255,255,.065);border-color:rgba(232,198,135,.2);color:#f4ead9;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.slot[aria-pressed=true]{background:linear-gradient(135deg,#f2d59a,#bd8c3a);color:#1c160d}
+.empty-slots{color:#bdc5d1;border-color:rgba(232,198,135,.25)}
+.footer{color:#9fa8b8}
+.notice{background:rgba(31,112,66,.2);border-color:rgba(111,204,145,.35);color:#ccf4d8}
+.notice.error{background:rgba(144,49,43,.2);border-color:rgba(241,137,127,.4);color:#ffd3cd}
+#booking-message{backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.submit{background:linear-gradient(135deg,#f1d59b,#bd8d3e);box-shadow:0 12px 30px rgba(191,144,65,.24),inset 0 1px rgba(255,255,255,.55)}
+@media(prefers-reduced-transparency:reduce){.glass,.hero,.top,.pill{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(18,24,34,.96)}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
 <div class="shell">
 <header class="top">
   <a class="brand" href="../" aria-label="Prime Auto Care home" style="text-decoration:none">
-    <span class="brand-mark"><img src="../../prime-auto-care-logo.jpg" alt=""></span>
+    <span class="brand-mark"><img src="https://raw.githubusercontent.com/zaid404sec/zaid404sec/main/car-wash-erp/prime-auto-care-logo.jpg" alt="Prime Auto Care logo"></span>
     <span>PRIME AUTO CARE<small>PROFESSIONAL CARE · PREMIUM SHINE</small></span>
   </a>
   <div class="top-actions"><a class="pill" href="../">Home</a><a class="pill" href="tel:+917777970261">Call us</a></div>
