@@ -212,6 +212,37 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
 @media(max-width:760px){.topbar{background:rgba(255,251,242,.92);padding-inline:14px}.content{padding:18px 14px 36px}.card,.stat{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}.growth-auto-note{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.btn,.growth-post,.nav button{transition:none!important;scroll-behavior:auto!important}}
 
+
+/* WashDesk 2.13.0 — deep translucent Liquid Glass system.
+   Invoice/PDF print styles remain deliberately unchanged. */
+:root{--bg:#080f1b;--panel:rgba(255,255,255,.075);--ink:#f4f7fc;--muted:#aab7c8;--line:rgba(220,235,255,.16);--nav:#08101d;--shadow:0 22px 60px rgba(0,0,0,.24);--radius:22px}
+html,body{background:radial-gradient(900px 620px at 12% 0%,rgba(69,118,170,.25),transparent 62%),radial-gradient(780px 540px at 100% 18%,rgba(185,143,73,.15),transparent 60%),linear-gradient(145deg,#080f1b,#101b2b 52%,#0a1220);color:#f4f7fc}
+.shell,.main{background:transparent}
+.sidebar{background:linear-gradient(180deg,rgba(6,13,24,.92),rgba(12,22,37,.86));border-right:1px solid rgba(220,235,255,.13);backdrop-filter:blur(28px) saturate(165%);-webkit-backdrop-filter:blur(28px) saturate(165%)}
+.topbar{background:rgba(10,19,32,.58);color:#f4f7fc;border-bottom:1px solid rgba(220,235,255,.14);backdrop-filter:blur(30px) saturate(175%);-webkit-backdrop-filter:blur(30px) saturate(175%);box-shadow:0 10px 36px rgba(0,0,0,.18)}
+.card,.stat,.modal,.modal-card,.modal-content,.dropdown-menu,.search-results{background:linear-gradient(145deg,rgba(255,255,255,.115),rgba(255,255,255,.045));color:#f4f7fc;border:1px solid rgba(225,238,255,.18);box-shadow:0 18px 48px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.16);backdrop-filter:blur(26px) saturate(165%);-webkit-backdrop-filter:blur(26px) saturate(165%)}
+.card h1,.card h2,.card h3,.card h4,.stat strong,.stat-value,.topbar h1{color:#f7f9ff}
+.muted,.help,.stat-label,.card .muted,.card .help{color:#b1bfd0}
+input,select,textarea,.field input,.field select,.field textarea{background:rgba(5,12,22,.52)!important;color:#f3f7fd!important;border:1px solid rgba(220,235,255,.2)!important;border-radius:12px}
+input::placeholder,textarea::placeholder{color:#9aabc0}
+select option{background:#111d2e;color:#f4f7fc}
+.table-wrap,.payroll-table-wrap{background:transparent}
+table{color:#edf3fc}
+thead th{background:rgba(255,255,255,.09);color:#dbe7f5;border-bottom:1px solid rgba(220,235,255,.17)}
+tbody tr{background:rgba(255,255,255,.025);border-bottom:1px solid rgba(220,235,255,.09)}
+tbody tr:hover{background:rgba(135,180,225,.09)}
+.btn{background:rgba(255,255,255,.075);color:#edf5ff;border:1px solid rgba(225,238,255,.2);box-shadow:0 8px 22px rgba(0,0,0,.13);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.btn.primary,.btn.gold{background:linear-gradient(135deg,#f2d89e,#c69b4d);color:#21180a;border-color:rgba(255,255,255,.42)}
+.btn.danger{background:rgba(180,55,55,.18);color:#ffdada;border-color:rgba(255,130,130,.25)}
+.nav button{color:#d6e2f1}
+.nav button:hover,.nav button.active{background:linear-gradient(110deg,rgba(255,255,255,.13),rgba(255,255,255,.045));color:#fff;border:1px solid rgba(255,255,255,.14)}
+.stat-icon,.icon-box{background:rgba(255,255,255,.09);color:#f3d89f;border:1px solid rgba(255,255,255,.14)}
+.staff-attendance-row,.staff-shift-preview,.google-review-card{background:rgba(255,255,255,.055);color:#f4f7fc;border-color:rgba(220,235,255,.16)}
+.staff-attendance-row select{background:rgba(5,12,22,.62)!important;color:#f4f7fc!important}
+.modal-backdrop{background:rgba(2,7,14,.68);backdrop-filter:blur(12px)}
+.toast{background:rgba(17,29,46,.92);color:#fff;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(22px)}
+@media(prefers-reduced-motion:no-preference){.card,.stat,.btn,.nav button{transition:background .2s ease,border-color .2s ease,box-shadow .2s ease,transform .2s ease}.card:hover,.stat:hover{box-shadow:0 22px 58px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.2)}}
+
 </style>
 </head>
 <body>
@@ -625,18 +656,21 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
       if(!previous||(Number(row.updatedAt)||0)>=(Number(previous.updatedAt)||0))byDate.set(row.date,row);
     }
     const unique=[...byDate.values()];
-    return {presentDays:unique.filter(a=>a.status==='Present').length,absentDays:unique.filter(a=>a.status==='Absent').length};
+    const presentDays=unique.filter(a=>a.status==='Present').length;
+    const absentDays=unique.filter(a=>a.status==='Absent').length;
+    const halfDays=unique.filter(a=>a.status==='Half Day').length;
+    return {presentDays,absentDays,halfDays,absenceEquivalentDays:absentDays+(halfDays*0.5)};
   }
   function staffPayrollBreakdown(st,month=monthKey()){
     const monthlySalary=Math.max(0,Number(st.salary)||0),calendarDays=staffMonthDayCount(month),accruedDays=staffAccruedDays(month),cutoff=accruedDays?month+'-'+String(accruedDays).padStart(2,'0'):month+'-00',attendance=staffAttendanceSummary(st.id,month,cutoff);
-    const dailyRate=calendarDays?monthlySalary/calendarDays:0,absenceDeduction=Math.min(monthlySalary,Math.round((dailyRate*attendance.absentDays+Number.EPSILON)*100)/100);
-    const earnedDays=Math.max(0,accruedDays-attendance.absentDays),earnedSalary=Math.max(0,Math.round((dailyRate*earnedDays+Number.EPSILON)*100)/100);
+    const dailyRate=calendarDays?monthlySalary/calendarDays:0,absenceDeduction=Math.min(monthlySalary,Math.round((dailyRate*attendance.absenceEquivalentDays+Number.EPSILON)*100)/100);
+    const earnedDays=Math.max(0,accruedDays-attendance.absenceEquivalentDays),earnedSalary=Math.max(0,Math.round((dailyRate*earnedDays+Number.EPSILON)*100)/100);
     const settled=Math.round((staffSalaryPaid(st.id,month)+Number.EPSILON)*100)/100;
     const balanceBeforeAdvances=Math.round((earnedSalary-settled+Number.EPSILON)*100)/100;
     const openAdvances=Math.round((staffAdvancesOutstanding(st.id)+Number.EPSILON)*100)/100,advanceDeduction=Math.min(Math.max(0,balanceBeforeAdvances),openAdvances);
     // The salary-settlement adjustment is capped, but the displayed liability must include every open advance.
     const netPayable=Math.round((balanceBeforeAdvances-openAdvances+Number.EPSILON)*100)/100;
-    return {monthlySalary,calendarDays,accruedDays,earnedDays,presentDays:attendance.presentDays,absentDays:attendance.absentDays,dailyRate,absenceDeduction,earnedSalary,settled,balanceBeforeAdvances,openAdvances,advanceDeduction,netPayable};
+    return {monthlySalary,calendarDays,accruedDays,earnedDays,presentDays:attendance.presentDays,absentDays:attendance.absentDays,halfDays:attendance.halfDays,absenceEquivalentDays:attendance.absenceEquivalentDays,dailyRate,absenceDeduction,earnedSalary,settled,balanceBeforeAdvances,openAdvances,advanceDeduction,netPayable};
   }
   function staffSalaryDue(st,month=monthKey()){return staffPayrollBreakdown(st,month).balanceBeforeAdvances}
   function staffAttendanceForDate(date){
@@ -650,7 +684,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
       if(!old)return 'unchanged';
       db._deletedIds[rowId]=Date.now();db.attendance=db.attendance.filter(a=>a.id!==rowId);return 'cleared';
     }
-    if(status!=='Present'&&status!=='Absent')throw new Error('Choose Present, Absent or Clear.');
+    if(status!=='Present'&&status!=='Half Day'&&status!=='Absent')throw new Error('Choose Present, Half Day, Absent or Clear.');
     const now=Date.now(),hours=hoursWorked===undefined?old?.hoursWorked:hoursWorked,item={id:rowId,staffId,staffNameSnapshot:staffName,date,status,...(hours===undefined||hours===null||hours===''?{}:{hoursWorked:Number(hours)}),createdAt:old?.createdAt||now,updatedAt:now};
     const index=db.attendance.findIndex(a=>a.id===rowId);
     if(index>=0)db.attendance[index]=item;else db.attendance.push(item);
@@ -748,7 +782,9 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
       if(key>now)continue;
       const month=key.slice(0,7),dailyRate=(Math.max(0,Number(st.salary)||0)/staffMonthDayCount(month));
       grossAccrual+=dailyRate;totalScheduledDays++;
-      if(attendanceByDate.get(key)?.Status==='Absent')absenceDeduction+=dailyRate;
+      const attendanceStatus=attendanceByDate.get(key)?.Status;
+      if(attendanceStatus==='Absent')absenceDeduction+=dailyRate;
+      else if(attendanceStatus==='Half Day')absenceDeduction+=dailyRate*0.5;
     }
     const salaryRows=(db.expenses||[]).filter(e=>e.category==='Salary'&&e.staffId===staffId&&e.date>=fromDate&&e.date<=toDate).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
     const salaryPayments=sum(salaryRows,e=>Number(e.amount)||0),advanceAdjustments=sum(salaryRows,e=>Number(e.advanceAdjustment)||0);
@@ -765,7 +801,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
     });
     const netPayable=calculateStaffStatementBalance({grossAccrual,absenceDeduction,salaryPayments,advanceAdjustments,openAdvances:allOpenAdvances});
     const totalHours=sum(attendance.filter(a=>a['Hours Worked']!=='Not recorded'),a=>a['Hours Worked']);
-    return {staff:st,fromDate,toDate,attendance,salaryRows:salaryRows.map(e=>({Date:e.date||'',Amount:Number(e.amount)||0,'Advance Adjustment':Number(e.advanceAdjustment)||0,Mode:e.mode||'',Note:e.note||''})),advances,summary:{'Staff Member':st.name,'Role':st.role||'Staff','Statement From':fromDate,'Statement To':toDate,'Days Accrued':totalScheduledDays,'Days Present':attendance.filter(a=>a.Status==='Present').length,'Days Absent':attendance.filter(a=>a.Status==='Absent').length,'Total Hours Recorded':totalHours,'Gross Salary Accrued':grossAccrual,'Absence Deductions':absenceDeduction,'Salary Earned After Absences':Math.max(0,grossAccrual-absenceDeduction),'Salary Payments':salaryPayments,'Advances Adjusted':advanceAdjustments,'Outstanding Advances':allOpenAdvances,'Final Balance':netPayable}};
+    return {staff:st,fromDate,toDate,attendance,salaryRows:salaryRows.map(e=>({Date:e.date||'',Amount:Number(e.amount)||0,'Advance Adjustment':Number(e.advanceAdjustment)||0,Mode:e.mode||'',Note:e.note||''})),advances,summary:{'Staff Member':st.name,'Role':st.role||'Staff','Statement From':fromDate,'Statement To':toDate,'Days Accrued':totalScheduledDays,'Days Present':attendance.filter(a=>a.Status==='Present').length,'Half Days':attendance.filter(a=>a.Status==='Half Day').length,'Days Absent':attendance.filter(a=>a.Status==='Absent').length,'Total Hours Recorded':totalHours,'Gross Salary Accrued':grossAccrual,'Absence Deductions':absenceDeduction,'Salary Earned After Absences':Math.max(0,grossAccrual-absenceDeduction),'Salary Payments':salaryPayments,'Advances Adjusted':advanceAdjustments,'Outstanding Advances':allOpenAdvances,'Final Balance':netPayable}};
   }
   function openStaffStatementForm(staffId){
     const st=db.staff.find(x=>x.id===staffId);if(!st)return;
@@ -830,14 +866,14 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
     <div class="card" style="margin-bottom:16px">
       <div class="card-head"><h3>Daily staff attendance</h3><span>Independent status per person</span></div>
       <div class="toolbar"><label for="attendance-date" class="muted" style="font-size:12px;font-weight:700">Attendance date</label><input class="btn" style="padding:8px" type="date" id="attendance-date" value="${esc(attendanceDate)}" /></div>
-      ${db.staff.length ? '<form id="attendance-form"><input type="hidden" name="date" value="'+esc(attendanceDate)+'" /><div class="staff-attendance-list">' + db.staff.map(st=>{const rec=attendanceByStaff.get(st.id);return '<div class="staff-attendance-row"><div class="staff-attendance-person"><b>'+esc(st.name)+'</b><span>'+esc(st.role||'')+'</span><small>Shift: '+esc(staffShiftLabel(st))+'</small></div><select name="status_'+esc(st.id)+'" aria-label="Attendance for '+esc(st.name)+'"><option value="" '+(!rec?'selected':'')+'>No change</option><option value="Present" '+(rec?.status==='Present'?'selected':'')+'>Present</option><option value="Absent" '+(rec?.status==='Absent'?'selected':'')+'>Absent</option><option value="Clear">Clear saved status</option></select><label class="help">Hours worked <input name="hours_'+esc(st.id)+'" type="number" min="0" max="24" step="0.25" value="'+(rec?.hoursWorked??'')+'" placeholder="e.g. 10.5" style="width:105px" /></label></div>'}).join('') + '</div><p class="help">Each staff member is marked independently. Change one person’s status without changing anyone else. You can correct Absent to Present later; payroll recalculates from the latest saved status.</p><div class="form-actions"><button class="btn primary" type="submit">Save selected changes</button></div></form>' : empty('No staff members','Add staff members before marking attendance.',{action:'add-staff',label:'Add staff'})}
+      ${db.staff.length ? '<form id="attendance-form"><input type="hidden" name="date" value="'+esc(attendanceDate)+'" /><div class="staff-attendance-list">' + db.staff.map(st=>{const rec=attendanceByStaff.get(st.id);return '<div class="staff-attendance-row"><div class="staff-attendance-person"><b>'+esc(st.name)+'</b><span>'+esc(st.role||'')+'</span><small>Shift: '+esc(staffShiftLabel(st))+'</small></div><select name="status_'+esc(st.id)+'" aria-label="Attendance for '+esc(st.name)+'"><option value="" '+(!rec?'selected':'')+'>No change</option><option value="Present" '+(rec?.status==='Present'?'selected':'')+'>Present</option><option value="Half Day" '+(rec?.status==='Half Day'?'selected':'')+'>Half Day (0.5 day)</option><option value="Absent" '+(rec?.status==='Absent'?'selected':'')+'>Absent</option><option value="Clear">Clear saved status</option></select><label class="help">Hours worked <input name="hours_'+esc(st.id)+'" type="number" min="0" max="24" step="0.25" value="'+(rec?.hoursWorked??'')+'" placeholder="e.g. 10.5" style="width:105px" /></label></div>'}).join('') + '</div><p class="help">Each staff member is marked independently. Change one person’s status without changing anyone else. You can correct Absent to Present later; payroll recalculates from the latest saved status.</p><div class="form-actions"><button class="btn primary" type="submit">Save selected changes</button></div></form>' : empty('No staff members','Add staff members before marking attendance.',{action:'add-staff',label:'Add staff'})}
       <p class="help" style="margin-top:10px">Attendance is saved per date and staff member, works offline, and syncs to your shared cloud workspace when connected.</p>
     </div>
     ${staffTodayAdvancesHtml()}\n    ${staffAdvanceReportHtml()}
     <div class="card" style="margin-bottom:16px">
       <div class="card-head"><h3>Monthly payroll calculator</h3><label class="muted" style="font-size:12px;font-weight:700">Payroll month <input type="month" id="payroll-month" value="${esc(m)}" /></label></div>
-      <p class="help" style="margin:0 0 12px">Daily rate = monthly salary ÷ actual calendar days in the selected month. Salary accrues only from the 1st through today (inclusive) in the current month; future dates are excluded. Each recorded Absent day up to the cutoff deducts one daily rate. Unmarked dates are not treated as Absent. Net payable also subtracts outstanding staff advances.</p>
-      <div class="table-wrap payroll-table-wrap">${db.staff.length?'<table><thead><tr><th>Staff</th><th class="right">Monthly salary</th><th class="right">Earned days / month</th><th class="right">Present</th><th class="right">Absent</th><th class="right">Daily rate</th><th class="right">Absent deduction</th><th class="right">Earned salary</th><th class="right">Paid / adjusted</th><th class="right">Advance open</th><th class="right">Net payable</th><th>Actions</th></tr></thead><tbody>'+db.staff.map(st=>{const p=staffPayrollBreakdown(st,m);return '<tr><td><b>'+esc(st.name)+'</b><div class="help">'+esc(st.role||'')+'</div><div class="staff-shift-label">'+esc(staffShiftLabel(st))+'</div><button class="btn small" data-edit-staff-shift="'+st.id+'">Edit timing</button></td><td class="right">'+INR(p.monthlySalary)+'</td><td class="right">'+p.accruedDays+' / '+p.calendarDays+'</td><td class="right">'+p.presentDays+'</td><td class="right">'+p.absentDays+'</td><td class="right">'+INR(p.dailyRate)+'</td><td class="right">'+INR(p.absenceDeduction)+'</td><td class="right">'+INR(p.earnedSalary)+'</td><td class="right">'+INR(p.settled)+'</td><td class="right">'+INR(p.openAdvances)+'</td><td class="right strong" style="'+(p.netPayable<-.009?'color:var(--red)':'')+'">'+INR(p.netPayable)+(p.netPayable<-.009?'<div class="help" style="color:var(--red)">Recovery due</div>':'')+'</td><td><button class="btn small" data-edit-staff="'+st.id+'">Edit</button> <button class="btn small" data-staff-statement="'+st.id+'">Statement</button> <button class="btn small" data-pay-salary="'+st.id+'">Pay / adjust</button> <button class="btn small primary" data-add-staff-advance="'+st.id+'">Give advance</button> <button class="btn small danger" data-delete-staff="'+st.id+'">Remove</button></td></tr>'}).join('')+'</tbody></table>':empty('No staff listed','Add washers, detailers, supervisors or cashiers.',{action:'add-staff',label:'Add staff'})}</div>
+      <p class="help" style="margin:0 0 12px">Daily rate = monthly salary ÷ actual calendar days in the selected month. Salary accrues only from the 1st through today (inclusive) in the current month; future dates are excluded. Each Absent day deducts one daily rate; each Half Day deducts half a daily rate. Unmarked dates are not treated as Absent. Net payable also subtracts outstanding staff advances.</p>
+      <div class="table-wrap payroll-table-wrap">${db.staff.length?'<table><thead><tr><th>Staff</th><th class="right">Monthly salary</th><th class="right">Earned days / month</th><th class="right">Present</th><th class="right">Half day</th><th class="right">Absent</th><th class="right">Daily rate</th><th class="right">Absent deduction</th><th class="right">Earned salary</th><th class="right">Paid / adjusted</th><th class="right">Advance open</th><th class="right">Net payable</th><th>Actions</th></tr></thead><tbody>'+db.staff.map(st=>{const p=staffPayrollBreakdown(st,m);return '<tr><td><b>'+esc(st.name)+'</b><div class="help">'+esc(st.role||'')+'</div><div class="staff-shift-label">'+esc(staffShiftLabel(st))+'</div><button class="btn small" data-edit-staff-shift="'+st.id+'">Edit timing</button></td><td class="right">'+INR(p.monthlySalary)+'</td><td class="right">'+p.accruedDays+' / '+p.calendarDays+'</td><td class="right">'+p.presentDays+'</td><td class="right">'+p.halfDays+'</td><td class="right">'+p.absentDays+'</td><td class="right">'+INR(p.dailyRate)+'</td><td class="right">'+INR(p.absenceDeduction)+'</td><td class="right">'+INR(p.earnedSalary)+'</td><td class="right">'+INR(p.settled)+'</td><td class="right">'+INR(p.openAdvances)+'</td><td class="right strong" style="'+(p.netPayable<-.009?'color:var(--red)':'')+'">'+INR(p.netPayable)+(p.netPayable<-.009?'<div class="help" style="color:var(--red)">Recovery due</div>':'')+'</td><td><button class="btn small" data-edit-staff="'+st.id+'">Edit</button> <button class="btn small" data-staff-statement="'+st.id+'">Statement</button> <button class="btn small" data-pay-salary="'+st.id+'">Pay / adjust</button> <button class="btn small primary" data-add-staff-advance="'+st.id+'">Give advance</button> <button class="btn small danger" data-delete-staff="'+st.id+'">Remove</button></td></tr>'}).join('')+'</tbody></table>':empty('No staff listed','Add washers, detailers, supervisors or cashiers.',{action:'add-staff',label:'Add staff'})}</div>
       <p class="help" style="margin-top:10px">Net payable = earned salary up to the cutoff date − cash salary already paid − all remaining open advances. A negative amount is the recovery balance the staff member owes to the business; it is not an amount to pay. When recording a salary settlement, the advance adjustment remains capped at the available salary balance. The current month's cutoff moves forward automatically each calendar day.</p>
     </div>
     <div class="card"><div class="card-head"><h3>Staff advance register</h3><button class="btn small primary" data-action="add-staff-advance">＋ Give advance</button></div>${advances.length?`<div class="table-wrap"><table><thead><tr><th>Date</th><th>Staff</th><th>Reason</th><th class="right">Issued</th><th class="right">Adjusted</th><th class="right">Outstanding</th><th>Status</th><th>Actions</th></tr></thead><tbody>${advances.map(a=>{const issued=Number(a.amount)||0,adjusted=Math.min(issued,staffAdvanceRecoveredAmount(a)),open=Math.max(0,issued-adjusted),staffName=db.staff.find(x=>x.id===a.staffId)?.name||a.staffName||'Staff record',hasAdjustments=staffAdvanceRecoveredAmount(a)>.009;return `<tr><td>${esc(a.date||'—')}</td><td><b>${esc(staffName)}</b></td><td>${esc(a.reason||'Staff advance')}</td><td class="right">${INR(issued)}</td><td class="right">${INR(adjusted)}</td><td class="right strong">${INR(open)}</td><td>${open>0?'<span class="badge amber">Open</span>':'<span class="badge green">Adjusted</span>'}</td><td><button class="btn small" data-edit-staff-advance="${esc(a.id)}">Edit</button> <button class="btn small danger" data-delete-staff-advance="${esc(a.id)}" ${hasAdjustments?'disabled title="This advance has already been adjusted against salary"':''}>Delete</button></td></tr>`}).join('')}</tbody></table></div>`:empty('No staff advances yet','Use Give advance to record money paid ahead of salary.',{action:'add-staff-advance',label:'Give first advance'})}</div>`
