@@ -87,6 +87,22 @@ if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
   throw new Error('Native Android booking notifications are missing from the app polling flow.');
 }
 console.log('PASS: new booking alerts can show as Android system notifications when the app is active and permission is granted');
+const notificationPollStart = html.indexOf('async function pollBookingNotifications(){');
+const notificationPollEnd = html.indexOf('async function loadBookingCenter(', notificationPollStart);
+if (notificationPollStart < 0 || notificationPollEnd < 0) throw new Error('Booking notification poller could not be inspected.');
+const notificationPoll = html.slice(notificationPollStart, notificationPollEnd);
+const deliveryIndex = notificationPoll.indexOf('const delivery=await sendAlert(item);');
+const receiptIndex = notificationPoll.indexOf('acknowledgeNotification(id)');
+const deniedIndex = notificationPoll.indexOf('if(delivery?.permissionDenied)');
+const deniedEnd = notificationPoll.indexOf('if(delivery?.supported===true', deniedIndex);
+if (deliveryIndex < 0 || receiptIndex < deliveryIndex || deniedIndex < 0 ||
+    deniedEnd < deniedIndex || notificationPoll.slice(deniedIndex, deniedEnd).includes('acknowledgeNotification') ||
+    !notificationPoll.includes('bookingNotificationRetryAt.set(id,Date.now()+60000)') ||
+    !notificationPoll.includes("document.addEventListener('visibilitychange'")) {
+  throw new Error('Booking alerts must remain unread when Android delivery fails and retry after the app resumes.');
+}
+console.log('PASS: booking alert receipts are acknowledged only after delivery; denied/failed alerts remain retryable');
+
 const bookingWebsite = await readFile(new URL('../website/booking/index.html', import.meta.url), 'utf8');
 if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes('function request(action') ||
