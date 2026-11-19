@@ -1227,7 +1227,7 @@ for (const token of ['google-review-connect','google-review-sync','google-review
 }
 if (!html.includes('googleAccountEmail') || !html.includes('13506481990772076097') ||
     !html.includes('https://share.google/6g3f0aJqTezi6JH5T') ||
-    !html.includes('https://zaid404sec.github.io/zaid404sec/website/')) {
+    !html.includes('https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-website')) {
   throw new Error('Prime Auto Care Google owner/profile/website settings were not prefilled.');
 }
 if (!html.includes('qr:reviewProfileLink') || !googleReviewClient.includes('qr: target') ||
