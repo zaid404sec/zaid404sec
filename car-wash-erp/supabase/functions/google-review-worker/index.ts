@@ -270,8 +270,7 @@ async function syncWorkspace(service:any,settings:any,targetReviewName:string|nu
 }
 Deno.serve(async req=>{
   if(req.method!=='POST')return new Response('POST required.',{status:405});
-  const secret=env('GOOGLE_REVIEW_WORKER_SECRET');
-  if(!secret||req.headers.get('x-google-review-worker-secret')!==secret)return new Response('Unauthorized',{status:401});
+  const suppliedSecret=req.headers.get('x-google-review-worker-secret')||'';
   try {
     const service=await serviceClient();
     const body=await req.json().catch(()=>({}));
@@ -282,9 +281,14 @@ Deno.serve(async req=>{
         .select('id,workspace_id,review_name,notification_type').eq('id',eventId).maybeSingle();
       if(eventError)throw eventError;
       if(!event)throw new Error('The Pub/Sub review event could not be found.');
-      workspaceFilter=event.workspace_id;
+      workspaceFilter=String(event.workspace_id);
+      const {data:expectedSecret,error:secretError}=await service.rpc('pac_get_google_review_worker_secret',{p_workspace_id:workspaceFilter});
+      if(secretError||!expectedSecret||suppliedSecret!==String(expectedSecret))return new Response('Unauthorized',{status:401});
       targetReviewName=String(event.review_name||'')||null;
       if(!['NEW_REVIEW','UPDATED_REVIEW'].includes(String(event.notification_type||'')))targetReviewName=null;
+    } else {
+      const scheduledSecret=env('GOOGLE_REVIEW_WORKER_SECRET');
+      if(!scheduledSecret||suppliedSecret!==scheduledSecret)return new Response('Unauthorized',{status:401});
     }
     let query=service.from('pac_google_review_settings').select('*').in('api_status',['connected','error']);
     if(workspaceFilter)query=query.eq('workspace_id',workspaceFilter);
