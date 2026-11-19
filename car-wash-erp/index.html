@@ -1474,48 +1474,62 @@ async function loadBookingCenter(force=false){
     const ready=(value)=>value===true;
     const line=(label,ok,detail)=>'<div class="stock-alert"><span>'+esc(label)+'</span><b style="color:'+(ok?'#23835b':'#a56b20')+'">'+(ok?'✓ Ready':'○ Needed')+'</b><div class="help">'+esc(detail||'')+'</div></div>';
     const callback=String(setup.oauth_callback_url||'https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-oauth-callback');
+    const webhook=String(setup.pubsub_webhook_url||'https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-pubsub-webhook');
     const project=String(setup.google_cloud_project_number||settings.google_cloud_project_number||'');
     const oauthReady=ready(setup.oauth_credentials_ready);
     const pubsubReady=ready(setup.pubsub_credentials_ready);
     const aiReady=ready(setup.openrouter_api_key_configured);
     const approved=ready(setup.api_access_approved);
     const connected=ready(setup.oauth_connected);
-    return '<div class="card" style="margin-top:16px;border-color:rgba(216,180,103,.35)"><div class="card-head"><h3>Google Business Profile · Setup wizard</h3><span class="badge '+(approved&&connected?'green':'amber')+'">'+(approved&&connected?'Connected':'Setup required')+'</span></div>'+
-      '<p class="help">This wizard uses the existing paired WashDesk session. You do not need a second Supabase sign-in or a new pairing code. Google still requires the original Business Profile Owner to approve OAuth access once; a database pairing code cannot replace Google consent.</p>'+
+    const isOwner=ready(permissions.workspace_owner);
+    return '<div class="card" style="margin-top:16px;border-color:rgba(216,180,103,.35)"><div class="card-head"><h3>Google Business Profile · Guided setup</h3><span class="badge '+(approved&&connected?'green':'amber')+'">'+(approved&&connected?'Connected':'Setup required')+'</span></div>'+
+      '<p class="help">Use this already-paired WashDesk workspace. Google passwords and secret values are never stored in the app database. OAuth and AI credentials are saved in Supabase Vault; only the original Workspace Owner can save or rotate them.</p>'+
       '<div class="grid two">'+
-        '<div><h4>1 · Google API approval</h4>'+
-          line('Business Profile API access',approved,'Current backend status: '+String(setup.api_status||'access_pending')+'. Google must approve the Cloud project before live review sync and publishing can work.')+
+        '<div><h4>1 · Google API access approval</h4>'+
+          line('Business Profile API access',approved,'Backend status: '+String(setup.api_status||'access_pending')+'. Google must approve your Cloud project before reviews can sync or replies can publish.')+
           '<div class="field"><label>Google Cloud Project Number</label><input id="google-cloud-project-number" inputmode="numeric" maxlength="24" value="'+esc(project)+'" placeholder="Numeric project number only" '+(!permissions.google_reviews_admin?'disabled':'')+'></div>'+
-          (permissions.google_reviews_admin?'<button class="btn small" data-action="google-review-save-project-number">Save project number</button>':'<p class="help">This device needs the scoped Google Reviews administrator permission to save the Cloud project number. The original Workspace Owner record is not changed.</p>')+
-          '<p class="help"><a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Open Google Cloud Console ↗</a> · <a href="https://developers.google.com/my-business/content/prereqs" target="_blank" rel="noopener">Basic API Access prerequisites ↗</a></p>'+
+          (permissions.google_reviews_admin?'<button class="btn small" data-action="google-review-save-project-number">Save project number</button>':'<p class="help">This device needs Google Reviews administrator permission to save the project number.</p>')+
+          '<p class="help"><a href="https://developers.google.com/my-business/content/prereqs" target="_blank" rel="noopener">Open Google API eligibility and Basic API Access ↗</a> · <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console ↗</a></p>'+
         '</div>'+
-        '<div><h4>2 · Google OAuth Web Client</h4>'+
-          line('OAuth Client ID',ready(setup.oauth_client_id_configured),'Set GOOGLE_OAUTH_CLIENT_ID in Supabase Edge Function Secrets.')+
-          line('OAuth Client Secret',ready(setup.oauth_client_secret_configured),'Set GOOGLE_OAUTH_CLIENT_SECRET in Supabase Edge Function Secrets.')+
-          line('Redirect URI',ready(setup.oauth_redirect_uri_configured),'The exact URI below must be saved in the Google OAuth Web Client and Supabase Secrets.')+
-          line('Token encryption key',ready(setup.token_encryption_key_configured),'Set GOOGLE_TOKEN_ENCRYPTION_KEY to Base64 of 32 random bytes.')+
+        '<div><h4>2 · Save Google OAuth Web Client</h4>'+
+          line('OAuth Web Client',oauthReady,'Saved in Supabase Vault. No Supabase Function Secrets screen is required for these credentials.')+
+          '<div class="field"><label>OAuth Client ID</label><input id="google-oauth-client-id" autocomplete="off" spellcheck="false" value="" placeholder="123456789-xxxxx.apps.googleusercontent.com" '+(!isOwner?'disabled':'')+'></div>'+
+          '<div class="field"><label>OAuth Client Secret</label><input id="google-oauth-client-secret" type="password" autocomplete="new-password" value="" placeholder="Paste once; stored encrypted in Vault" '+(!isOwner?'disabled':'')+'></div>'+
+          (isOwner?'<button class="btn small primary" data-action="google-review-save-oauth-config">Save OAuth client securely</button>':'<p class="help">Only the original Workspace Owner can save OAuth credentials. This does not change the Workspace Owner record.</p>')+
           '<div class="field"><label>Authorised redirect URI</label><input id="google-oauth-redirect-uri" readonly value="'+esc(callback)+'"></div>'+
           '<button class="btn small" data-action="google-review-copy-oauth-callback">Copy redirect URI</button>'+
-          '<p class="help"><a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">Open OAuth clients ↗</a> · <a href="https://developers.google.com/my-business/content/basic-setup" target="_blank" rel="noopener">Google OAuth setup guide ↗</a></p>'+
+          '<p class="help"><a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">Create OAuth Web Client ↗</a></p>'+
         '</div>'+
       '</div>'+
       '<div class="divider" style="margin:14px 0;border-top:1px solid rgba(169,132,65,.2)"></div>'+
       '<div class="grid two">'+
         '<div><h4>3 · Connect the Primary Owner</h4>'+
-          line('Google Owner OAuth',connected,'Expected account: '+String(connectionEmail(state)||'bmumz3909@gmail.com')+'. The owner must choose this Google account in the browser and approve Business Profile access.')+
+          line('Google Owner OAuth',connected,'Connected account: '+String(connectionEmail(state)||'not connected')+'. The Business Profile owner must approve Google consent once.')+
           '<button class="btn primary" data-action="google-review-connect" '+(!oauthReady?'disabled':'')+'>Connect Google Owner Account</button>'+
-          '<p class="help">The button opens Google’s official consent page. It does not ask for a Google password inside WashDesk.</p>'+
+          '<p class="help">This opens Google’s official sign-in and consent page. WashDesk never asks for your Google password.</p>'+
         '</div>'+
-        '<div><h4>4 · Live review alerts and AI</h4>'+
-          line('Pub/Sub topic, audience and push identity',pubsubReady,'Requires GOOGLE_PUBSUB_TOPIC_NAME, GOOGLE_PUBSUB_AUDIENCE, GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT and GOOGLE_REVIEW_WORKER_SECRET.')+
-          line('Google review notifications',ready(setup.notifications_enabled),'Enable notifications only after OAuth and the Pub/Sub subscription are working.')+
-          line('OpenRouter server AI key',aiReady,'Set OPENROUTER_API_KEY in Supabase Secrets. This key is not a Google API key and is never stored in the app.')+
+        '<div><h4>4 · Save the AI provider key</h4>'+
+          line('OpenRouter AI key',aiReady,'Saved securely in Supabase Vault. The app only receives a configured/not-configured status.')+
+          '<div class="field"><label>Replacement OpenRouter API key</label><input id="google-openrouter-api-key" type="password" autocomplete="new-password" value="" placeholder="sk-or-v1-…" '+(!isOwner?'disabled':'')+'></div>'+
+          (isOwner?'<button class="btn small primary" data-action="google-review-save-openrouter-key">Save AI key securely</button>':'<p class="help">Only the original Workspace Owner can save or rotate the AI provider key.</p>')+
+          '<p class="help"><a href="https://openrouter.ai/keys" target="_blank" rel="noopener">Create a replacement OpenRouter key ↗</a>. Revoke the key previously pasted into chat. Never paste the new key into chat or a GitHub file.</p>'+
         '</div>'+
       '</div>'+
-      '<div class="notice" style="margin-top:12px"><b>Where to add server secrets</b><br/><a href="https://supabase.com/dashboard/project/jkjudmkqaebrgllemris/functions/secrets" target="_blank" rel="noopener">Open Supabase Edge Function Secrets ↗</a><br/>Required OAuth secrets: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI, GOOGLE_TOKEN_ENCRYPTION_KEY. AI secret: OPENROUTER_API_KEY. Pub/Sub secrets: GOOGLE_REVIEW_WORKER_SECRET, GOOGLE_PUBSUB_TOPIC_NAME, GOOGLE_PUBSUB_AUDIENCE, GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT. The screen reads only whether each secret exists; secret values are never returned to the app.</div>'+
-      '<div class="actions" style="margin-top:12px"><button class="btn" data-action="google-review-setup-refresh">Refresh setup status</button><button class="btn" data-action="google-review-enable-notifications" '+(!connected||!pubsubReady?'disabled':'')+'>Enable Google review alerts</button><button class="btn" data-action="google-review-sync" '+(!connected?'disabled':'')+'>Sync reviews</button></div>'+
-      '<p class="help"><a href="https://github.com/zaid404sec/zaid404sec/blob/main/car-wash-erp/docs/GOOGLE_REVIEW_SETUP_GUIDE.md" target="_blank" rel="noopener">Open the complete step-by-step Google setup guide ↗</a></p>'+
-      '<p class="help">Google API approval is external and can take time. The free OpenRouter model has a documented 50-request/day and 20-request/minute cap for free accounts without qualifying credits; provider availability may vary. Replies may stay Pending moderation after Google accepts the submission.</p>'+
+      '<div class="divider" style="margin:14px 0;border-top:1px solid rgba(169,132,65,.2)"></div>'+
+      '<div><h4>5 · Instant Google review notifications (Pub/Sub)</h4>'+
+        line('Pub/Sub settings',pubsubReady,'The topic, webhook audience, push identity and internal worker token are saved for this workspace. The internal token is generated and stored in Supabase Vault automatically.')+
+        '<div class="grid two">'+
+          '<div class="field"><label>Pub/Sub topic resource</label><input id="google-pubsub-topic" value="'+esc(settings.pubsub_topic_name||'')+'" placeholder="projects/PROJECT_ID/topics/prime-auto-care-reviews" '+(!isOwner?'disabled':'')+'></div>'+
+          '<div class="field"><label>Pub/Sub push service-account email</label><input id="google-pubsub-service-account" value="'+esc(settings.pubsub_push_service_account||'')+'" placeholder="prime-auto-care-push@PROJECT_ID.iam.gserviceaccount.com" '+(!isOwner?'disabled':'')+'></div>'+
+          '<div class="field"><label>Authenticated push URL / OIDC audience</label><input id="google-pubsub-audience" readonly value="'+esc(webhook)+'"></div>'+
+        '</div>'+
+        (isOwner?'<button class="btn small primary" data-action="google-review-save-pubsub-settings">Save Pub/Sub settings securely</button>':'<p class="help">Only the original Workspace Owner can save Pub/Sub settings.</p>')+
+        '<p class="help">In Google Cloud, create the topic, grant the Google Business Profile publisher permission, create an authenticated push subscription using the URL above as both endpoint and OIDC audience, and grant its service account permission to mint OIDC tokens. The setup guide has the exact steps.</p>'+
+        '<div class="actions" style="margin-top:10px"><button class="btn" data-action="google-review-enable-alerts" '+(!connected||!pubsubReady?'disabled':'')+'>Enable Google review alerts</button><button class="btn" data-action="google-review-sync" '+(!connected?'disabled':'')+'>Sync reviews now</button></div>'+
+      '</div>'+
+      '<div class="notice" style="margin-top:12px"><b>Only one unavoidable Google approval step:</b> Google must approve Business Profile Basic API Access. WashDesk cannot grant that approval on Google’s behalf. When approved, the original owner connects once above. Auto-replies stay Off until the API, owner connection, review sync, Pub/Sub and AI checks are ready.</div>'+
+      '<div class="actions" style="margin-top:12px"><button class="btn" data-action="google-review-setup-refresh">Refresh setup status</button><a class="btn" href="https://github.com/zaid404sec/zaid404sec/blob/main/car-wash-erp/docs/GOOGLE_REVIEW_SETUP_GUIDE.md" target="_blank" rel="noopener">Step-by-step setup guide ↗</a></div>'+
+      '<p class="help">AI uses the OpenRouter free-model route; free availability and quotas can change. Replies are checked against Google’s moderation status and are not shown as published until Google confirms approval.</p>'+
     '</div>';
   }
   function connectionEmail(state){return state.connection?.google_user_email||state.settings?.google_account_email||db.business?.googleAccountEmail||'bmumz3909@gmail.com'}
