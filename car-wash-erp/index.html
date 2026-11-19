@@ -1420,7 +1420,7 @@ async function pollBookingNotifications(){
           notify(summary+' · Turn on notifications for WashDesk in Android Settings.');
           continue;
         }
-        if(delivery?.supported===true&&delivery?.scheduled!==true)throw new Error('Android did not confirm that the booking alert was scheduled.');
+        if(delivery?.supported!==true||delivery?.scheduled!==true)throw new Error('This device did not confirm Android notification delivery. The alert remains pending.');
         bookingNotificationSeen.add(id);
         bookingNotificationRetryAt.delete(id);
         notify(summary);
