@@ -88,6 +88,18 @@ for (const token of ['pac_booking_notification_admins','booking_notifications_ad
   if (!bookingNotificationMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Booking notification permission migration is incomplete: '+token);
 }
 console.log('PASS: the paired booking desk receives scoped alerts without changing the original Workspace Owner');
+for (const token of ['create-notification-pair-code','redeem-notification-pair-code','pac_booking_notification_pair_codes','pac_booking_notification_receipts','notification_id','auth_user_id','device_acknowledged']) {
+  if (!bookingApiSource.includes(token)) throw new Error('Per-device booking notification pairing/receipt support is missing: '+token);
+}
+if (bookingApiSource.includes(".from('pac_booking_notification_events').update({\\n      acknowledged_at")) {
+  throw new Error('Booking acknowledgement must be per-device, not a global event acknowledgement.');
+}
+if (!html.includes('booking-notification-create-code') ||
+    !html.includes('booking-notification-redeem-code') ||
+    !html.includes('notificationPairCode')) {
+  throw new Error('WashDesk must expose the owner-issued phone pairing flow.');
+}
+console.log('PASS: owner-issued one-time codes authorise each phone independently; one phone acknowledgement does not hide alerts from others');
 const localNotificationsSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
 if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
     !localNotificationsSource.includes('BOOKING_ALERT_CHANNEL_ID') ||
