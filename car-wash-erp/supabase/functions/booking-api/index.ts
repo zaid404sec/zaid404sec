@@ -17,12 +17,15 @@ const services = [
   { name: 'Outside Wash', duration_minutes: 30 }
 ];
 const vehicleTypes = [
-  'Private Car / SUV',
+  'Private Car',
+  'Private SUV',
   'Taxi',
   'Commercial Transport / Traveller',
   'Auto Rickshaw',
   'Other'
 ];
+// Accept the legacy combined category for historical records/imports, but do not offer it for new bookings.
+const acceptedVehicleTypes = [...vehicleTypes, 'Private Car / SUV'];
 
 function env(name: string) { return Deno.env.get(name)?.trim() || ''; }
 function headersFor(req: Request) {
@@ -141,7 +144,7 @@ async function createBooking(admin: any, settings: any, input: any, source: 'pub
   const phone = normalizePhone(input.customer_phone);
   const vehicle = validateVehicle(input.vehicle_number);
   const vehicleType = String(input.vehicle_type || '').trim();
-  if (!vehicleTypes.includes(vehicleType)) throw new Error('Choose a valid vehicle category.');
+  if (!acceptedVehicleTypes.includes(vehicleType)) throw new Error('Choose a valid vehicle category.');
   const service = String(input.service_type || '').trim();
   const duration = durationFor(service);
   const bookingDate = parseDate(input.booking_date);
