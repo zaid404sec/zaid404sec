@@ -19,25 +19,41 @@ function fromBase64(value: string) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
   return Uint8Array.from(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')), c => c.charCodeAt(0));
 }
-function encryptionKey() {
-  const encoded = env('GOOGLE_TOKEN_ENCRYPTION_KEY');
-  if (!encoded) throw new Error('Google review encryption is not configured on the server.');
+function encryptionKey(encodedValue = '') {
+  const encoded = String(encodedValue || env('GOOGLE_TOKEN_ENCRYPTION_KEY')).trim();
+  if (!encoded) throw new Error('Google token encryption is not configured. Save the OAuth Web Client in WashDesk Setup.');
   const raw = fromBase64(encoded);
-  if (raw.length !== 32) throw new Error('GOOGLE_TOKEN_ENCRYPTION_KEY must decode to exactly 32 bytes.');
+  if (raw.length !== 32) throw new Error('The Google token encryption key must decode to exactly 32 bytes.');
   return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
 }
-async function encryptText(value: string) {
-  const key = await encryptionKey();
+async function encryptText(value: string, encodedKey = '') {
+  const key = await encryptionKey(encodedKey);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(value));
   return base64Url(new Uint8Array([...iv, ...new Uint8Array(encrypted)]));
 }
-async function decryptText(value: string) {
+async function decryptText(value: string, encodedKey = '') {
   const raw = fromBase64(value);
   if (raw.length < 29) throw new Error('Encrypted Google credential is invalid.');
-  const key = await encryptionKey();
+  const key = await encryptionKey(encodedKey);
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(0, 12) }, key, raw.slice(12));
   return new TextDecoder().decode(plain);
+}
+async function googleOAuthConfig(ctx: Context) {
+  const { data, error } = await ctx.service.rpc('pac_get_google_oauth_app_config', { p_workspace_id: ctx.workspace.id });
+  if (error) throw new Error('Secure Google OAuth settings could not be read from Supabase Vault: ' + error.message);
+  const baseUrl = env('SUPABASE_URL').replace(/\/$/, '');
+  return {
+    client_id: String(data?.client_id || env('GOOGLE_OAUTH_CLIENT_ID')).trim(),
+    client_secret: String(data?.client_secret || env('GOOGLE_OAUTH_CLIENT_SECRET')).trim(),
+    redirect_uri: String(data?.redirect_uri || env('GOOGLE_OAUTH_REDIRECT_URI') || (baseUrl ? baseUrl + '/functions/v1/google-review-oauth-callback' : '')).trim(),
+    encryption_key: String(data?.encryption_key || env('GOOGLE_TOKEN_ENCRYPTION_KEY')).trim()
+  };
+}
+async function getOpenRouterKey(ctx: Context) {
+  const { data, error } = await ctx.service.rpc('pac_get_openrouter_key', { p_workspace_id: ctx.workspace.id });
+  if (error) throw new Error('The AI provider key could not be read from Supabase Vault.');
+  return String(data || env('OPENROUTER_API_KEY') || '').trim();
 }
 function randomToken(bytes = 32) { return base64Url(crypto.getRandomValues(new Uint8Array(bytes))); }
 async function sha256(value: string) {
@@ -99,6 +115,42 @@ function requireOriginalWorkspaceOwner(ctx: Context) {
     throw new Error('Only the original Prime Auto Care Workspace Owner can enable automatic Google replies.');
   }
 }
+async function saveGoogleOAuthConfig(ctx: Context, input: any) {
+  requireOriginalWorkspaceOwner(ctx);
+  const clientId = String(input?.client_id || '').trim();
+  const clientSecret = String(input?.client_secret || '').trim();
+  if (!/^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(clientId)) {
+    throw new Error('Enter the Google OAuth Web Client ID ending in .apps.googleusercontent.com.');
+  }
+  if (clientSecret.length < 12 || clientSecret.length > 512) throw new Error('The Google OAuth Client Secret is incomplete.');
+  const baseUrl = env('SUPABASE_URL').replace(/\/$/, '');
+  if (!baseUrl) throw new Error('Supabase project URL is missing from the server.');
+  const redirectUri = baseUrl + '/functions/v1/google-review-oauth-callback';
+  const existing = await googleOAuthConfig(ctx);
+  const encryptionSecret = existing.encryption_key || base64Url(crypto.getRandomValues(new Uint8Array(32)));
+  const { data, error } = await ctx.service.rpc('pac_store_google_oauth_app_config', {
+    p_workspace_id: ctx.workspace.id,
+    p_auth_user_id: ctx.user.id,
+    p_client_id: clientId,
+    p_client_secret: clientSecret,
+    p_redirect_uri: redirectUri,
+    p_encryption_key: encryptionSecret
+  });
+  if (error || data !== true) throw new Error('Google OAuth credentials could not be saved securely in Supabase Vault: ' + (error?.message || 'save failed'));
+  return { saved: true, oauth_credentials_ready: true, redirect_uri: redirectUri, secret_storage: 'Supabase Vault' };
+}
+async function saveOpenRouterKey(ctx: Context, value: unknown) {
+  requireOriginalWorkspaceOwner(ctx);
+  const key = String(value || '').trim();
+  if (!/^sk-or-v1-[A-Za-z0-9_-]{20,}$/.test(key) || key.length > 512) throw new Error('Enter a valid replacement OpenRouter API key beginning with sk-or-v1-.');
+  const { data, error } = await ctx.service.rpc('pac_store_openrouter_key', {
+    p_workspace_id: ctx.workspace.id,
+    p_auth_user_id: ctx.user.id,
+    p_secret: key
+  });
+  if (error || data !== true) throw new Error('The AI key could not be stored securely in Supabase Vault.');
+  return { saved: true, provider: 'openrouter', key_configured: true, secret_storage: 'Supabase Vault' };
+}
 async function saveAutoReplySettings(ctx: Context, settings: any) {
   requireOriginalWorkspaceOwner(ctx);
   const enabled = settings?.enabled === true;
@@ -117,8 +169,8 @@ async function saveAutoReplySettings(ctx: Context, settings: any) {
     if (readiness.notifications_enabled !== true) {
       throw new Error('Enable Google Pub/Sub review notifications and confirm the notification setting before enabling automatic replies.');
     }
-    if (!Deno.env.get('OPENROUTER_API_KEY')?.trim()) {
-      throw new Error('Add the replacement OPENROUTER_API_KEY to Supabase Edge Function Secrets before enabling automatic replies.');
+    if (!(await getOpenRouterKey(ctx))) {
+      throw new Error('Save a replacement OpenRouter AI key in Google Review Center → Setup wizard before enabling automatic replies.');
     }
     if (!Deno.env.get('GOOGLE_REVIEW_WORKER_SECRET')?.trim()) {
       throw new Error('Configure GOOGLE_REVIEW_WORKER_SECRET in Supabase before enabling automatic replies.');
@@ -162,21 +214,23 @@ async function googleCredentials(ctx: Context) {
 }
 async function googleAccessToken(ctx: Context) {
   const credentials = await googleCredentials(ctx);
+  const oauth = await googleOAuthConfig(ctx);
+  if (!oauth.client_id || !oauth.client_secret || !oauth.encryption_key) throw new Error('Google OAuth credentials are missing. Open Setup wizard and save the Web Client.');
   const expires = credentials.access_token_expires_at ? Date.parse(credentials.access_token_expires_at) : 0;
-  if (credentials.encrypted_access_token && expires > Date.now() + 90_000) return decryptText(credentials.encrypted_access_token);
-  const refreshToken = await decryptText(credentials.encrypted_refresh_token);
+  if (credentials.encrypted_access_token && expires > Date.now() + 90_000) return decryptText(credentials.encrypted_access_token, oauth.encryption_key);
+  const refreshToken = await decryptText(credentials.encrypted_refresh_token, oauth.encryption_key);
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: env('GOOGLE_OAUTH_CLIENT_ID'),
-      client_secret: env('GOOGLE_OAUTH_CLIENT_SECRET'),
+      client_id: oauth.client_id,
+      client_secret: oauth.client_secret,
       refresh_token: refreshToken,
       grant_type: 'refresh_token'
     })
   });
   const token = await response.json().catch(() => ({}));
   if (!response.ok || !token.access_token) throw new Error('Google authorization expired or could not be refreshed. Reconnect the owner account.');
-  const encryptedAccess = await encryptText(String(token.access_token));
+  const encryptedAccess = await encryptText(String(token.access_token), oauth.encryption_key);
   await ctx.service.from('pac_google_oauth_credentials').update({
     encrypted_access_token: encryptedAccess,
     access_token_expires_at: new Date(Date.now() + Number(token.expires_in || 3600) * 1000).toISOString(),
@@ -405,9 +459,9 @@ async function runFreeAi(ctx: Context, body: any) {
   requireGoogleReviewAdmin(ctx);
   const provider = String(body.provider || 'openrouter');
   if (provider !== 'openrouter') throw new Error('This build supports the OpenRouter free-model route only.');
-  const apiKey = env('OPENROUTER_API_KEY');
+  const apiKey = await getOpenRouterKey(ctx);
   if (!apiKey || apiKey.length < 20 || apiKey.length > 512) {
-    throw new Error('The server-side free AI key is not configured. The original Workspace Owner must add OPENROUTER_API_KEY in Supabase Edge Function Secrets. Do not paste keys into the app.');
+    throw new Error('The server-side AI key is not configured. The original Workspace Owner must save a replacement key in Google Review Center → Setup wizard.');
   }
   const model = String(body.model || 'openrouter/free').trim();
   if (model !== 'openrouter/free' && !model.endsWith(':free')) throw new Error('Paid model IDs are blocked. Use openrouter/free or a model whose ID ends in :free.');
@@ -727,21 +781,21 @@ async function ownerSettings(ctx: Context, settings: any) {
 }
 async function startOAuth(ctx: Context) {
   requireGoogleReviewAdmin(ctx);
-  const clientId = env('GOOGLE_OAUTH_CLIENT_ID'), redirectUri = env('GOOGLE_OAUTH_REDIRECT_URI');
-  if (!clientId || !env('GOOGLE_OAUTH_CLIENT_SECRET') || !redirectUri || !env('GOOGLE_TOKEN_ENCRYPTION_KEY')) {
-    throw new Error('Google OAuth is not configured on the server. Basic API access and Google Cloud OAuth credentials must be prepared first.');
+  const oauth = await googleOAuthConfig(ctx);
+  if (!oauth.client_id || !oauth.client_secret || !oauth.redirect_uri || !oauth.encryption_key) {
+    throw new Error('Save the Google OAuth Web Client ID and Client Secret in Setup wizard → Google OAuth first.');
   }
   const state = randomToken(32), verifier = randomToken(48);
   const challenge = await sha256(verifier);
   const now = new Date();
   const { error } = await ctx.service.from('pac_google_oauth_states').insert({
     state_hash: await sha256(state), workspace_id: ctx.workspace.id,
-    initiated_by: ctx.user.id, encrypted_code_verifier: await encryptText(verifier),
+    initiated_by: ctx.user.id, encrypted_code_verifier: await encryptText(verifier, oauth.encryption_key),
     created_at: now.toISOString(), expires_at: new Date(now.getTime() + 10 * 60 * 1000).toISOString()
   });
   if (error) throw error;
   const query = new URLSearchParams({
-    client_id: clientId, redirect_uri: redirectUri, response_type: 'code',
+    client_id: oauth.client_id, redirect_uri: oauth.redirect_uri, response_type: 'code',
     scope: 'openid email https://www.googleapis.com/auth/business.manage',
     access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true',
     state, code_challenge: challenge, code_challenge_method: 'S256'
@@ -762,17 +816,17 @@ async function status(ctx: Context) {
   ratings.forEach((rating: number) => distribution[String(rating)]++);
   const sent = logs.filter((row: any) => row.status === 'sent_confirmed');
   const prepared = logs.filter((row: any) => row.status === 'prepared');
-  const redirectUri = env('GOOGLE_OAUTH_REDIRECT_URI')
-    || (env('SUPABASE_URL') ? env('SUPABASE_URL').replace(/\/$/, '') + '/functions/v1/google-review-oauth-callback' : '');
-  const oauthClientIdReady = !!env('GOOGLE_OAUTH_CLIENT_ID');
-  const oauthClientSecretReady = !!env('GOOGLE_OAUTH_CLIENT_SECRET');
-  const oauthRedirectReady = !!env('GOOGLE_OAUTH_REDIRECT_URI');
-  const encryptionKeyReady = !!env('GOOGLE_TOKEN_ENCRYPTION_KEY');
+  const oauth = await googleOAuthConfig(ctx);
+  const redirectUri = oauth.redirect_uri;
+  const oauthClientIdReady = !!oauth.client_id;
+  const oauthClientSecretReady = !!oauth.client_secret;
+  const oauthRedirectReady = !!oauth.redirect_uri;
+  const encryptionKeyReady = !!oauth.encryption_key;
   const pubsubTopicReady = /^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(env('GOOGLE_PUBSUB_TOPIC_NAME') || String(settings.pubsub_topic_name || ''));
   const pubsubAudienceReady = !!env('GOOGLE_PUBSUB_AUDIENCE');
   const pubsubPushAccountReady = !!env('GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT');
   const workerSecretReady = !!env('GOOGLE_REVIEW_WORKER_SECRET');
-  const openRouterKeyReady = !!env('OPENROUTER_API_KEY');
+  const openRouterKeyReady = !!(await getOpenRouterKey(ctx).catch(() => ''));
   const oauthCredentialsReady = oauthClientIdReady && oauthClientSecretReady && oauthRedirectReady && encryptionKeyReady;
   const pubsubCredentialsReady = pubsubTopicReady && pubsubAudienceReady && pubsubPushAccountReady && workerSecretReady;
   return {
@@ -843,6 +897,8 @@ async function handle(ctx: Context, body: any) {
   }
   if (action === 'save-settings') return ownerSettings(ctx, body.settings || {});
   if (action === 'save-google-project-number') return saveGoogleProjectNumber(ctx, body.project_number);
+  if (action === 'save-google-oauth-config') return saveGoogleOAuthConfig(ctx, body.credentials || {});
+  if (action === 'save-openrouter-key') return saveOpenRouterKey(ctx, body.api_key);
   if (action === 'save-auto-reply-settings') return saveAutoReplySettings(ctx, body.settings || {});
   if (action === 'connect') return startOAuth(ctx);
   if (action === 'enable-notifications') {
