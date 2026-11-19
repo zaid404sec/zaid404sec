@@ -27,5 +27,8 @@ window.PrimeAutoCareBookings = {
   updateStatus: (id, status, statusNote = '') => bookingRequest('update-status', { id, status, status_note: statusNote }),
   saveSettings: settings => bookingRequest('save-settings', { settings }),
   notifications: () => bookingRequest('notifications'),
-  acknowledgeNotification: id => bookingRequest('acknowledge-notification', { id })
+  acknowledgeNotification: id => bookingRequest('acknowledge-notification', { id }),
+  createNotificationPairCode: () => bookingRequest('create-notification-pair-code'),
+  redeemNotificationPairCode: code => bookingRequest('redeem-notification-pair-code', { code }),
+  revokeNotificationDevice: user_id => bookingRequest('revoke-notification-device', { user_id })
 };
