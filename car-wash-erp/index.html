@@ -1225,7 +1225,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
   function googleGrowthContext(){
     const b=db.business||{};
     const services=(Array.isArray(db.services)?db.services:[]).slice(0,30).map(x=>String(x.name||x.title||'')).filter(Boolean);
-    return {business:{name:b.name||'PRIME AUTO CARE',city:b.city||'Surat',state:b.state||'Gujarat',address:b.address||'Fulwadi, Surat',opening_hours:(b.openingTime||'08:00')+'–'+(b.closingTime||'20:00'),website:b.website||'https://zaid404sec.github.io/zaid404sec/website/'},services:services,date:new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'}),service_area:'Fulwadi and nearby Surat localities'};
+    return {business:{name:b.name||'PRIME AUTO CARE',city:b.city||'Surat',state:b.state||'Gujarat',address:b.address||'Fulwadi, Surat',opening_hours:(b.openingTime||'08:00')+'–'+(b.closingTime||'20:00'),website:b.website||'https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-website'},services:services,date:new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'}),service_area:'Fulwadi and nearby Surat localities'};
   }
   function googleGrowthMarkup(){
     const key=googleAiKey(),posts=googleGrowthState.posts||[],keywords=googleGrowthState.keywords||[];
@@ -1334,7 +1334,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
   document.addEventListener('change',async function(event){const input=event.target;if(!input.matches||!input.matches('input[data-growth-photo]'))return;const file=input.files&&input.files[0];if(!file)return;try{const result=await window.PrimeAutoCareGoogleReviews.uploadGrowthPhoto(input.dataset.growthPhoto,file);googleGrowthState.posts=googleGrowthState.posts.map(p=>p.id===input.dataset.growthPhoto?{...p,image_url:result.image_url,image_object_path:result.image_object_path}:p);render();notify('Real business photo added to the shared post library.')}catch(e){notify(e.message||'Photo upload failed.')}});
 
 
-  const PUBLIC_BOOKING_URL='https://zaid404sec.github.io/zaid404sec/website/booking/';
+  const PUBLIC_BOOKING_URL='https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking';
   function bookingDateLabel(value){if(!value)return '—';const d=new Date(String(value).slice(0,10)+'T00:00:00');return Number.isNaN(d.getTime())?String(value):d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',weekday:'short'})}
   function bookingStatusPill(status){const map={pending:'amber',confirmed:'green',rescheduled:'amber',cancelled:'red',completed:'green',no_show:'red',rejected:'red'};return '<span class="badge '+(map[status]||'amber')+'">'+esc(String(status||'pending').replace(/_/g,' '))+'</span>'}
   function bookings(){
