@@ -58,7 +58,9 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
 }
 console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
 const bookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
-if (!bookingApiSource.includes("'Private Car / SUV'") ||
+if (!bookingApiSource.includes("'Private Car'") ||
+    !bookingApiSource.includes("'Private SUV'") ||
+    !bookingApiSource.includes("'Private Car / SUV'") ||
     !bookingApiSource.includes("'Taxi'") ||
     !bookingApiSource.includes("'Commercial Transport / Traveller'") ||
     bookingApiSource.includes("'Taxi / Commercial'") ||
@@ -72,6 +74,11 @@ if (!bookingApiSource.includes("'Private Car / SUV'") ||
   throw new Error('Booking taxonomy, rejection action or guarded status-transition checks are missing.');
 }
 console.log('PASS: private vehicles, taxis and commercial transport are distinct; Pending requests can be rejected safely');
+if (!html.includes('<option value="Private Car">Private Car</option>') ||
+    !html.includes('<option value="Private SUV">Private SUV</option>')) {
+  throw new Error('Staff booking form must distinguish Private Car and Private SUV.');
+}
+console.log('PASS: staff booking filters distinguish Private Car, Private SUV, Taxi and Commercial Transport');
 
 const bookingNotificationMigration = await readFile(new URL('../supabase/migrations/20261119043635_booking_notification_admin_access.sql', import.meta.url), 'utf8');
 for (const token of ['canManageBookingNotifications','pac_booking_notification_admins','action === \'notifications\'','action === \'acknowledge-notification\'']) {
