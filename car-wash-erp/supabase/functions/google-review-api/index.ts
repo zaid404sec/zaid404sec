@@ -820,7 +820,7 @@ async function ownerSettings(ctx: Context, settings: any) {
   return { saved: true };
 }
 async function startOAuth(ctx: Context) {
-  requireGoogleReviewAdmin(ctx);
+  requireOriginalWorkspaceOwner(ctx);
   const config = await getGoogleOAuthConfig(ctx);
   const clientId = config.client_id, redirectUri = config.redirect_uri;
   if (!clientId || !config.client_secret || !redirectUri || !config.encryption_key) {
@@ -944,11 +944,11 @@ async function handle(ctx: Context, body: any) {
   if (action === 'save-auto-reply-settings') return saveAutoReplySettings(ctx, body.settings || {});
   if (action === 'connect') return startOAuth(ctx);
   if (action === 'enable-notifications') {
-    requireGoogleReviewAdmin(ctx);
+    requireOriginalWorkspaceOwner(ctx);
     const settings = await getSettings(ctx);
     const topicName = env('GOOGLE_PUBSUB_TOPIC_NAME') || String(settings.pubsub_topic_name || '');
     if (!/^projects\/[a-zA-Z0-9._:-]+\/topics\/[a-zA-Z0-9._-]+$/.test(topicName)) {
-      throw new Error('Set GOOGLE_PUBSUB_TOPIC_NAME in Supabase Function secrets to a topic like projects/PROJECT_ID/topics/prime-auto-care-reviews.');
+      throw new Error('Save the full Pub/Sub topic name in Google Review Center → Setup wizard → Pub/Sub settings.');
     }
     const token = await googleAccessToken(ctx);
     const location = await resolveGoogleLocation(ctx, token, settings);
