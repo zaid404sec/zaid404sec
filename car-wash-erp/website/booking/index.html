@@ -13,6 +13,22 @@ button,input,select,textarea{font:inherit}a{color:inherit}.shell{max-width:1080p
 @media(max-width:760px){.shell{padding:10px 12px 36px}.top{padding:8px 2px 14px}.main-grid{grid-template-columns:1fr}.glass{padding:18px}.hero{border-radius:22px}.slots{grid-template-columns:repeat(3,minmax(0,1fr))}.side{grid-template-columns:1fr 1fr}}
 @media(max-width:440px){.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.side{grid-template-columns:1fr}.top-actions .pill:first-child{display:none}.brand{font-size:11px}.hero h1{font-size:34px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+:root{color-scheme:dark;--ink:#f4f1e9;--muted:#aab2c0;--gold:#d8b66e;--gold2:#f0d49a;--line:rgba(255,255,255,.15);--paper:#090d15;--glass:rgba(255,255,255,.075)}
+*{box-sizing:border-box}
+body{background:radial-gradient(ellipse at 12% 0%,rgba(74,100,145,.22),transparent 38%),radial-gradient(ellipse at 92% 12%,rgba(190,145,64,.15),transparent 32%),#080b11!important;color:#f4f1e9!important}
+.pill,.glass,.side,.trust,.notice,.field input,.field select,.field textarea,.slot{background:rgba(255,255,255,.075)!important;color:#f4f1e9!important;border-color:rgba(255,255,255,.16)!important;box-shadow:0 18px 48px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.1)!important;backdrop-filter:blur(24px) saturate(155%);-webkit-backdrop-filter:blur(24px) saturate(155%)}
+.field label,.hint,.side p,.fine,.footer{color:#aab2c0!important}
+.field input::placeholder,.field textarea::placeholder{color:#9da6b4}
+.hero{background:linear-gradient(125deg,rgba(16,23,37,.86),rgba(45,35,21,.75))!important;border:1px solid rgba(215,182,110,.32);backdrop-filter:blur(26px)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#e4c47e!important;box-shadow:0 0 0 3px rgba(228,196,126,.2)!important}
+.slot[aria-pressed=true],.submit{background:linear-gradient(135deg,#efd49a,#b88b3e)!important;color:#17120a!important}
+.step{background:rgba(215,182,110,.16)!important;color:#f0d18d!important}
+.brand small{color:#d8b66e!important}
+.notice{background:rgba(37,190,135,.12)!important;color:#a8f0d2!important}
+.notice.error{background:rgba(230,80,80,.13)!important;color:#ffb4ad!important}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
 </style>
 </head>
 <body>

@@ -14,6 +14,23 @@ console.log('PASS: Android 2.12.0 retains the existing v24 application ID for an
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
+if (!html.includes("data-action=\"dashboard-refresh\"") ||
+    !html.includes("Dashboard > Refresh data") ||
+    !html.includes("pendingRemotePayload=remote") ||
+    !html.includes("return {__cloudSyncDeferred:true};")) {
+  throw new Error('Dashboard must queue realtime snapshots and refresh only on user request.');
+}
+const receiveStart=html.indexOf('function receiveCloudData(remote){');
+const receiveEnd=html.indexOf('async function connectCloud(e){',receiveStart);
+if(receiveStart<0||receiveEnd<0||html.slice(receiveStart,receiveEnd).includes('render()')) {
+  throw new Error('Realtime cloud updates must not trigger a full screen render.');
+}
+console.log('PASS: realtime snapshots do not reload the screen; dashboard refresh is user-controlled');
+if (!html.includes('color-scheme:dark') || !html.includes('backdrop-filter:blur(24px)') ||
+    !html.includes('deep liquid-glass')) {
+  throw new Error('Deep liquid-glass app theme is missing.');
+}
+
 if (!html.includes('Founder') || !html.includes('Owner Operator')) throw new Error('Founder and Owner Operator roles are missing.');
 console.log('PASS: Founder and Owner Operator roles');
 if (!html.includes('Personal / Household · Vehicle Petrol') || !html.includes('Personal / Household · House Light Bill') || !html.includes("expenseType==='personal'")) throw new Error('Personal and household expense classification is missing.');
@@ -70,6 +87,22 @@ if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
   throw new Error('Native Android booking notifications are missing from the app polling flow.');
 }
 console.log('PASS: new booking alerts can show as Android system notifications when the app is active and permission is granted');
+const notificationPollStart = html.indexOf('async function pollBookingNotifications(){');
+const notificationPollEnd = html.indexOf('async function loadBookingCenter(', notificationPollStart);
+if (notificationPollStart < 0 || notificationPollEnd < 0) throw new Error('Booking notification poller could not be inspected.');
+const notificationPoll = html.slice(notificationPollStart, notificationPollEnd);
+const deliveryIndex = notificationPoll.indexOf('const delivery=await sendAlert(item);');
+const receiptIndex = notificationPoll.indexOf('acknowledgeNotification(id)');
+const deniedIndex = notificationPoll.indexOf('if(delivery?.permissionDenied)');
+const deniedEnd = notificationPoll.indexOf('if(delivery?.supported===true', deniedIndex);
+if (deliveryIndex < 0 || receiptIndex < deliveryIndex || deniedIndex < 0 ||
+    deniedEnd < deniedIndex || notificationPoll.slice(deniedIndex, deniedEnd).includes('acknowledgeNotification') ||
+    !notificationPoll.includes('bookingNotificationRetryAt.set(id,Date.now()+60000)') ||
+    !notificationPoll.includes("document.addEventListener('visibilitychange'")) {
+  throw new Error('Booking alerts must remain unread when Android delivery fails and retry after the app resumes.');
+}
+console.log('PASS: booking alert receipts are acknowledged only after delivery; denied/failed alerts remain retryable');
+
 const bookingWebsite = await readFile(new URL('../website/booking/index.html', import.meta.url), 'utf8');
 if (!bookingWebsite.includes('id="booking-form"') ||
     !bookingWebsite.includes('function request(action') ||
@@ -390,7 +423,7 @@ const mustContain = [
   'Online received (UPI / Card / Bank)',
   'data-edit-invoice', 'function saveInvoiceEdits', 'function calculateEditedInvoice',
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
-  'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle', 'function canRenderRemoteUpdate', 'remoteRenderPending', 'if(canRenderRemoteUpdate())render()',
+  'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle', 'function canRenderRemoteUpdate', 'remoteRenderPending', 
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'pairDevice', 'pairingCode', 'Connect / Pair this device', 'Prime-Auto-Care-',
@@ -565,6 +598,25 @@ if (februaryPayroll.calendarDays !== 28 || februaryPayroll.absentDays !== 1 ||
   throw new Error('28-day payroll calculation failed: ' + JSON.stringify(februaryPayroll));
 }
 console.log('PASS: 28-day payroll uses the correct calendar-day rate');
+const halfDayPayroll = vm.runInNewContext(
+  payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2026-11')",
+  {
+    db: { staffAdvances:[], attendance:[
+      {staffId:'staff-1',date:'2026-11-02',status:'Half Day',updatedAt:1},
+      {staffId:'staff-1',date:'2026-11-03',status:'Absent',updatedAt:1},
+      {staffId:'staff-1',date:'2026-11-04',status:'Present',updatedAt:1}
+    ], expenses:[] },
+    today: () => '2026-11-15',
+    monthKey: date => date ? String(date).slice(0,7) : '2026-11',
+    sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
+  }
+);
+if (halfDayPayroll.halfDays!==1 || halfDayPayroll.absentDays!==1 ||
+    Math.abs(halfDayPayroll.halfDayDeduction-233.33)>0.01 ||
+    Math.abs(halfDayPayroll.earnedSalary-6300)>0.01) {
+  throw new Error('Half-day payroll must deduct exactly 50% of the daily salary rate: '+JSON.stringify(halfDayPayroll));
+}
+console.log('PASS: half-day attendance deducts exactly 50% of the daily salary rate');
 const negativePayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:10000},'2026-11')",
   {
@@ -714,10 +766,13 @@ const remoteReceiveStart = html.indexOf('function receiveCloudData(');
 const remoteReceiveEnd = html.indexOf('async function connectCloud', remoteReceiveStart);
 if (remoteReceiveStart < 0 || remoteReceiveEnd < 0) throw new Error('Remote sync handler not found.');
 const remoteReceive = html.slice(remoteReceiveStart, remoteReceiveEnd);
-if (!remoteReceive.includes('if(shouldDeferRemoteUpdate())') ||
+if (!remoteReceive.includes('pendingRemotePayload=remote;') ||
+    !remoteReceive.includes('remoteRenderPending=true;') ||
     !remoteReceive.includes('return {__cloudSyncDeferred:true}') ||
-    remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db));render();')) {
-  throw new Error('A remote sync event can still mutate local data or the active app DOM during billing.');
+    remoteReceive.includes('db=mergeWashDeskData') ||
+    remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db))') ||
+    remoteReceive.includes('render()')) {
+  throw new Error('Realtime snapshots must be queued without changing local data or rerendering the active screen.');
 }
 if (!html.includes('let pendingRemotePayload=null;') ||
     !html.includes('function applyPendingRemoteData()') ||
