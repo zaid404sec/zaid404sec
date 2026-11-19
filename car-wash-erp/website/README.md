@@ -24,6 +24,13 @@ The repository already has `.github/workflows/pages.yml`, which builds and publi
 5. Sign in to the Google account that owns Prime Auto Care. Open the Business Profile and choose **Edit profile → Contact → Website**. Add the live public URL and save it.
 6. Confirm the website link appears on the public Business Profile in Google Search / Maps.
 
+
+## Live Google reviews
+
+The home page includes a recent-review section backed by the Supabase public-reviews Edge Function. It returns a small, privacy-limited set of genuine Google reviews only; it does not expose internal review IDs, tokens, database rows or customer contact details. The website displays a business reply only when Google's reviewReplyState is APPROVED. When no reviews have synced yet, the page shows a clear empty state and directs visitors to the public Google Business Profile instead of displaying fake testimonials.
+
+The feed stays empty until Google Basic API Access is approved, the original Business Profile owner completes OAuth, and WashDesk syncs real review records. The website's customer booking page also supports an optional urgent-request flag; every request still waits for staff confirmation.
+
 ## Booking and advance-payment boundary
 
 The booking portal collects the customer's name, phone number, vehicle registration and category, service, preferred date/time and optional notes. WashDesk validates the requested time against opening hours and configured bay capacity, then stores it as **Pending**. Staff must confirm the appointment in WashDesk before the customer travels to the station. Customers can submit a request without an account; the staff dashboard is limited to paired workspace users. No payment, deposit, refund or cancellation fee is processed. A payment provider and merchant account would be a separate future integration.
