@@ -10,7 +10,7 @@ if (packageJson.version !== '2.13.1') throw new Error('The package version must 
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
   throw new Error('The 2.13.1 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
 }
-console.log('PASS: Android 2.12.0 retains the existing v24 application ID for an in-place upgrade.');
+console.log('PASS: Android 2.13.1 retains the existing v24 application ID for an in-place upgrade.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
