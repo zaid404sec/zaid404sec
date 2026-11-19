@@ -38,6 +38,17 @@
     .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}.about-visual{min-height:365px;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:linear-gradient(135deg,rgba(8,9,11,.08),rgba(8,9,11,.65)),url("https://raw.githubusercontent.com/zaid404sec/zaid404sec/main/car-wash-erp/prime-auto-care-car-photo.jpg") center/cover}.about-copy h2{font-size:clamp(30px,4vw,43px);letter-spacing:-.04em;margin:12px 0}.about-copy p{color:var(--muted)}.checklist{display:grid;gap:10px;margin-top:22px}.check{display:flex;gap:10px;font-size:13px;color:#e3e2df}.check i{font-style:normal;color:var(--gold2)}
     .visit{background:radial-gradient(ellipse at 20% 10%,rgba(216,180,103,.1),transparent 48%),#101216;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}.visit-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.visit-card{border:1px solid var(--line);border-radius:18px;padding:26px;background:rgba(255,255,255,.025)}.visit-card h3{font-size:18px;margin:0 0 15px}.visit-card p{margin:0;color:#c3c4c7;font-size:14px}.visit-card .small{font-size:12px;color:var(--muted);margin-top:10px}.visit-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
     .review-band{padding:54px 0}.review-inner{border:1px solid var(--line);border-radius:22px;padding:32px;background:linear-gradient(120deg,rgba(216,180,103,.12),rgba(255,255,255,.025));display:flex;justify-content:space-between;align-items:center;gap:24px}.review-inner h2{margin:0 0 8px;font-size:clamp(23px,3vw,32px)}.review-inner p{margin:0;color:var(--muted);font-size:13px}
+    .google-review-feed{margin-top:20px;border:1px solid var(--line);border-radius:20px;padding:24px;background:rgba(255,255,255,.025)}
+    .google-review-feed h3{margin:0 0 6px;font-size:18px}.google-review-feed .feed-note{margin:0 0 16px;color:var(--muted);font-size:12px}
+    .google-review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .google-review-card{min-width:0;padding:18px;border:1px solid rgba(216,180,103,.18);border-radius:15px;background:rgba(255,255,255,.035)}
+    .google-review-meta{display:flex;justify-content:space-between;gap:10px;align-items:center;color:var(--muted);font-size:11px}
+    .google-review-stars{color:var(--gold2);letter-spacing:2px;font-size:14px;white-space:nowrap}
+    .google-review-card blockquote{margin:12px 0 0;color:#f4f0e8;font-size:13px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+    .google-review-reply{margin-top:13px;padding:11px 12px;border-left:2px solid var(--gold);background:rgba(216,180,103,.07);color:#d8d2c6;font-size:12px;line-height:1.55}
+    .google-review-reply b{display:block;margin-bottom:4px;color:var(--gold2);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+    .google-review-empty{padding:16px;border:1px dashed var(--line);border-radius:14px;color:var(--muted);font-size:12px;line-height:1.6}
+    @media(max-width:620px){.google-review-grid{grid-template-columns:1fr}.google-review-feed{padding:18px}}
     footer{border-top:1px solid rgba(255,255,255,.07);padding:30px 0 36px;color:var(--muted);font-size:12px}.foot{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.foot b{color:var(--gold2);letter-spacing:.12em}
     .wa-float{position:fixed;right:18px;bottom:18px;z-index:20;width:56px;height:56px;border-radius:50%;background:var(--green);color:#062b14;display:grid;place-items:center;font-size:25px;box-shadow:0 10px 30px rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.4)}
     @media(max-width:850px){.services{grid-template-columns:repeat(2,1fr)}.about-grid{gap:28px}.navlinks{gap:15px}.hero{min-height:560px}}
@@ -141,8 +152,11 @@
         </div><p class="enquiry-note">The form opens WhatsApp with your details. Nothing is sent until you press Send in WhatsApp.</p><button class="btn btn-gold" type="submit">Prepare WhatsApp enquiry ↗</button></form>
       </div>
     </section>
-    <section class="review-band">
-      <div class="wrap"><div class="review-inner"><div><div class="eyebrow">Your feedback matters</div><h2>Visited us? Share your experience.</h2><p>Honest feedback helps other customers make an informed choice. Every opinion is welcome.</p></div><a class="btn btn-gold" href="https://share.google/6g3f0aJqTezi6JH5T" target="_blank" rel="noopener">View Google Profile & Reviews ↗</a></div></div>
+    <section class="review-band" id="reviews">
+      <div class="wrap">
+        <div class="review-inner"><div><div class="eyebrow">Real customer feedback</div><h2>Google reviews from our customers.</h2><p>Read genuine public feedback synced from our Google Business Profile. Replies are shown here only after Google marks them approved.</p></div><a class="btn btn-gold" href="https://share.google/6g3f0aJqTezi6JH5T" target="_blank" rel="noopener">View profile & write a review ↗</a></div>
+        <div class="google-review-feed"><h3>Recent Google reviews</h3><p class="feed-note">Reviews are retrieved from the Prime Auto Care Google Business Profile. New reviews appear after Google API access and sync are enabled.</p><div id="google-review-feed" class="google-review-empty" role="status" aria-live="polite">Loading recent Google reviews…</div></div>
+      </div>
     </section>
   </main>
   <footer><div class="wrap foot"><div><b>PRIME AUTO CARE</b><div>Professional Care · Premium Shine</div></div><div>Fulwadi, Surat, Gujarat 395004 · India</div><div>© <span id="year"></span> Prime Auto Care</div></div></footer>
@@ -150,6 +164,48 @@
   <script>
     (() => {
       const year=document.getElementById('year');if(year)year.textContent=new Date().getFullYear();
+      const reviewFeed=document.getElementById('google-review-feed');
+      const reviewFeedUrl='https://jkjudmkqaebrgllemris.supabase.co/functions/v1/public-reviews';
+      function reviewDate(value){
+        if(!value)return 'Google customer';
+        const date=new Date(value);return Number.isNaN(date.getTime())?'Google customer':date.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      }
+      function reviewElement(review){
+        const card=document.createElement('article');card.className='google-review-card';
+        const meta=document.createElement('div');meta.className='google-review-meta';
+        const reviewer=document.createElement('b');reviewer.textContent=review.reviewer_name||'Google customer';
+        const date=document.createElement('span');date.textContent=reviewDate(review.created_at);
+        meta.append(reviewer,date);card.append(meta);
+        const stars=document.createElement('div');stars.className='google-review-stars';stars.textContent='★'.repeat(Math.max(1,Math.min(5,Number(review.star_rating)||5)))+'☆'.repeat(5-Math.max(1,Math.min(5,Number(review.star_rating)||5)));stars.setAttribute('aria-label',String(review.star_rating||5)+' out of 5 stars');card.append(stars);
+        const quote=document.createElement('blockquote');quote.textContent=review.comment||'Rated Prime Auto Care on Google.';card.append(quote);
+        if(review.business_reply){
+          const reply=document.createElement('div');reply.className='google-review-reply';
+          const label=document.createElement('b');label.textContent='Prime Auto Care · Google-approved reply';
+          const body=document.createElement('span');body.textContent=review.business_reply;reply.append(label,body);card.append(reply);
+        }
+        return card;
+      }
+      async function loadGoogleReviews(){
+        if(!reviewFeed)return;
+        try{
+          const response=await fetch(reviewFeedUrl,{headers:{Accept:'application/json'}});
+          const payload=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(payload.error||'Google reviews are temporarily unavailable.');
+          reviewFeed.replaceChildren();
+          const reviews=Array.isArray(payload.reviews)?payload.reviews:[];
+          if(!reviews.length){
+            const empty=document.createElement('div');empty.className='google-review-empty';
+            empty.textContent='Google reviews will appear here after the Prime Auto Care Google account is connected and reviews have synced. You can still view the live Google profile using the button above.';
+            reviewFeed.append(empty);return;
+          }
+          const grid=document.createElement('div');grid.className='google-review-grid';
+          reviews.forEach(review=>grid.append(reviewElement(review)));
+          reviewFeed.append(grid);
+        }catch(error){
+          reviewFeed.textContent='Recent Google reviews are temporarily unavailable. Please use the Google Profile link above to read the latest reviews.';
+        }
+      }
+      void loadGoogleReviews();
       const dateInput=document.getElementById('enq-date');
       if(dateInput){const now=new Date(),today=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);dateInput.min=today;}
       document.getElementById('wash-enquiry-form')?.addEventListener('submit',event=>{
