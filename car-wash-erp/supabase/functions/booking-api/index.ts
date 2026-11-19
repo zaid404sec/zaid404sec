@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
 const allowedOrigins = new Set([
   'https://zaid404sec.github.io',
+  'https://jkjudmkqaebrgllemris.supabase.co',
   'capacitor://localhost',
   'http://localhost',
   'https://localhost',
@@ -16,7 +17,8 @@ const services = [
   { name: 'Outside Wash', duration_minutes: 30 }
 ];
 const vehicleTypes = [
-  'Private Car / SUV',
+  'Private Car',
+  'Private SUV',
   'Taxi',
   'Commercial Transport / Traveller',
   'Auto Rickshaw',
