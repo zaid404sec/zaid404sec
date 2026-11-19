@@ -1,8 +1,9 @@
 # Android signing status — 20 November 2026
 
 ## Verified APK certificate comparison
-- The existing 2.11.0 APK and a tested 2.13.1 CI APK have different SHA-256 signing-certificate fingerprints.
-- The 2.13.1 build is debug-signed on a fresh GitHub runner; each runner may generate a different certificate, so there is no stable release identity.
+- Existing 2.11.0 APK certificate SHA-256: `dcc0d72b55241ae6ef20de36ddcff3c95b7a44c0ff0b17a61acb0da15d2704ce`.
+- Final 2.13.1 APK from run #445972 certificate SHA-256: `aabb892f62856c530540c950524f6176769b4da6228862862b7a0779c0504a8c`.
+- These do not match. The 2.13.1 build is debug-signed on a fresh GitHub runner; each runner may generate a different certificate, so there is no stable release identity.
 - Android will reject the tested 2.13.1 APK as an in-place update over the existing 2.11.0/v24 installation, despite the same package ID `com.washdesk.carwash.v24` and a higher version code.
 
 ## Signing-key availability
