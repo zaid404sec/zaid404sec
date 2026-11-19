@@ -1353,6 +1353,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
         bookingNotificationSeen.add(item.id);
         const priority=item.is_urgent?'URGENT · ':'';
         notify(priority+'New booking '+(item.booking_code||'')+' — '+(item.customer_name||'Customer')+' · '+(item.vehicle_number||'Vehicle')+' · '+bookingDateLabel(item.booking_date)+' '+String(item.start_time||'').slice(0,5));
+        await window.PrimeAutoCareNotifications?.sendBookingAlertNotification?.(item).catch(error=>console.warn('Android booking notification could not be shown:',error?.message||error));
         await window.PrimeAutoCareBookings.acknowledgeNotification(item.id).catch(()=>{});
       }
     }catch(error){console.warn('Booking notification check failed:',error?.message||error)}
