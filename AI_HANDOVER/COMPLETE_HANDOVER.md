@@ -6,7 +6,7 @@ This section supersedes older release/status notes below. Preserve the existing 
 - Active development PR: [#68](https://github.com/zaid404sec/zaid404sec/pull/68), branch `feature/google-review-vault-pairing`.
 - Complete CI run: [#445954](https://github.com/zaid404sec/zaid404sec/actions/runs/44595450691) — Android APK, Windows installer, Edge Function type-check and full release package all succeeded.
 - Production Supabase project: `jkjudmkqaebrgllemris`, `ACTIVE_HEALTHY`, region `ap-northeast-2`.
-- Active functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v10, `prime-auto-care-site` v3, `prime-auto-care-website` v1, `prime-auto-care-booking` v1, `public-reviews` v3.
+- Active functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v10, `prime-auto-care-site` v3, `prime-auto-care-website` v2, `prime-auto-care-booking` v2, `public-reviews` v3.
 - Public website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/
 - Public booking page: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
 - Booking creation and accept/reject/cancel status changes write notification events atomically. Four-phone pairing uses one-time owner-issued codes and independent per-device receipts. Paired devices receive Supabase Realtime events and the app refreshes the booking list without a full dashboard reload.
@@ -256,7 +256,7 @@ This section records the verified state for continuing the Prime Auto Care WashD
 
 ### Supabase production state checked
 - Existing project: `jkjudmkqaebrgllemris`, region `ap-northeast-2`, status `ACTIVE_HEALTHY`. Preserve this project and its existing Workspace Owner.
-- Active Edge Functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v10, `prime-auto-care-website` v1, `prime-auto-care-booking` v1, `prime-auto-care-site` v3, and `public-reviews` v3.
+- Active Edge Functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v10, `prime-auto-care-website` v2, `prime-auto-care-booking` v2, `prime-auto-care-site` v3, and `public-reviews` v3.
 - Public business website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-website
 - Public customer booking page: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
 - Booking settings are enabled for slug `prime-auto-care`, timezone `Asia/Kolkata`, 08:00–19:00, 30-minute slots, capacity 1, 14-day booking horizon.
