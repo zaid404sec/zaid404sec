@@ -157,24 +157,17 @@ async function redeemBookingNotificationPairCode(ctx: any, value: unknown) {
   if (!/^\d{8}$/.test(code)) throw new Error('Enter the 8-digit code generated on the original Workspace Owner phone.');
   if (ctx.isOwner) return { ok: true, already_authorised: true };
   const codeHash = await bookingNotificationPairHash(ctx.workspace.id, code);
-  const now = new Date().toISOString();
-  const { data: pair, error: lookupError } = await ctx.admin.from('pac_booking_notification_pair_codes')
-    .select('id,created_by,expires_at')
-    .eq('workspace_id', ctx.workspace.id).eq('code_hash', codeHash)
-    .is('redeemed_at', null).is('revoked_at', null).gt('expires_at', now).maybeSingle();
-  if (lookupError) throw new Error('Phone pairing could not be checked. Try again.');
-  if (!pair) throw new Error('This code is invalid, expired or already used. Generate a new code on the owner phone.');
-  const { data: claimed, error: claimError } = await ctx.admin.from('pac_booking_notification_pair_codes')
-    .update({ redeemed_by: ctx.user.id, redeemed_at: now })
-    .eq('id', pair.id).is('redeemed_at', null).is('revoked_at', null)
-    .gt('expires_at', now).select('id').maybeSingle();
-  if (claimError || !claimed) throw new Error('This code was already used. Generate a new code on the owner phone.');
-  const { error: grantError } = await ctx.admin.from('pac_booking_notification_admins').upsert({
-    workspace_id: ctx.workspace.id, auth_user_id: ctx.user.id,
-    permission: 'booking_notifications_admin', granted_by: pair.created_by,
-    granted_at: now, revoked_at: null
-  }, { onConflict: 'workspace_id,auth_user_id' });
-  if (grantError) throw new Error('The phone was paired, but booking-alert permission could not be saved. Contact the owner.');
+  const { data, error } = await ctx.admin.rpc('pac_redeem_booking_notification_pair_code', {
+    p_workspace_id: ctx.workspace.id,
+    p_code_hash: codeHash,
+    p_auth_user_id: ctx.user.id
+  });
+  if (error || data !== true) {
+    const message = String(error?.message || '');
+    if (message.includes('DEVICE_NOT_PAIRED')) throw new Error('Sign in to an existing WashDesk workspace member account on this phone first.');
+    if (message.includes('PAIR_CODE_ALREADY_USED')) throw new Error('This code was already used. Generate a new code on the owner phone.');
+    throw new Error('This code is invalid, expired or already used. Generate a new code on the owner phone.');
+  }
   return { ok: true, authorised: true };
 }
 async function publicSettings(admin: any, slug: string) {
