@@ -880,6 +880,7 @@ for (const token of [
 }
 if (!html.includes("window.addEventListener('washdesk-booking-notification'") ||
     !html.includes('bookingNotificationSeen.delete(id)') ||
+    !html.includes("if(page==='bookings')void loadBookingCenter(true)") ||
     !html.includes('void pollBookingNotifications()')) {
   throw new Error('Live booking events must immediately trigger the per-device notification poller.');
 }
