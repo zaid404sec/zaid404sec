@@ -356,7 +356,7 @@ async function handle(req: Request, body: any) {
     return { pairing_code: code, expires_at: expiresAt, single_use: true };
   }
   if (action === 'pair-notifications') {
-    const code = String(body.pairing_code || '').replace(/\\s/g, '').toUpperCase();
+    const code = String(body.pairing_code || '').replace(/\s/g, '').toUpperCase();
     if (!/^[A-HJ-NP-Z2-9]{8}$/.test(code)) throw new Error('Enter the complete 8-character booking-alert pairing code.');
     const { data, error } = await ctx.admin.rpc('pac_redeem_booking_notification_pair_code', {
       p_workspace_id: ctx.workspace.id,
