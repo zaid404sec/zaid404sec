@@ -1,6 +1,6 @@
 # Prime Auto Care — Google Review Center setup guide
 
-This guide is for WashDesk 2.12.1 and the existing Prime Auto Care Supabase project.
+This guide is for WashDesk 2.13.0 and the existing Prime Auto Care Supabase project.
 
 ## First: understand the two different credentials
 
@@ -18,7 +18,7 @@ Use the Google account that is listed as an owner or manager of PRIME AUTO CARE.
 3. Publish the business website and add the same website URL to the Business Profile under **Edit profile → Contact → Website**.
 4. Keep the profile complete and current, including address, phone, services and hours.
 
-Google's prerequisites and Basic API Access application: <https://developers.google.com/my-business/content/prereqs>.
+Google's prerequisites: <https://developers.google.com/my-business/content/prereqs>. Submit the **Application for Basic API Access** at <https://support.google.com/business/contact/api_default>.
 
 ## 2. Create or select the Google Cloud project
 
@@ -51,6 +51,7 @@ After Google approves the project, open <https://console.cloud.google.com/apis/l
 5. My Business Notifications API
 6. My Business Verifications API
 7. My Business Business Information API
+8. My Business Q&A API
 
 Google's Basic setup guide: <https://developers.google.com/my-business/content/basic-setup>.
 
@@ -135,7 +136,7 @@ Automatic replies remain Off by default. The Original Workspace Owner should ena
 - Pub/Sub notification registration and test event delivery succeed.
 - The replacement OpenRouter key and worker secret are configured.
 
-The system only considers the exact new/updated review associated with a Pub/Sub event. It skips existing Google replies and holds low ratings or detected complaint language for human review. Google may show a reply as **Pending moderation** or **Rejected**. WashDesk displays that state and the public website only displays a business reply when Google reports it as **APPROVED**.
+The system only considers the exact new/updated review associated with a Pub/Sub event. It skips existing Google replies and holds low ratings or detected complaint language for human review. Google may show a reply as **Pending moderation** or **Rejected**. WashDesk stores the moderation state and policy violation; the public website only displays a business reply when Google reports it as **APPROVED**.
 
 There is no guaranteed one-second publication SLA. Pub/Sub delivery, AI generation, Google API response and Google's moderation status each introduce variable delay.
 
@@ -143,7 +144,7 @@ There is no guaranteed one-second publication SLA. Pub/Sub delivery, AI generati
 
 | What you see | What to check |
 |---|---|
-| OAuth button disabled | Set all four OAuth secrets and confirm the redirect URI is an exact match. |
+| OAuth button disabled | Set all four OAuth secrets and confirm the redirect URI is an exact match. The OpenRouter AI key is configured separately inside the Setup wizard. |
 | Google returns 403 / access pending | Basic API Access is not yet approved, the wrong Cloud project is used, or the required API has not been enabled. |
 | Google authorises the wrong account | Reconnect with the original PRIME AUTO CARE Business Profile owner account. |
 | Notifications stay disabled | Check the topic publisher permission, push subscription, OIDC audience/service account, and four Pub/Sub secrets. |
