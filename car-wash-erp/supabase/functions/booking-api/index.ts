@@ -357,7 +357,7 @@ async function handle(req: Request, body: any) {
     if (body.status && ['pending','confirmed','rescheduled','cancelled','completed','no_show','rejected'].includes(String(body.status))) {
       query = query.eq('status', String(body.status));
     }
-    if (body.vehicle_type && vehicleTypes.includes(String(body.vehicle_type))) query = query.eq('vehicle_type', String(body.vehicle_type));
+    if (body.vehicle_type && acceptedVehicleTypes.includes(String(body.vehicle_type))) query = query.eq('vehicle_type', String(body.vehicle_type));
     if (body.service_type && ['Regular Wash','Foam Wash','Wax & Shine','Outside Wash'].includes(String(body.service_type))) query = query.eq('service_type', String(body.service_type));
     if (body.is_urgent === true || body.is_urgent === false) query = query.eq('is_urgent', body.is_urgent);
     const search = String(body.search || '').replace(/[^a-zA-Z0-9 -]/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 60);
