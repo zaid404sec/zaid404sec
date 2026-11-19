@@ -40,7 +40,8 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
 }
 console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
 const bookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
-if (!bookingApiSource.includes("'Taxi'") ||
+if (!bookingApiSource.includes("'Private Car / SUV'") ||
+    !bookingApiSource.includes("'Taxi'") ||
     !bookingApiSource.includes("'Commercial Transport / Traveller'") ||
     bookingApiSource.includes("'Taxi / Commercial'") ||
     !bookingApiSource.includes("'rejected'") ||
