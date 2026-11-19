@@ -1423,8 +1423,8 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
       '<div class="grid two">'+
         '<div><h4>1 · Google API approval</h4>'+
           line('Business Profile API access',approved,'Current backend status: '+String(setup.api_status||'access_pending')+'. Google must approve the Cloud project before live review sync and publishing can work.')+
-          '<div class="field"><label>Google Cloud Project Number</label><input id="google-cloud-project-number" inputmode="numeric" maxlength="24" value="'+esc(project)+'" placeholder="Numeric project number only" '+(!permissions.workspace_owner?'disabled':'')+'></div>'+
-          (permissions.workspace_owner?'<button class="btn small" data-action="google-review-save-project-number">Save project number</button>':'<p class="help">Only the original Workspace Owner can save the Cloud project number.</p>')+
+          '<div class="field"><label>Google Cloud Project Number</label><input id="google-cloud-project-number" inputmode="numeric" maxlength="24" value="'+esc(project)+'" placeholder="Numeric project number only" '+(!permissions.google_reviews_admin?'disabled':'')+'></div>'+
+          (permissions.google_reviews_admin?'<button class="btn small" data-action="google-review-save-project-number">Save project number</button>':'<p class="help">This device needs the scoped Google Reviews administrator permission to save the Cloud project number. The original Workspace Owner record is not changed.</p>')+
           '<p class="help"><a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Open Google Cloud Console ↗</a> · <a href="https://developers.google.com/my-business/content/prereqs" target="_blank" rel="noopener">Basic API Access prerequisites ↗</a></p>'+
         '</div>'+
         '<div><h4>2 · Google OAuth Web Client</h4>'+
