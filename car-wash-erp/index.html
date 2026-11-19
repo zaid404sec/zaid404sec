@@ -780,8 +780,8 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
     return '<div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Today’s staff advances</h3><span>'+today()+'</span></div><div class="table-wrap"><table><thead><tr><th>Staff member</th><th class="right">Number of advances</th><th class="right">Total today</th><th>Reasons</th></tr></thead><tbody>'+body+'</tbody><tfoot><tr><th>Total today</th><th class="right">'+rows.length+'</th><th class="right">'+INR(total)+'</th><th>'+groups.size+' staff members</th></tr></tfoot></table></div></div>';
   }
   function staffAdvanceReportHtml(){const month=document.getElementById('advance-month-filter')?.value||monthKey(),staffId=document.getElementById('advance-staff-filter')?.value||'all',rows=(db.staffAdvances||[]).filter(a=>monthKey(a.date)===month&&(staffId==='all'||a.staffId===staffId)),total=sum(rows,a=>a.amount),adjusted=sum(rows,a=>staffAdvanceRecoveredAmount(a)),outstanding=sum(rows,a=>Math.max(0,Number(a.amount||0)-staffAdvanceRecoveredAmount(a))),name=staffId==='all'?'All staff':(db.staff.find(s=>s.id===staffId)?.name||'Selected staff');return '<div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Advance summary</h3><b>'+INR(total)+'</b></div><div class="toolbar"><label>Staff <select id="advance-staff-filter"><option value="all" '+(staffId==='all'?'selected':'')+'>All staff</option>'+db.staff.map(s=>'<option value="'+esc(s.id)+'" '+(staffId===s.id?'selected':'')+'>'+esc(s.name)+'</option>').join('')+'</select></label><label>Month <input id="advance-month-filter" type="month" value="'+esc(month)+'" /></label></div><div class="grid stats"><div class="stat"><div class="stat-top"><span>Advance grand total</span></div><div class="stat-value">'+INR(total)+'</div><div class="stat-foot">'+esc(name)+' · '+esc(month)+'</div></div><div class="stat"><div class="stat-top"><span>Advance entries</span></div><div class="stat-value">'+rows.length+'</div><div class="stat-foot">Selected period</div></div><div class="stat"><div class="stat-top"><span>Adjusted</span></div><div class="stat-value">'+INR(adjusted)+'</div></div><div class="stat"><div class="stat-top"><span>Outstanding</span></div><div class="stat-value">'+INR(outstanding)+'</div></div></div></div>'}
-  function calculateStaffStatementBalance({grossAccrual,absenceDeduction,salaryPayments,advanceAdjustments,openAdvances}){
-    return Math.round((Number(grossAccrual||0)-Number(absenceDeduction||0)-Number(salaryPayments||0)-Number(advanceAdjustments||0)-Number(openAdvances||0)+Number.EPSILON)*100)/100;
+  function calculateStaffStatementBalance({grossAccrual,absenceDeduction,halfDayDeduction=0,salaryPayments,advanceAdjustments,openAdvances}){
+    return Math.round((Number(grossAccrual||0)-Number(absenceDeduction||0)-Number(halfDayDeduction||0)-Number(salaryPayments||0)-Number(advanceAdjustments||0)-Number(openAdvances||0)+Number.EPSILON)*100)/100;
   }
   function buildStaffStatement(staffId,fromDate,toDate){
     if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(fromDate)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(toDate)||fromDate>toDate)throw new Error('Choose a valid start and end date.');
@@ -789,7 +789,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
     const attendanceMap=new Map();
     (db.attendance||[]).filter(a=>a.staffId===staffId&&a.date>=fromDate&&a.date<=toDate).forEach(a=>{const old=attendanceMap.get(a.date);if(!old||(Number(a.updatedAt)||0)>=(Number(old.updatedAt)||0))attendanceMap.set(a.date,a)});
     const attendance=[...attendanceMap.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(a=>({Date:a.date,Status:a.status||'Unmarked','Hours Worked':a.hoursWorked===undefined?'Not recorded':Number(a.hoursWorked)||0,Shift:staffShiftLabel(st)}));
-    let grossAccrual=0,absenceDeduction=0,totalScheduledDays=0;
+    let grossAccrual=0,absenceDeduction=0,halfDayDeduction=0,totalScheduledDays=0;
     const now=today(),start=new Date(fromDate+'T12:00:00'),end=new Date(toDate+'T12:00:00'),attendanceByDate=new Map(attendance.map(a=>[a.Date,a]));
     for(const d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
       const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -797,6 +797,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
       const month=key.slice(0,7),dailyRate=(Math.max(0,Number(st.salary)||0)/staffMonthDayCount(month));
       grossAccrual+=dailyRate;totalScheduledDays++;
       if(attendanceByDate.get(key)?.Status==='Absent')absenceDeduction+=dailyRate;
+      else if(attendanceByDate.get(key)?.Status==='Half Day')halfDayDeduction+=dailyRate*0.5;
     }
     const salaryRows=(db.expenses||[]).filter(e=>e.category==='Salary'&&e.staffId===staffId&&e.date>=fromDate&&e.date<=toDate).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
     const salaryPayments=sum(salaryRows,e=>Number(e.amount)||0),advanceAdjustments=sum(salaryRows,e=>Number(e.advanceAdjustment)||0);
@@ -811,9 +812,9 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
       const adjusted=entries.length?sum(entries.filter(x=>String(x.date||'')<=toDate),x=>Number(x.amount)||0):Math.min(Number(a.amount)||0,Number(a.recoveredAmount)||0);
       return Math.max(0,(Number(a.amount)||0)-adjusted);
     });
-    const netPayable=calculateStaffStatementBalance({grossAccrual,absenceDeduction,salaryPayments,advanceAdjustments,openAdvances:allOpenAdvances});
+    const netPayable=calculateStaffStatementBalance({grossAccrual,absenceDeduction,halfDayDeduction,salaryPayments,advanceAdjustments,openAdvances:allOpenAdvances});
     const totalHours=sum(attendance.filter(a=>a['Hours Worked']!=='Not recorded'),a=>a['Hours Worked']);
-    return {staff:st,fromDate,toDate,attendance,salaryRows:salaryRows.map(e=>({Date:e.date||'',Amount:Number(e.amount)||0,'Advance Adjustment':Number(e.advanceAdjustment)||0,Mode:e.mode||'',Note:e.note||''})),advances,summary:{'Staff Member':st.name,'Role':st.role||'Staff','Statement From':fromDate,'Statement To':toDate,'Days Accrued':totalScheduledDays,'Days Present':attendance.filter(a=>a.Status==='Present').length,'Days Absent':attendance.filter(a=>a.Status==='Absent').length,'Total Hours Recorded':totalHours,'Gross Salary Accrued':grossAccrual,'Absence Deductions':absenceDeduction,'Salary Earned After Absences':Math.max(0,grossAccrual-absenceDeduction),'Salary Payments':salaryPayments,'Advances Adjusted':advanceAdjustments,'Outstanding Advances':allOpenAdvances,'Final Balance':netPayable}};
+    return {staff:st,fromDate,toDate,attendance,salaryRows:salaryRows.map(e=>({Date:e.date||'',Amount:Number(e.amount)||0,'Advance Adjustment':Number(e.advanceAdjustment)||0,Mode:e.mode||'',Note:e.note||''})),advances,summary:{'Staff Member':st.name,'Role':st.role||'Staff','Statement From':fromDate,'Statement To':toDate,'Days Accrued':totalScheduledDays,'Days Present':attendance.filter(a=>a.Status==='Present').length,'Days Absent':attendance.filter(a=>a.Status==='Absent').length,'Half Days':attendance.filter(a=>a.Status==='Half Day').length,'Total Hours Recorded':totalHours,'Gross Salary Accrued':grossAccrual,'Absence Deductions':absenceDeduction,'Half-day Deductions':halfDayDeduction,'Attendance Deductions':absenceDeduction+halfDayDeduction,'Salary Earned After Attendance Deductions':Math.max(0,grossAccrual-absenceDeduction-halfDayDeduction),'Salary Payments':salaryPayments,'Advances Adjusted':advanceAdjustments,'Outstanding Advances':allOpenAdvances,'Final Balance':netPayable}};
   }
   function openStaffStatementForm(staffId){
     const st=db.staff.find(x=>x.id===staffId);if(!st)return;
