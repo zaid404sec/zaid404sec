@@ -5,9 +5,8 @@ function b64(value: string) {
   const normalized=value.replace(/-/g,'+').replace(/_/g,'/');
   return Uint8Array.from(atob(normalized.padEnd(Math.ceil(normalized.length/4)*4,'=')),c=>c.charCodeAt(0));
 }
-async function decrypt(value: string) {
-  const keyText=env('GOOGLE_TOKEN_ENCRYPTION_KEY');
-  if(!keyText)throw new Error('Token encryption key missing.');
+async function decrypt(value: string,keyText:string) {
+  if(!keyText)throw new Error('Google token encryption key missing. Save the OAuth Web Client in the Setup wizard.');
   const keyBytes=b64(keyText),raw=b64(value);
   if(keyBytes.length!==32||raw.length<29)throw new Error('Encrypted token invalid.');
   const key=await crypto.subtle.importKey('raw',keyBytes,'AES-GCM',false,['decrypt']);
@@ -174,19 +173,22 @@ async function syncWorkspace(service:any,settings:any,targetReviewName:string|nu
   const {data:credentials,error}=await service.from('pac_google_oauth_credentials').select('*').eq('workspace_id',workspaceId).maybeSingle();
   if(error)throw error;
   if(!credentials?.encrypted_refresh_token)throw new Error('Owner OAuth is not connected.');
+  const {data:oauthConfig,error:oauthConfigError}=await service.rpc('pac_get_google_oauth_app_config',{p_workspace_id:workspaceId});
+  if(oauthConfigError||!oauthConfig?.client_id||!oauthConfig?.client_secret||!oauthConfig?.encryption_key)throw new Error('Google OAuth Web Client is not configured in WashDesk Setup.');
+  const encryptionKey=String(oauthConfig.encryption_key);
   let token='';
   const expiry=credentials.access_token_expires_at?Date.parse(credentials.access_token_expires_at):0;
-  if(credentials.encrypted_access_token&&expiry>Date.now()+90000)token=await decrypt(credentials.encrypted_access_token);
+  if(credentials.encrypted_access_token&&expiry>Date.now()+90000)token=await decrypt(credentials.encrypted_access_token,encryptionKey);
   else {
-    const refreshToken=await decrypt(credentials.encrypted_refresh_token);
+    const refreshToken=await decrypt(credentials.encrypted_refresh_token,encryptionKey);
     const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({
-      client_id:env('GOOGLE_OAUTH_CLIENT_ID'),client_secret:env('GOOGLE_OAUTH_CLIENT_SECRET'),
+      client_id:String(oauthConfig.client_id),client_secret:String(oauthConfig.client_secret),
       refresh_token:refreshToken,grant_type:'refresh_token'
     })});
     const body=await response.json().catch(()=>({}));
     if(!response.ok||!body.access_token)throw new Error('Google token refresh failed.');
     token=String(body.access_token);
-    const keyBytes=b64(env('GOOGLE_TOKEN_ENCRYPTION_KEY')),key=await crypto.subtle.importKey('raw',keyBytes,'AES-GCM',false,['encrypt']);
+    const keyBytes=b64(encryptionKey),key=await crypto.subtle.importKey('raw',keyBytes,'AES-GCM',false,['encrypt']);
     const iv=crypto.getRandomValues(new Uint8Array(12));
     const encrypted=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(token));
     const encoded=btoa(String.fromCharCode(...new Uint8Array([...iv,...new Uint8Array(encrypted)]))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');
@@ -263,13 +265,19 @@ async function syncWorkspace(service:any,settings:any,targetReviewName:string|nu
 }
 Deno.serve(async req=>{
   if(req.method!=='POST')return new Response('POST required.',{status:405});
-  const secret=env('GOOGLE_REVIEW_WORKER_SECRET');
-  if(!secret||req.headers.get('x-google-review-worker-secret')!==secret)return new Response('Unauthorized',{status:401});
   try {
     const service=await serviceClient();
     const body=await req.json().catch(()=>({}));
+    const workspaceId=String(body?.workspace_id||'');
+    let expectedSecret=env('GOOGLE_REVIEW_WORKER_SECRET');
+    if(workspaceId){
+      const {data:storedSecret,error:secretError}=await service.rpc('pac_get_google_review_worker_secret',{p_workspace_id:workspaceId});
+      if(secretError)throw secretError;
+      expectedSecret=String(storedSecret||expectedSecret||'');
+    }
+    if(!expectedSecret||req.headers.get('x-google-review-worker-secret')!==expectedSecret)return new Response('Unauthorized',{status:401});
     const eventId=String(body?.event_id||'');
-    let targetReviewName:string|null=null,workspaceFilter:string|null=null;
+    let targetReviewName:string|null=null,workspaceFilter:string|null=workspaceId||null;
     if(eventId) {
       const {data:event,error:eventError}=await service.from('pac_google_review_events')
         .select('id,workspace_id,review_name,notification_type').eq('id',eventId).maybeSingle();
