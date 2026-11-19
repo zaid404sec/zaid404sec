@@ -184,6 +184,39 @@ async function googleFetch(url: string, token: string, init: RequestInit = {}) {
   }
   return body;
 }
+async function readGoogleReplyModeration(token:string,accountName:string,locationName:string,reviewResource:string,expectedReply:string) {
+  const expectedId=reviewResource.split('/').pop();
+  for(let attempt=0;attempt<3;attempt++){
+    let pageToken='';
+    for(let page=0;page<10;page++){
+      const params=new URLSearchParams({pageSize:'50',orderBy:'updateTime desc'});
+      if(pageToken)params.set('pageToken',pageToken);
+      const data=await googleFetch('https://mybusiness.googleapis.com/v4/'+accountName+'/locations/'+locationName.split('/').pop()+'/reviews?'+params.toString(),token);
+      const item=(data.reviews||[]).find((r:any)=>{
+        const resource=String(r.name||'');
+        const id=String(r.reviewId||resource.split('/').pop()||'');
+        return resource===reviewResource||id===expectedId;
+      });
+      if(item){
+        const moderation=item.reviewReply||{};
+        const returnedComment=String(moderation.comment||'');
+        if(returnedComment&&returnedComment!==expectedReply){
+          return {state:'REPLY_MISMATCH',policyViolation:null,checkedAt:new Date().toISOString()};
+        }
+        return {
+          state:String(moderation.reviewReplyState||'REVIEW_REPLY_STATE_UNSPECIFIED'),
+          policyViolation:moderation.policyViolation?String(moderation.policyViolation):null,
+          checkedAt:new Date().toISOString()
+        };
+      }
+      pageToken=String(data.nextPageToken||'');
+      if(!pageToken)break;
+    }
+    if(attempt<2)await new Promise(resolve=>setTimeout(resolve,800*(attempt+1)));
+  }
+  return {state:'PENDING_VERIFICATION',policyViolation:null,checkedAt:new Date().toISOString()};
+}
+
 function ratingNumber(value: unknown) {
   const text = String(value || '').toUpperCase();
   const map: Record<string, number> = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 };
@@ -926,15 +959,27 @@ async function handle(ctx: Context, body: any) {
     const reviewId = String(review.google_review_id).split('/').pop();
     const endpoint = 'https://mybusiness.googleapis.com/v4/' + location.accountName + '/locations/' + location.locationName.split('/').pop() + '/reviews/' + reviewId + '/reply';
     await googleFetch(endpoint, token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment: draft.draft_text }) });
+    // A successful updateReply response means Google accepted the request, not that
+    // moderation approved it. reviews.list returns the output-only reply state.
+    const moderation = await readGoogleReplyModeration(token, location.accountName, location.locationName, String(review.google_review_id), String(draft.draft_text));
     const now = new Date().toISOString();
     await ctx.service.from('pac_review_reply_drafts').update({
       status: 'published', approved_by: ctx.user.id, approved_at: now,
-      published_at: now, updated_at: now
+      published_at: now, updated_at: now,
+      publication_state: moderation.state,
+      publication_policy_violation: moderation.policyViolation,
+      publication_checked_at: moderation.checkedAt,
+      publication_error: null
     }).eq('id', draft.id);
     await ctx.service.from('pac_google_reviews').update({
-      reply_comment: draft.draft_text, reply_updated_at: now, updated_at: now
+      reply_comment: draft.draft_text, reply_updated_at: now,
+      reply_publication_state: moderation.state,
+      reply_policy_violation: moderation.policyViolation,
+      reply_state_checked_at: moderation.checkedAt,
+      updated_at: now
     }).eq('id', draft.review_row_id);
-    return { published: true, published_at: now };
+    return { submitted: true, published: moderation.state === 'APPROVED', publication_state: moderation.state,
+      policy_violation: moderation.policyViolation, publication_checked_at: moderation.checkedAt, submitted_at: now };
   }
   return null;
 }
