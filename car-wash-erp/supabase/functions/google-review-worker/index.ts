@@ -283,6 +283,7 @@ Deno.serve(async req=>{
         .select('id,workspace_id,review_name,notification_type').eq('id',eventId).maybeSingle();
       if(eventError)throw eventError;
       if(!event)throw new Error('The Pub/Sub review event could not be found.');
+      if(workspaceId && event.workspace_id!==workspaceId)throw new Error('The review event does not belong to the authorised workspace.');
       workspaceFilter=event.workspace_id;
       targetReviewName=String(event.review_name||'')||null;
       if(!['NEW_REVIEW','UPDATED_REVIEW'].includes(String(event.notification_type||'')))targetReviewName=null;
