@@ -6,9 +6,9 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.12.0') throw new Error('The package version must be 2.12.0.');
+if (packageJson.version !== '2.12.1') throw new Error('The package version must be 2.12.1.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.12.0 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
+  throw new Error('The 2.12.1 APK must retain v24 so it upgrades the installed WashDesk app without splitting local data.');
 }
 console.log('PASS: Android 2.12.0 retains the existing v24 application ID for an in-place upgrade.');
 
@@ -33,12 +33,27 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261118193000_google_review_auto_reply.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119034723_booking_urgency_notifications_google_publication.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119041849_booking_notification_fk_indexes.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261119080000_booking_rejected_status.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
   throw new Error('One or more booking source, migration, API or public website files are missing.');
 }
 console.log('PASS: public booking portal, staff bookings module, additive migration and API files exist');
 const bookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
+if (!bookingApiSource.includes("'Taxi'") ||
+    !bookingApiSource.includes("'Commercial Transport / Traveller'") ||
+    bookingApiSource.includes("'Taxi / Commercial'") ||
+    !bookingApiSource.includes("'rejected'") ||
+    !bookingApiSource.includes("updates.rejected_at") ||
+    !bookingApiSource.includes("updates.rejected_by") ||
+    !bookingApiSource.includes(".in('status', allowedCurrent)") ||
+    !html.includes("data-status=\"rejected\"") ||
+    !html.includes("rejected:'red'") ||
+    !html.includes("'Commercial Transport / Traveller'")) {
+  throw new Error('Booking taxonomy, rejection action or guarded status-transition checks are missing.');
+}
+console.log('PASS: private vehicles, taxis and commercial transport are distinct; Pending requests can be rejected safely');
+
 const bookingNotificationMigration = await readFile(new URL('../supabase/migrations/20261119043635_booking_notification_admin_access.sql', import.meta.url), 'utf8');
 for (const token of ['canManageBookingNotifications','pac_booking_notification_admins','action === \'notifications\'','action === \'acknowledge-notification\'']) {
   if (!bookingApiSource.includes(token)) throw new Error('Booking alert API is missing scoped notification access: '+token);
@@ -93,11 +108,27 @@ console.log('PASS: public business website review feed, DOM rendering, Schema.or
 
 if (!html.includes('google-auto-reply-enabled') || !html.includes('google-review-save-auto-reply') ||
     !html.includes('Only the original Workspace Owner') ||
+    !html.includes('function googleReviewSetupMarkup(state)') ||
+    !html.includes('google-review-save-project-number') ||
+    !html.includes('google-review-copy-oauth-callback') ||
+    !html.includes('GOOGLE_OAUTH_CLIENT_SECRET') ||
+    !html.includes('OPENROUTER_API_KEY') ||
+    !html.includes('oauth_credentials_ready') ||
+    !html.includes('pubsub_credentials_ready') ||
+    html.includes('google-ai-api-key') ||
     !existsSync(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url))) {
   throw new Error('Owner-controlled event-driven Google AI reply workflow is incomplete.');
 }
 const googleReviewWorkerSource = await readFile(new URL('../supabase/functions/google-review-worker/index.ts', import.meta.url), 'utf8');
 const googleReviewApiSource = await readFile(new URL('../supabase/functions/google-review-api/index.ts', import.meta.url), 'utf8');
+if (!googleReviewApiSource.includes("env('OPENROUTER_API_KEY')") ||
+    googleReviewApiSource.includes('body.api_key') ||
+    !googleReviewApiSource.includes('save-google-project-number') ||
+    !googleReviewApiSource.includes('oauth_callback_url') ||
+    !googleReviewApiSource.includes('openrouter_api_key_configured')) {
+  throw new Error('Google setup must use server-side AI secrets and expose only safe configuration readiness flags.');
+}
+console.log('PASS: Google setup wizard uses paired session, original-owner OAuth and server-side AI secrets');
 if (!googleReviewWorkerSource.includes('readGoogleReplyModeration') ||
     !googleReviewWorkerSource.includes('reviewReplyState') ||
     !googleReviewWorkerSource.includes('publication_state') ||
@@ -1164,13 +1195,20 @@ for (const token of ['pac_google_growth_posts','pac_google_growth_keywords','ena
 for (const token of ['pac_google_growth_daily_runs','unique (workspace_id, run_date)','revoke all on public.pac_google_growth_daily_runs from public, anon, authenticated','grant all on public.pac_google_growth_daily_runs to service_role']) {
   if (!dailyGrowthMigration.includes(token)) throw new Error('Daily AI Growth migration is missing its workspace idempotency or service-only security safeguard: '+token);
 }
-for (const token of ['google-ai-api-key','AI GROWTH STUDIO','Generate 2 additional drafts','AI relevance estimates','data-growth-photo','openrouter.ai/keys','googleGrowthMarkup','Daily post autopilot','Create gold-glass poster','ensureDailyGrowthPosts','[vehicle number removed]']) {
+for (const token of ['Server-connected free AI','AI GROWTH STUDIO','Generate 2 additional drafts','AI relevance estimates','data-growth-photo','openrouter.ai/keys','googleGrowthMarkup','Daily post autopilot','Create gold-glass poster','ensureDailyGrowthPosts','[vehicle number removed]']) {
   if (!html.includes(token)) throw new Error('Google AI Growth Studio UI is missing: '+token);
 }
 for (const token of ['ai-generate','ensure-daily-growth-posts','Asia/Kolkata','list-growth-posts','save-growth-post','save-growth-keywords','upload-growth-photo','publish-growth-post','openrouter/free','Paid model IDs are blocked','Photo must be between 10 KB and 5 MB','250 × 250 pixels','pac_google_growth_posts','pac_google_growth_daily_runs']) {
   if (!growthApi.includes(token)) throw new Error('Google AI Growth backend is missing: '+token);
 }
-if (!growthClient.includes('ensureDailyGrowthPosts') || growthClient.includes('GOOGLE_OAUTH_CLIENT_SECRET')) throw new Error('The browser API client must expose daily draft automation and contain no server-side secrets.');
+if (!growthClient.includes('ensureDailyGrowthPosts') ||
+    growthClient.includes('GOOGLE_OAUTH_CLIENT_SECRET') ||
+    growthClient.includes('api_key:') ||
+    html.includes('google-ai-api-key') ||
+    html.includes('localStorage.setItem(GOOGLE_AI_KEY_STORAGE')) {
+  throw new Error('The browser API client must not store or transmit AI provider keys.');
+}
+console.log('PASS: browser and APK no longer store OpenRouter keys; AI runs through server-side secrets');
 for (const token of ['canonical','og:title','twitter:card','AutoWash','openingHoursSpecification','Prime Auto Care','wash-enquiry-form','WhatsApp','href="./booking/"','08:00 AM – 07:00 PM']) {
   if (!website.includes(token)) throw new Error('Public website SEO or enquiry markup is missing: '+token);
 }
