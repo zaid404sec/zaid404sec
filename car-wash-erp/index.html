@@ -1401,6 +1401,12 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
     finally{if(button)button.disabled=false}
   }
 
+  function replyPublicationPill(state,policy){
+    const value=String(state||'REVIEW_REPLY_STATE_UNSPECIFIED');
+    const map={APPROVED:['green','Approved'],PENDING:['amber','Pending moderation'],REJECTED:['red','Rejected'],PENDING_VERIFICATION:['amber','Awaiting Google status'],REPLY_MISMATCH:['red','Reply mismatch'],REVIEW_REPLY_STATE_UNSPECIFIED:['amber','Status not confirmed'],NOT_SUBMITTED:['muted','Not submitted']};
+    const item=map[value]||['amber','Unknown status'];
+    return '<span class="badge '+item[0]+'">'+item[1]+'</span>'+(policy?'<div class="help">Policy: '+esc(policy)+'</div>':'');
+  }
   function googleReviews(){
     const state=googleReviewState||{},records=Array.isArray(state.reviews)?state.reviews:[],metrics=state.metrics||{},b=db.business||{},connection=state.connection||{},permissions=state.permissions||{};
     const average=metrics.average_rating===null||metrics.average_rating===undefined?'—':Number(metrics.average_rating).toFixed(1)+' / 5';
@@ -1412,7 +1418,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
     const rows=records.map(r=>{
       const name=esc(r.reviewer_name||'Google user'),rating=Number(r.star_rating)||'—';
       const date=r.google_created_at?new Date(r.google_created_at).toLocaleDateString('en-IN'):'—';
-      return '<tr><td>'+name+'</td><td>'+esc(String(rating))+' ★</td><td><div style="min-width:210px;white-space:normal">'+esc(r.comment||'No written comment')+'</div></td><td>'+esc(date)+'</td><td>'+esc(r.reply_comment||'Not answered')+'</td></tr>';
+      return '<tr><td>'+name+'</td><td>'+esc(String(rating))+' ★</td><td><div style="min-width:210px;white-space:normal">'+esc(r.comment||'No written comment')+'</div></td><td>'+esc(date)+'</td><td>'+esc(r.reply_comment||'Not answered')+'</td><td>'+replyPublicationPill(r.reply_publication_state,r.reply_policy_violation)+'</td></tr>';
     }).join('');
     const error=state.error?'<div class="notice" style="margin-bottom:12px;border-color:#a33;color:#a33">'+esc(state.error)+'</div>':'';
     const manualReview=String(state.manualReviewText||'');
@@ -1472,7 +1478,7 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
           '<div class="actions" style="margin-top:12px"><button class="btn" data-action="google-review-open-manager">Read reviews on Google ↗</button></div></div>'+
       '</div>'+
       '<div class="card" style="margin-top:16px"><div class="card-head"><h3>Imported Google reviews</h3><span class="help">Optional API-connected view</span></div>'+
-        (records.length?'<div class="table-wrap"><table><thead><tr><th>Reviewer</th><th>Rating</th><th>Review</th><th>Date</th><th>Business reply</th></tr></thead><tbody>'+rows+'</tbody></table></div>':empty('No reviews imported','The API review list stays empty until Google Business Profile API access and OAuth are configured. Open Google Business Profile to read and answer reviews manually.'))+
+        (records.length?'<div class="table-wrap"><table><thead><tr><th>Reviewer</th><th>Rating</th><th>Review</th><th>Date</th><th>Business reply</th><th>Google moderation state</th></tr></thead><tbody>'+rows+'</tbody></table></div>':empty('No reviews imported','The API review list stays empty until Google Business Profile API access and OAuth are configured. Open Google Business Profile to read and answer reviews manually.'))+
       '</div>'+
       '<div class="notice" style="margin-top:16px">Privacy and attribution: invitations and received Google reviews are separate measures. WashDesk cannot reliably attribute a particular Google review to an individual invoice.</div>';
   }
