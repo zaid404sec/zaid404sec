@@ -63,12 +63,16 @@ if (!businessWebsite.includes('id="reviews"') ||
     !businessWebsite.includes('Google-approved reply')) {
   throw new Error('Public business website is missing its live Google review feed and approved-reply safeguard.');
 }
-const websiteInlineScripts = [...businessWebsite.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
+const websiteScripts = [...businessWebsite.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
+const websiteJsonLd = websiteScripts.filter(match => /\btype=["']application\/ld\+json["']/i.test(match[1]));
+if (!websiteJsonLd.length) throw new Error('Public business website is missing its Schema.org JSON-LD structured data.');
+for (const match of websiteJsonLd) JSON.parse(match[2]);
+const websiteInlineScripts = websiteScripts.filter(match => !/\btype=["']application\/ld\+json["']/i.test(match[1]));
 if (!websiteInlineScripts.length) throw new Error('Public business website has no inline application script.');
 for (const match of websiteInlineScripts) {
-  await transform(match[1], { loader: 'js', target: 'es2020', logLevel: 'silent' });
+  await transform(match[2], { loader: 'js', target: 'es2020', logLevel: 'silent' });
 }
-console.log('PASS: public business website review feed, DOM rendering and JavaScript syntax');
+console.log('PASS: public business website review feed, DOM rendering, Schema.org JSON-LD and JavaScript syntax');
 
 if (!html.includes('google-auto-reply-enabled') || !html.includes('google-review-save-auto-reply') ||
     !html.includes('Only the original Workspace Owner') ||
