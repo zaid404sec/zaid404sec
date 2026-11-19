@@ -278,17 +278,20 @@ function listenForChanges() {
       const incoming = event.new?.payload;
       if (!incoming || !remoteHandler) return;
       try {
-        // The app can defer this event while a billing form is active. Do not
-        // stringify/clone the full business payload on that keystroke-sensitive path.
-        const merged = applyRemote(incoming);
-        if (!merged) {
-          setStatus('Connected · update queued until you leave the current screen');
-          return;
-        }
+        // Drop identical Realtime echoes before touching app state. Applying an
+        // unchanged snapshot first used to trigger needless DOM renders on phones.
         const incomingText = stableStringify(incoming);
         if (incomingText === lastPayloadString) return;
+        const merged = applyRemote(incoming);
+        if (!merged) {
+          setStatus('Connected · update waiting for manual refresh or navigation');
+          return;
+        }
         if (stableStringify(merged) !== incomingText) schedulePush(merged);
-        else setStatus('Connected · live update received');
+        else {
+          lastPayloadString = incomingText;
+          setStatus('Connected · update received and ready');
+        }
       } catch (error) {
         console.error('Prime Auto Care live update merge failed:', error);
         setStatus('Cloud update error · local data is safe');
@@ -342,14 +345,14 @@ function startSafetyRefresh() {
         .maybeSingle();
       if (error || !data?.payload) return;
       if (!remoteHandler) return;
-      const merged = applyRemote(data.payload);
-      if (!merged) return;
       const incomingText = stableStringify(data.payload);
       if (incomingText === lastPayloadString) return;
+      const merged = applyRemote(data.payload);
+      if (!merged) return;
       if (stableStringify(merged) !== incomingText) await publishPayload(merged);
       else {
         lastPayloadString = incomingText;
-        setStatus('Connected · live sync active on all paired devices');
+        setStatus('Connected · update received and ready');
       }
     } catch (error) {
       console.warn('Prime Auto Care sync reconciliation:', error);
