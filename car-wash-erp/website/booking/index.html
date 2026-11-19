@@ -13,6 +13,25 @@ button,input,select,textarea{font:inherit}a{color:inherit}.shell{max-width:1080p
 @media(max-width:760px){.shell{padding:10px 12px 36px}.top{padding:8px 2px 14px}.main-grid{grid-template-columns:1fr}.glass{padding:18px}.hero{border-radius:22px}.slots{grid-template-columns:repeat(3,minmax(0,1fr))}.side{grid-template-columns:1fr 1fr}}
 @media(max-width:440px){.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.side{grid-template-columns:1fr}.top-actions .pill:first-child{display:none}.brand{font-size:11px}.hero h1{font-size:34px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+/* 2.13.0: dark Liquid Glass booking experience, consistent with WashDesk. */
+:root{color-scheme:dark;--ink:#f3f7fd;--muted:#adbbce;--gold:#d9b56c;--gold2:#f1d79e;--line:rgba(220,235,255,.18);--paper:#091321;--glass:rgba(255,255,255,.075)}
+html,body{background:radial-gradient(900px 600px at 10% 0%,rgba(68,117,172,.25),transparent 62%),radial-gradient(720px 520px at 100% 10%,rgba(190,146,73,.14),transparent 58%),linear-gradient(145deg,#080f1b,#111d2e 55%,#091321);color:#f3f7fd}
+header{background:rgba(7,14,24,.64);border:1px solid rgba(225,238,255,.15);backdrop-filter:blur(28px) saturate(165%);-webkit-backdrop-filter:blur(28px) saturate(165%);box-shadow:0 18px 48px rgba(0,0,0,.2)}
+.glass,.card,.summary,.hero-note,.notice,.success,.booking-summary{background:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.045));border:1px solid rgba(225,238,255,.18);box-shadow:0 20px 52px rgba(0,0,0,.23),inset 0 1px 0 rgba(255,255,255,.16);backdrop-filter:blur(26px) saturate(165%);-webkit-backdrop-filter:blur(26px) saturate(165%);color:#f3f7fd}
+.field label,.field .hint,.hint,.step,.hero p,.muted{color:#b4c2d4}
+.field input,.field select,.field textarea{background:rgba(4,11,20,.56);border:1px solid rgba(220,235,255,.2);color:#f4f7fc}
+.field input::placeholder,.field textarea::placeholder{color:#8fa2ba}
+.field select option{background:#101d2e;color:#f3f7fd}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#e0bd76;box-shadow:0 0 0 3px rgba(224,189,118,.16)}
+.slot{background:rgba(255,255,255,.07);border:1px solid rgba(220,235,255,.18);color:#eaf2fc}
+.slot[aria-pressed=true]{background:linear-gradient(135deg,#f1d79e,#c79d53);color:#20170a;border-color:rgba(255,255,255,.5)}
+.btn,.button{background:rgba(255,255,255,.075);border:1px solid rgba(225,238,255,.2);color:#f2f7ff;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.btn-gold,.primary{background:linear-gradient(135deg,#f1d79e,#c79d53);color:#21180a;border-color:rgba(255,255,255,.42)}
+h1,h2,h3,strong{color:#f7f9ff}
+.brand-mark{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2)}
+@media(prefers-reduced-motion:no-preference){.slot,.btn,.glass{transition:background .18s ease,border-color .18s ease,transform .18s ease,box-shadow .18s ease}.slot:hover,.btn:hover{transform:translateY(-1px)}}
+
 </style>
 </head>
 <body>
