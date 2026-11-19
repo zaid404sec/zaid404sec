@@ -30,6 +30,7 @@ The production Supabase project `jkjudmkqaebrgllemris` is already `ACTIVE_HEALTH
 | 20261119090556 | google_oauth_pubsub_vault_setup_20261119 |
 | 20261119142834 | google_vault_setup_wizard |
 | 20261119144606 | google_review_vault_cron |
+| 20261119190447 | booking_create_atomic_notification_events_20261120 |
 
 ## Recovered source files
 
@@ -39,6 +40,7 @@ The following remote migrations had no matching local source file when checked; 
 - `20261119085230_booking_status_atomic_notifications_20261119.sql`
 - `20261119085605_google_ai_key_vault_setup_20261119.sql`
 - `20261119090408_booking_notification_realtime_20261119.sql`
+- `20261119190447_booking_create_atomic_notification_events_20261120.sql`
 
 The existing local source for Google OAuth/Pub/Sub Vault setup, Google Vault wizard, and Google review cron is present under later local filename timestamps. The earlier communications automation migration is also present, but the separate remote migration `20261118052642` needs its exact original SQL recovered before a clean fresh-project replay can be certified.
 
