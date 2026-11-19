@@ -96,6 +96,25 @@ async function hashPhone(value: string) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
+async function hashPairCode(value: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+function createPairCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes, value => alphabet[value % alphabet.length]).join('');
+}
+function bookingActorLabel(req: Request, userId: string) {
+  const agent = req.headers.get('user-agent') || '';
+  let device = 'WashDesk device';
+  if (/CPH2213/i.test(agent)) device = 'OPPO Android phone';
+  else if (/V2427/i.test(agent)) device = 'Android phone';
+  else if (/Android/i.test(agent)) device = 'Android phone';
+  else if (/Windows/i.test(agent)) device = 'Windows desktop';
+  else if (/Macintosh|Mac OS/i.test(agent)) device = 'Mac desktop';
+  return device + ' · ' + userId.slice(-4).toUpperCase();
+}
 async function authenticate(req: Request) {
   const url = env('SUPABASE_URL'), anon = publishableKey(), admin = adminClient();
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
@@ -323,24 +342,62 @@ async function handle(req: Request, body: any) {
   }
 
   const ctx = await authenticate(req);
+  if (action === 'create-notification-pair-code') {
+    if (!ctx.isOwner) throw new Error('Only the original Workspace Owner can create booking-alert pairing codes.');
+    const code = createPairCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const { error } = await ctx.admin.from('pac_booking_notification_pair_codes').insert({
+      workspace_id: ctx.workspace.id,
+      code_hash: await hashPairCode(code),
+      created_by: ctx.user.id,
+      expires_at: expiresAt
+    });
+    if (error) throw new Error('A one-time booking-alert code could not be created. Please retry.');
+    return { pairing_code: code, expires_at: expiresAt, single_use: true };
+  }
+  if (action === 'pair-notifications') {
+    const code = String(body.pairing_code || '').replace(/\\s/g, '').toUpperCase();
+    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(code)) throw new Error('Enter the complete 8-character booking-alert pairing code.');
+    const { data, error } = await ctx.admin.rpc('pac_redeem_booking_notification_pair_code', {
+      p_workspace_id: ctx.workspace.id,
+      p_code_hash: await hashPairCode(code),
+      p_auth_user_id: ctx.user.id
+    });
+    if (error || data !== true) throw new Error(error?.message || 'The booking-alert code is invalid, expired or already used.');
+    return { paired: true, message: 'This device can now receive booking alerts and accept or reject customer requests.' };
+  }
   if (action === 'notifications') {
-    if (!(await canManageBookingNotifications(ctx))) throw new Error('This device is not authorised to receive Prime Auto Care booking alerts.');
+    if (!(await canManageBookingNotifications(ctx))) throw new Error('This device is not authorised to receive Prime Auto Care booking alerts. Ask the Workspace Owner for a one-time pairing code.');
     const { data, error } = await ctx.admin.from('pac_booking_notification_events')
-      .select('id,booking_id,event_type,booking_code,customer_name,customer_phone,vehicle_number,vehicle_type,service_type,booking_date,start_time,is_urgent,source,created_at')
+      .select('id,booking_id,event_type,booking_code,customer_name,customer_phone,vehicle_number,vehicle_type,service_type,booking_date,start_time,is_urgent,source,actor_user_id,actor_label,created_at')
       .eq('workspace_id', ctx.workspace.id)
-      .is('acknowledged_at', null)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(40);
     if (error) throw error;
-    return { notifications: data || [] };
+    const ids = (data || []).map((item: any) => item.id);
+    if (!ids.length) return { notifications: [] };
+    const { data: receipts, error: receiptError } = await ctx.admin.from('pac_booking_notification_receipts')
+      .select('notification_id')
+      .eq('workspace_id', ctx.workspace.id)
+      .eq('auth_user_id', ctx.user.id)
+      .in('notification_id', ids);
+    if (receiptError) throw receiptError;
+    const acknowledged = new Set((receipts || []).map((item: any) => item.notification_id));
+    return { notifications: (data || []).filter((item: any) => !acknowledged.has(item.id)) };
   }
   if (action === 'acknowledge-notification') {
     if (!(await canManageBookingNotifications(ctx))) throw new Error('This device is not authorised to acknowledge Prime Auto Care booking alerts.');
     const id = String(body.id || '');
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Select a valid booking notification.');
-    const { error } = await ctx.admin.from('pac_booking_notification_events').update({
-      acknowledged_at: new Date().toISOString(), acknowledged_by: ctx.user.id
-    }).eq('workspace_id', ctx.workspace.id).eq('id', id).is('acknowledged_at', null);
+    const { data: event, error: eventError } = await ctx.admin.from('pac_booking_notification_events')
+      .select('id').eq('workspace_id', ctx.workspace.id).eq('id', id).maybeSingle();
+    if (eventError || !event) throw new Error('The booking notification was not found.');
+    const { error } = await ctx.admin.from('pac_booking_notification_receipts').upsert({
+      workspace_id: ctx.workspace.id,
+      notification_id: id,
+      auth_user_id: ctx.user.id,
+      acknowledged_at: new Date().toISOString()
+    }, { onConflict: 'notification_id,auth_user_id' });
     if (error) throw error;
     return { ok: true };
   }
@@ -382,34 +439,29 @@ async function handle(req: Request, body: any) {
     return { ok: true, booking };
   }
   if (action === 'update-status') {
+    if (!(await canManageBookingNotifications(ctx))) {
+      throw new Error('This device is not authorised to accept or reject bookings. Ask the Workspace Owner for a one-time booking-alert pairing code.');
+    }
     const allowed = new Set(['confirmed', 'rejected', 'cancelled', 'completed', 'no_show']);
     const status = String(body.status || '');
     const id = String(body.id || '');
     if (!allowed.has(status) || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid booking update.');
-
-    // Status transitions are enforced on the server. Confirm/reject can only act on
-    // a Pending request; terminal or completed bookings cannot be overwritten.
-    const allowedCurrent = status === 'confirmed' || status === 'rejected'
-      ? ['pending']
-      : status === 'cancelled'
-        ? ['pending', 'confirmed', 'rescheduled']
-        : ['confirmed', 'rescheduled'];
-    const now = new Date().toISOString();
-    const updates: any = { status, updated_at: now };
-    if (status === 'confirmed') updates.confirmed_at = now;
-    if (status === 'rejected') {
-      updates.rejected_at = now;
-      updates.rejected_by = ctx.user.id;
+    const actorLabel = bookingActorLabel(req, ctx.user.id);
+    const { data, error } = await ctx.admin.rpc('pac_update_booking_status_and_notify', {
+      p_workspace_id: ctx.workspace.id,
+      p_booking_id: id,
+      p_status: status,
+      p_status_note: String(body.status_note || '').trim().slice(0, 300),
+      p_actor_user_id: ctx.user.id,
+      p_actor_label: actorLabel
+    });
+    if (error || !data) {
+      const message = String(error?.message || 'Booking update failed.');
+      if (/BOOKING_STATUS_CHANGED|BOOKING_NOT_FOUND/i.test(message)) {
+        throw new Error('This booking was already changed on another device. Refresh the list to see the latest decision.');
+      }
+      throw new Error(message);
     }
-    if (status === 'cancelled') updates.cancelled_at = now;
-    if (status === 'completed') updates.completed_at = now;
-    updates.status_note = String(body.status_note || '').trim().slice(0, 300) || null;
-
-    const { data, error } = await ctx.admin.from('pac_bookings').update(updates)
-      .eq('workspace_id', ctx.workspace.id).eq('id', id).in('status', allowedCurrent)
-      .select('*').maybeSingle();
-    if (error) throw new Error(error.message || 'Booking update failed.');
-    if (!data) throw new Error('Booking was not found or its status changed. Refresh the list before trying again.');
     return { ok: true, booking: data };
   }
   if (action === 'save-settings') {
