@@ -1,48 +1,47 @@
 # Prime Auto Care — Google Review Center setup guide
 
-This guide is for WashDesk 2.12.1 and the existing Prime Auto Care Supabase project.
+This guide is for the WashDesk 2.13 app and the existing Prime Auto Care Supabase project.
 
-## First: understand the two different credentials
+## The important distinction
 
-- **Google Business Profile API access** is for reading reviews, syncing review changes and publishing an approved business reply. It requires a Google Cloud project, Basic API Access approval and Google OAuth consent.
-- **OpenRouter API key** is only the AI provider credential for drafting review responses and Google post content. It is not a Google credential and cannot enable Google Business Profile API access.
+Google Business Profile API access and AI text generation are two different services:
 
-The OpenRouter key previously pasted into chat is exposed. Revoke that key and create a replacement. Never add the replacement to the APK, Windows installer, GitHub source, local storage, or chat. Add it only in Supabase Edge Function Secrets as \`OPENROUTER_API_KEY\`.
+- **Google Business Profile API** lets WashDesk retrieve reviews, monitor review changes and publish business replies. Google must approve the Cloud project for Basic API Access. No app or pairing code can bypass that approval.
+- **OpenRouter** supplies the AI model used to draft replies and marketing content. It does not grant Google Business Profile access.
 
-## 1. Check Business Profile eligibility
+The OpenRouter key previously pasted into this chat is exposed. Revoke it in OpenRouter and create a replacement. Do not paste the replacement into this chat, a GitHub file, an APK or a screenshot. Enter it only in the WashDesk Setup wizard described below.
 
-Use the Google account that is listed as an owner or manager of PRIME AUTO CARE.
+## Public Prime Auto Care links
 
-1. Open the <https://business.google.com/> Business Profile manager.
-2. Confirm PRIME AUTO CARE is verified and has been active for more than 60 days.
-3. Publish the business website and add the same website URL to the Business Profile under **Edit profile → Contact → Website**.
-4. Keep the profile complete and current, including address, phone, services and hours.
+The public pages are served by the existing Supabase project so they do not depend on GitHub Pages deployment settings:
 
-Google's prerequisites and Basic API Access application: <https://developers.google.com/my-business/content/prereqs>.
+- Business website: <https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-website>
+- Customer booking page: <https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking>
 
-## 2. Create or select the Google Cloud project
+Use the business website URL in Google Business Profile under **Edit profile → Contact → Website**. Use the booking URL in WhatsApp, invoices and the WashDesk Bookings page.
+
+## 1. Confirm Google Business Profile eligibility
+
+Sign in to <https://business.google.com/> using the Google account that owns or manages PRIME AUTO CARE.
+
+Google's current prerequisites include a verified Business Profile that has been active for more than 60 days, plus an official business website listed on the profile. Keep the profile details complete and current: <https://developers.google.com/my-business/content/prereqs>.
+
+## 2. Create the Google Cloud project and request Basic API Access
 
 1. Open <https://console.cloud.google.com/>.
-2. Sign in with the Business Profile owner/manager account.
-3. Create a project named **Prime Auto Care WashDesk Reviews**, or select the project that will own the integration.
-4. On the project's Dashboard, copy the numeric **Project Number** (not the project name and not the project ID).
-5. In WashDesk → Google Review Center → Setup wizard, paste the numeric Project Number and press **Save project number**.
+2. Create or select a project for Prime Auto Care.
+3. Open the project's Dashboard and copy its numeric **Project Number** (not the project name or Project ID).
+4. In WashDesk, open **Google Review Center → Setup wizard**.
+5. Paste the numeric Project Number into **Google Cloud Project Number** and save it.
+6. Open Google's prerequisites page and submit the **Application for Basic API Access** for this same project: <https://developers.google.com/my-business/content/prereqs>.
+7. Use an email address that is an owner or manager of the Prime Auto Care Business Profile.
+8. Wait for Google's approval email.
 
-The number is saved against the existing workspace; no Workspace Owner role is changed.
+To check approval, open Google Cloud Console → APIs & Services → Enabled APIs & services → Quotas. Google's documentation says 0 QPM means API access has not been granted; 300 QPM indicates the standard approved quota. Do not repeatedly request a quota increase while the project remains unapproved.
 
-## 3. Request Google Business Profile Basic API Access
+## 3. Enable the seven Business Profile APIs
 
-1. Open the Google prerequisites page.
-2. Select the same Google Cloud project.
-3. Submit Google's **Application for Basic API Access** form.
-4. Enter the numeric Project Number and use an email that is listed as an owner/manager on PRIME AUTO CARE.
-5. Wait for Google's review and approval email.
-
-To check approval, open **Google Cloud Console → APIs & Services → Enabled APIs & services → Quotas** for the Business Profile APIs. Google's documentation describes 0 QPM as not approved and 300 QPM as approved. WashDesk cannot apply for or grant Google's approval on Google's behalf.
-
-## 4. Enable the Business Profile APIs
-
-After Google approves the project, open <https://console.cloud.google.com/apis/library> and enable these seven Business Profile APIs:
+After Basic API Access is approved, enable the seven APIs listed in Google's official Basic setup guide:
 
 1. Google My Business API
 2. My Business Account Management API
@@ -52,102 +51,95 @@ After Google approves the project, open <https://console.cloud.google.com/apis/l
 6. My Business Verifications API
 7. My Business Business Information API
 
-Google's Basic setup guide: <https://developers.google.com/my-business/content/basic-setup>.
+Official guide: <https://developers.google.com/my-business/content/basic-setup>.
 
-## 5. Create the OAuth Web Client
+## 4. Create the Google OAuth Web Client
 
 1. Open <https://console.cloud.google.com/auth/clients>.
-2. Choose **Create client → Web application**.
-3. Add the exact authorised redirect URI displayed in the WashDesk setup wizard:
+2. Create an OAuth client with application type **Web application**.
+3. In WashDesk → Google Review Center → Setup wizard, copy the exact **Authorised redirect URI** displayed in the Google OAuth section.
+4. Add that exact URI to the OAuth Web Client's **Authorised redirect URIs**.
+5. Copy the OAuth **Client ID** and **Client Secret**.
+6. Return to WashDesk → Setup wizard and paste both into **OAuth Client ID** and **OAuth Client Secret**.
+7. Press **Save OAuth client securely**.
 
-   \`https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-oauth-callback\`
+WashDesk stores these credentials and its generated AES-256 token-encryption key in Supabase Vault. You do not need to open Supabase Edge Function Secrets or run SQL manually for the OAuth credentials.
 
-4. Create the client and copy the **Client ID** and **Client Secret**.
-5. In <https://supabase.com/dashboard/project/jkjudmkqaebrgllemris/functions/secrets>, add the following Edge Function Secrets:
+OAuth still requires one explicit Google consent from the original Business Profile Owner. WashDesk never asks for the Google password inside the app. Official OAuth guide: <https://developers.google.com/my-business/content/implement-oauth>.
 
-| Secret name | Value |
-|---|---|
-| \`GOOGLE_OAUTH_CLIENT_ID\` | OAuth Web Client ID |
-| \`GOOGLE_OAUTH_CLIENT_SECRET\` | OAuth Web Client Secret |
-| \`GOOGLE_OAUTH_REDIRECT_URI\` | Exact callback URI above |
-| \`GOOGLE_TOKEN_ENCRYPTION_KEY\` | Base64 encoding of 32 random bytes |
+## 5. Connect the original Business Profile Owner
 
-Do not put any of these values in a source file, APK, browser field, screenshot or GitHub repository. Supabase Edge Function Secrets is the server-side location for them.
+1. Ensure the account email shown in Google Review Center is the account that owns the Prime Auto Care Business Profile.
+2. Press **Connect Google Owner Account**.
+3. In the official Google consent screen, sign in to the original Business Profile Owner account.
+4. Review and approve the Business Profile access request.
+5. Return to WashDesk. The setup status should show **Google Owner OAuth — Ready**.
+6. Press **Sync reviews** and confirm the review count and last successful sync timestamp.
 
-## 6. Connect the original Google Business Profile owner in WashDesk
+This Google consent is separate from the existing WashDesk device pairing. Pairing authenticates a phone to your Prime Auto Care workspace; Google consent authorises the app to access the Business Profile.
 
-1. Open the installed WashDesk app on a device already paired to the Prime Auto Care workspace.
-2. Open **Google Review Center → Setup wizard**.
-3. Refresh setup status and confirm the OAuth items display **Ready**.
-4. Press **Connect Google Owner Account**.
-5. In the Google consent page, choose the original Business Profile owner account configured for PRIME AUTO CARE (currently recorded in the workspace as \`bmumz3909@gmail.com\`).
-6. Review and approve the Business Profile scope.
-7. Return to WashDesk. The wizard should show the Google account as connected.
-8. Press **Sync reviews** and confirm review rows and a successful sync timestamp appear.
+## 6. Save the OpenRouter AI key
 
-The existing WashDesk pairing/session authenticates the app to its own workspace. It does not replace Google's separate consent for access to the Business Profile. WashDesk must never ask the user to type a Google password into the app.
+1. Open <https://openrouter.ai/keys> and create a replacement key.
+2. In WashDesk → Google Review Center → Setup wizard, paste it into **Replacement OpenRouter API key**.
+3. Press **Save AI key securely**.
+4. The field clears after saving. The key is stored in Supabase Vault and is not returned to the app.
 
-## 7. Configure Google Pub/Sub notifications
+WashDesk uses the `openrouter/free` model route. OpenRouter currently documents 20 requests per minute and 50 requests per day for free-variant accounts without qualifying credits; provider/model availability can change. See <https://openrouter.ai/collections/free-models>.
 
-This enables event-driven review updates. Google still controls delivery timing; it is not a guaranteed one-second response service.
+## 7. Configure Google Pub/Sub review notifications
 
-1. In the same Google Cloud project, open <https://console.cloud.google.com/cloudpubsub>.
-2. Create a topic such as \`prime-auto-care-reviews\` and copy its full resource name:
-   \`projects/PROJECT_ID/topics/prime-auto-care-reviews\`.
-3. Grant the Google Business Profile publisher identity \`mybusiness-api-pubsub@system.gserviceaccount.com\` the **Pub/Sub Publisher** role on that topic.
-4. Create an authenticated push subscription targeting:
+Pub/Sub is Google's mechanism for delivering new and updated review events. Set it up once in the same Google Cloud project:
 
-   \`https://jkjudmkqaebrgllemris.supabase.co/functions/v1/google-review-pubsub-webhook\`
+1. Open <https://console.cloud.google.com/cloudpubsub>.
+2. Create a topic named `prime-auto-care-reviews`.
+3. Copy the complete topic resource name, for example `projects/PROJECT_ID/topics/prime-auto-care-reviews`.
+4. Grant `mybusiness-api-pubsub@system.gserviceaccount.com` the **Pub/Sub Publisher** role on that topic.
+5. Create a dedicated Google Cloud service account for authenticated push delivery, for example `prime-auto-care-push@PROJECT_ID.iam.gserviceaccount.com`.
+6. Create a **Push** subscription for the topic.
+7. Use the exact **Authenticated push URL / OIDC audience** shown in WashDesk → Setup wizard for both the push endpoint and the OIDC audience.
+8. Enable authentication and select the dedicated push service account.
+9. Grant the Pub/Sub service agent `service-PROJECT_NUMBER@gcp-sa-pubsub.iam.gserviceaccount.com` the **Service Account Token Creator** role on the push service account. The user creating the subscription also needs permission to attach that service account (the `iam.serviceAccounts.actAs` permission, commonly granted through Service Account User).
 
-5. Use a dedicated push service account and set its OIDC audience to the exact webhook URL above.
-6. Grant the Pub/Sub service agent permission to mint tokens for that push service account (the Service Account Token Creator role on that service account).
-7. In Supabase Edge Function Secrets, add:
+Google's official notification guide: <https://developers.google.com/my-business/content/notification-setup>. Google's authenticated push guide: <https://cloud.google.com/pubsub/docs/authenticate-push-subscriptions>.
 
-| Secret name | Purpose |
-|---|---|
-| \`GOOGLE_REVIEW_WORKER_SECRET\` | Long random secret used only for internal worker calls |
-| \`GOOGLE_PUBSUB_TOPIC_NAME\` | Full Pub/Sub topic resource name |
-| \`GOOGLE_PUBSUB_AUDIENCE\` | Exact webhook URL |
-| \`GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT\` | Push service account email |
+10. Copy the full topic resource name and push service-account email into WashDesk → Setup wizard → **Instant Google review notifications (Pub/Sub)**.
+11. Press **Save Pub/Sub settings securely**. WashDesk generates its internal worker token and stores it in Supabase Vault; you do not create or paste that internal token.
+12. Press **Enable Google review alerts**. WashDesk registers the topic with the Google Business Profile account.
+13. When a new review arrives, the webhook validates Google's OIDC token, the worker syncs the review and the moderation state is stored with the reply record.
 
-8. Return to WashDesk → Setup wizard and refresh status. Once the Pub/Sub items are ready, press **Enable Google review alerts**.
-9. Run a test event and confirm the event appears in the Google Review event table and the worker sync log.
+Google delivers notifications asynchronously; this is event-driven, not a guaranteed instant/one-second service.
 
-Google notification guide: <https://developers.google.com/my-business/content/notification-setup>.
+## 8. Test before enabling automatic replies
 
-## 8. Configure the AI provider key
-
-1. Revoke the OpenRouter key that was pasted into chat.
-2. Create a replacement at <https://openrouter.ai/keys>.
-3. Open Supabase → Edge Function Secrets.
-4. Add the replacement value as \`OPENROUTER_API_KEY\`.
-5. Return to the WashDesk AI Growth Studio / Google Review Center and press **Test free AI**.
-
-WashDesk calls \`openrouter/free\` on the server. The key is not stored in the browser or sent back to the client. OpenRouter documents free model limits of 20 requests per minute and 50 requests per day for a free account; provider/model availability can vary. See <https://openrouter.ai/collections/free-models>.
-
-## 9. Turn on automatic review replies only after all tests pass
-
-Automatic replies remain Off by default. The Original Workspace Owner should enable them only after:
+Keep automatic replies Off until all of these checks succeed:
 
 - Google Basic API Access is approved.
-- Owner OAuth is connected.
-- A manual review sync succeeds.
-- Pub/Sub notification registration and test event delivery succeed.
-- The replacement OpenRouter key and worker secret are configured.
+- OAuth Web Client is saved and the original Business Profile Owner is connected.
+- Manual review sync succeeds.
+- Pub/Sub topic and authenticated push subscription are configured and review notifications are enabled.
+- The replacement OpenRouter key is saved and a free AI test succeeds.
+- A test reply is reviewed and its Google moderation status is confirmed.
 
-The system only considers the exact new/updated review associated with a Pub/Sub event. It skips existing Google replies and holds low ratings or detected complaint language for human review. Google may show a reply as **Pending moderation** or **Rejected**. WashDesk displays that state and the public website only displays a business reply when Google reports it as **APPROVED**.
-
-There is no guaranteed one-second publication SLA. Pub/Sub delivery, AI generation, Google API response and Google's moderation status each introduce variable delay.
+Automatic replies remain disabled by default. The app checks for Google's returned reply state and does not label a reply as published unless Google confirms approval. Replies that are pending, rejected, mismatched or not confirmed remain visibly distinct.
 
 ## Troubleshooting
 
 | What you see | What to check |
 |---|---|
-| OAuth button disabled | Set all four OAuth secrets and confirm the redirect URI is an exact match. |
-| Google returns 403 / access pending | Basic API Access is not yet approved, the wrong Cloud project is used, or the required API has not been enabled. |
-| Google authorises the wrong account | Reconnect with the original PRIME AUTO CARE Business Profile owner account. |
-| Notifications stay disabled | Check the topic publisher permission, push subscription, OIDC audience/service account, and four Pub/Sub secrets. |
-| AI test says server key missing | Add the replacement \`OPENROUTER_API_KEY\` in Supabase Edge Function Secrets and refresh the wizard. |
-| AI says quota exceeded | OpenRouter free quota may have been reached; wait for reset or use a different approved provider/model. |
-| Reply shows Pending moderation | Google accepted the request but has not approved the reply for public display yet. Do not resubmit repeatedly. |
-| Reply shows Rejected | Review Google's policy feedback and prepare a compliant replacement for human review. |
+| API access still says `access_pending` | Google Basic API Access approval has not been granted yet. Check the project quota in Google Cloud. |
+| OAuth client cannot be saved | Confirm you are signed in as the original WashDesk Workspace Owner and copied the Web Client ID and Secret correctly. |
+| Redirect URI mismatch | Copy the URI from the WashDesk wizard and paste it exactly in the OAuth Web Client. |
+| Wrong Google account | Reconnect using the Google account that owns or manages PRIME AUTO CARE. |
+| Pub/Sub identity mismatch | Confirm the subscription uses the exact endpoint and audience displayed in WashDesk, the correct service account, and the Pub/Sub service-agent Token Creator permission. |
+| AI key is not configured | Revoke the exposed key, create a replacement and save it in the WashDesk Setup wizard. |
+| AI rate limit reached | OpenRouter free variants are currently limited to 50 requests/day and 20 requests/minute for accounts without qualifying credits. Wait for the quota reset or choose a paid model explicitly. |
+| Reply remains pending | Google has not yet confirmed moderation approval. Do not treat a submitted reply as publicly approved. |
+
+## Security and ownership
+
+- The original WashDesk Workspace Owner record is not changed by this setup.
+- Only the original Workspace Owner can save/rotate Google OAuth, OpenRouter and internal Pub/Sub secrets.
+- Secret values are stored in Supabase Vault. The app receives readiness flags, not the values.
+- Do not place service-role keys, Google Client Secrets, Google refresh tokens, OpenRouter keys or internal worker tokens in GitHub, APKs, browser storage or screenshots.
+- Do not enable automatic reply publication until the end-to-end checks above pass.
