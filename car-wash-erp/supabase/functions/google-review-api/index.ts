@@ -43,6 +43,25 @@ function randomToken(bytes = 32) { return base64Url(crypto.getRandomValues(new U
 async function sha256(value: string) {
   return base64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))));
 }
+async function getOpenRouterKey(ctx: Context) {
+  const { data, error } = await ctx.service.rpc('pac_get_openrouter_key', { p_workspace_id: ctx.workspace.id });
+  if (error) throw error;
+  return String(data || env('OPENROUTER_API_KEY') || '').trim();
+}
+async function saveOpenRouterKey(ctx: Context, value: unknown) {
+  requireOriginalWorkspaceOwner(ctx);
+  const key = String(value || '').trim();
+  if (!/^sk-or-v1-[A-Za-z0-9_-]{20,}$/.test(key) || key.length > 512) {
+    throw new Error('Enter a valid replacement OpenRouter API key beginning with sk-or-v1-.');
+  }
+  const { data, error } = await ctx.service.rpc('pac_store_openrouter_key', {
+    p_workspace_id: ctx.workspace.id,
+    p_auth_user_id: ctx.user.id,
+    p_secret: key
+  });
+  if (error || data !== true) throw new Error('The AI key could not be saved securely in Supabase Vault.');
+  return { saved: true, provider: 'openrouter', key_configured: true };
+}
 function secretServiceKey() {
   const legacy = env('SUPABASE_SERVICE_ROLE_KEY');
   if (legacy) return legacy;
@@ -117,8 +136,8 @@ async function saveAutoReplySettings(ctx: Context, settings: any) {
     if (readiness.notifications_enabled !== true) {
       throw new Error('Enable Google Pub/Sub review notifications and confirm the notification setting before enabling automatic replies.');
     }
-    if (!Deno.env.get('OPENROUTER_API_KEY')?.trim()) {
-      throw new Error('Add the replacement OPENROUTER_API_KEY to Supabase Edge Function Secrets before enabling automatic replies.');
+    if (!(await getOpenRouterKey(ctx))) {
+      throw new Error('Save a replacement OpenRouter AI key in Google Review Center → Setup wizard before enabling automatic replies.');
     }
     if (!Deno.env.get('GOOGLE_REVIEW_WORKER_SECRET')?.trim()) {
       throw new Error('Configure GOOGLE_REVIEW_WORKER_SECRET in Supabase before enabling automatic replies.');
@@ -405,9 +424,9 @@ async function runFreeAi(ctx: Context, body: any) {
   requireGoogleReviewAdmin(ctx);
   const provider = String(body.provider || 'openrouter');
   if (provider !== 'openrouter') throw new Error('This build supports the OpenRouter free-model route only.');
-  const apiKey = env('OPENROUTER_API_KEY');
+  const apiKey = await getOpenRouterKey(ctx);
   if (!apiKey || apiKey.length < 20 || apiKey.length > 512) {
-    throw new Error('The server-side free AI key is not configured. The original Workspace Owner must add OPENROUTER_API_KEY in Supabase Edge Function Secrets. Do not paste keys into the app.');
+    throw new Error('The original Workspace Owner must save a replacement OpenRouter key in the Google Review Center Setup wizard. It is stored encrypted in Supabase Vault.');
   }
   const model = String(body.model || 'openrouter/free').trim();
   if (model !== 'openrouter/free' && !model.endsWith(':free')) throw new Error('Paid model IDs are blocked. Use openrouter/free or a model whose ID ends in :free.');
@@ -772,7 +791,7 @@ async function status(ctx: Context) {
   const pubsubAudienceReady = !!env('GOOGLE_PUBSUB_AUDIENCE');
   const pubsubPushAccountReady = !!env('GOOGLE_PUBSUB_PUSH_SERVICE_ACCOUNT');
   const workerSecretReady = !!env('GOOGLE_REVIEW_WORKER_SECRET');
-  const openRouterKeyReady = !!env('OPENROUTER_API_KEY');
+  const openRouterKeyReady = !!(await getOpenRouterKey(ctx).catch(() => ''));
   const oauthCredentialsReady = oauthClientIdReady && oauthClientSecretReady && oauthRedirectReady && encryptionKeyReady;
   const pubsubCredentialsReady = pubsubTopicReady && pubsubAudienceReady && pubsubPushAccountReady && workerSecretReady;
   return {
@@ -843,6 +862,7 @@ async function handle(ctx: Context, body: any) {
   }
   if (action === 'save-settings') return ownerSettings(ctx, body.settings || {});
   if (action === 'save-google-project-number') return saveGoogleProjectNumber(ctx, body.project_number);
+  if (action === 'save-openrouter-key') return saveOpenRouterKey(ctx, body.api_key);
   if (action === 'save-auto-reply-settings') return saveAutoReplySettings(ctx, body.settings || {});
   if (action === 'connect') return startOAuth(ctx);
   if (action === 'enable-notifications') {
