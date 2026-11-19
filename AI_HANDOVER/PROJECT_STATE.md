@@ -1,3 +1,44 @@
+# Current verified state — 20 November 2026
+
+> This current-state section supersedes older historical status notes below. Preserve the existing data and original Workspace Owner.
+
+## Source control and build
+- Repository: https://github.com/zaid404sec/zaid404sec
+- Production baseline: `main` commit `03191af76a703cb341eca88ac651bc331a935a32`, WashDesk 2.13.
+- Active PR: [#68 — Google Review Vault pairing and booking fixes](https://github.com/zaid404sec/zaid404sec/pull/68).
+- Current application-code commit: `7fc672256364ce61bee2d8979080106b1042f688`.
+- Latest CI run for that code commit: [Run #445919](https://github.com/zaid404sec/zaid404sec/actions/runs/44591948369); Edge Function type-check passed, Android and Windows build jobs were still running at last check. Do not merge until all checks pass.
+- Main app package remains `com.washdesk.carwash.v24`.
+
+## Production Supabase
+- Project: `jkjudmkqaebrgllemris`, status `ACTIVE_HEALTHY`, region `ap-northeast-2`.
+- Active functions: `google-review-api` v10, `google-review-oauth-callback` v4, `google-review-worker` v6, `google-review-pubsub-webhook` v2, `booking-api` v9, `prime-auto-care-website` v1, `prime-auto-care-booking` v1, `prime-auto-care-site` v3, `public-reviews` v3.
+- Business website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/
+- Public booking page: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
+- Google Review Center's saved `website_url` already points to the Supabase business website, not GitHub Pages.
+
+## Booking and notifications
+- Public booking is enabled for `prime-auto-care`, Asia/Kolkata, 08:00–19:00, 30-minute slots, capacity 1, 14-day horizon.
+- The booking database uses a per-workspace/per-day PostgreSQL advisory transaction lock and checks overlapping pending/confirmed/rescheduled bookings before insert. This prevents two simultaneous requests from claiming the same capacity slot.
+- Booking API v9 supports owner-issued one-time phone pairing codes (8 digits, 10-minute expiry, single use) and per-device receipts. Acknowledging an alert on one phone does not clear it for other phones.
+- Last database check: 34 paired workspace members, 1 authorised booking-notification device, 0 unused pairing codes, 0 per-device receipts, 0 booking records and 0 booking notification events. Generate a separate code on the original Owner phone for each additional device; each signed-in paired device redeems its own code.
+- Android local booking alerts work while WashDesk is active and permission is granted. Background delivery when the app is fully closed still requires remote push/FCM configuration; do not promise it until tested.
+
+## Google Reviews setup
+- Vault-backed OAuth app config, OpenRouter key storage and Pub/Sub worker secret storage are implemented and deployed.
+- Last database check: 0 OAuth app configs, 0 original-owner OAuth connections, 0 OpenRouter Vault keys, 0 Pub/Sub worker secrets and 0 enabled Google Review notification settings.
+- Google Basic API Access approval, original-owner Google OAuth consent, Pub/Sub topic/subscription/OIDC configuration and a replacement AI key are still required. Auto-replies remain disabled by default.
+- An OpenRouter key was exposed in chat. Revoke it and create a replacement; enter the replacement only through WashDesk Setup. Never commit or reuse the exposed key.
+
+## 2.13 baseline features
+- Half-day attendance salary deduction is exactly 50% of the calendar-day rate.
+- Dark Liquid Glass app and booking UI are implemented; printed invoices remain paper-white.
+- Dashboard automatic full reloads are reduced; manual refresh is available.
+- Vehicle categories distinguish Private Car, Private SUV, Taxi and Commercial Transport.
+- Keep old source, APK, business records and existing owner identity intact. Never reset or reseed production data.
+
+---
+
 # Project state — Prime Auto Care / WashDesk
 
 _Last verified: 19 November 2026_
