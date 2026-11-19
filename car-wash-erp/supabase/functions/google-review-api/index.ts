@@ -875,7 +875,7 @@ async function status(ctx: Context) {
       oauth_credentials_ready: oauthCredentialsReady,
       oauth_callback_url: redirectUri,
       oauth_connected: !!credentials.data?.workspace_id,
-      pubsub_webhook_url: env('SUPABASE_URL').replace(/\\/$/, '') + '/functions/v1/google-review-pubsub-webhook',
+      pubsub_webhook_url: (() => { const base = env('SUPABASE_URL'); return (base.endsWith('/') ? base.slice(0, -1) : base) + '/functions/v1/google-review-pubsub-webhook'; })(),
       pubsub_topic_configured: pubsubTopicReady,
       pubsub_audience_configured: pubsubAudienceReady,
       pubsub_push_service_account_configured: pubsubPushAccountReady,
