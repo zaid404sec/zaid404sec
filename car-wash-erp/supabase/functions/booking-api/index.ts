@@ -139,7 +139,7 @@ async function createBooking(admin: any, settings: any, input: any, source: 'pub
   const bookingCode = 'PAC-' + bookingDate.replace(/-/g, '') + '-' +
     Array.from(crypto.getRandomValues(new Uint8Array(3))).map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
   const phoneHash = await hashPhone(phone);
-  const { data, error } = await admin.rpc('pac_create_booking', {
+  const { data, error } = await admin.rpc('pac_create_booking_with_urgency', {
     p_workspace_id: settings.workspace_id,
     p_booking_code: bookingCode,
     p_customer_name: name,
@@ -153,11 +153,92 @@ async function createBooking(admin: any, settings: any, input: any, source: 'pub
     p_duration_minutes: duration,
     p_notes: notes,
     p_source: source,
-    p_created_by: userId
+    p_created_by: userId,
+    p_is_urgent: input.is_urgent === true
   });
   if (error) throw new Error(error.message || 'This time slot is no longer available. Choose another time.');
+  await recordBookingCreated(admin, settings, data, {
+    customer_name: name, customer_phone: phone, vehicle_number: vehicle,
+    vehicle_type: vehicleType, service_type: service, booking_date: bookingDate,
+    start_time: startTime, is_urgent: input.is_urgent === true, source
+  });
   return data;
 }
+async function recordBookingCreated(admin: any, settings: any, booking: any, details: any) {
+  if (!booking?.id) return;
+  const event = {
+    workspace_id: settings.workspace_id,
+    booking_id: booking.id,
+    event_type: 'booking_created',
+    booking_code: String(booking.booking_code || ''),
+    customer_name: String(details.customer_name || ''),
+    customer_phone: String(details.customer_phone || ''),
+    vehicle_number: String(details.vehicle_number || ''),
+    vehicle_type: String(details.vehicle_type || ''),
+    service_type: String(details.service_type || ''),
+    booking_date: String(details.booking_date || ''),
+    start_time: String(details.start_time || ''),
+    is_urgent: details.is_urgent === true,
+    source: details.source === 'staff' ? 'staff' : 'public',
+    delivery_status: 'in_app'
+  };
+  const { data: notification, error } = await admin.from('pac_booking_notification_events')
+    .upsert(event, { onConflict: 'workspace_id,booking_id,event_type' })
+    .select('id').single();
+  if (error) {
+    console.error('Booking was created, but its in-app notification could not be saved:', error.message);
+    return;
+  }
+  const target = String(settings.notification_phone || '').trim();
+  const template = String(settings.notification_whatsapp_template || '').trim();
+  if (settings.notification_channel !== 'whatsapp' || !target || !template) return;
+  try {
+    const { data: provider } = await admin.from('pac_communication_settings')
+      .select('whatsapp_phone_number_id,whatsapp_language')
+      .eq('workspace_id', settings.workspace_id).maybeSingle();
+    if (!provider?.whatsapp_phone_number_id) return;
+    const phone = normalizePhone(target);
+    const urgentLabel = details.is_urgent === true ? 'URGENT BOOKING' : 'New booking request';
+    const message = [
+      urgentLabel + ' · Prime Auto Care',
+      'Ref: ' + String(booking.booking_code || ''),
+      'Customer: ' + details.customer_name,
+      'Mobile: ' + details.customer_phone,
+      'Vehicle: ' + details.vehicle_number + ' · ' + details.vehicle_type,
+      'Service: ' + details.service_type,
+      'Date/time: ' + details.booking_date + ' ' + details.start_time,
+      'Source: ' + (details.source === 'staff' ? 'Staff / phone booking' : 'Customer website'),
+      'Status: Pending — confirm in WashDesk'
+    ].join('\\n');
+    const { data: job, error: jobError } = await admin.from('pac_communication_jobs').insert({
+      workspace_id: settings.workspace_id,
+      campaign_id: null,
+      customer_id: null,
+      channel: 'whatsapp',
+      purpose: 'service',
+      recipient_e164: phone,
+      recipient_name: 'Prime Auto Care',
+      status: 'queued',
+      payload: {
+        template_name: template,
+        language: String(provider.whatsapp_language || 'en'),
+        message
+      },
+      idempotency_key: 'booking-alert:' + String(booking.id),
+      attempts: 0,
+      max_attempts: 5,
+      scheduled_at: new Date().toISOString()
+    }).select('id').single();
+    if (jobError) throw jobError;
+    await admin.from('pac_booking_notification_events').update({
+      delivery_status: 'queued', communication_job_id: job.id
+    }).eq('id', notification.id);
+  } catch (notifyError) {
+    console.error('Booking saved; WhatsApp owner alert was not queued:', notifyError instanceof Error ? notifyError.message : 'unknown');
+    await admin.from('pac_booking_notification_events').update({ delivery_status: 'failed' }).eq('id', notification.id);
+  }
+}
+
 async function slotsFor(admin: any, settings: any, dateValue: unknown, serviceValue: unknown) {
   const date = parseDate(dateValue);
   const duration = durationFor(String(serviceValue || ''));
@@ -229,6 +310,25 @@ async function handle(req: Request, body: any) {
   }
 
   const ctx = await authenticate(req);
+  if (action === 'notifications') {
+    const { data, error } = await ctx.admin.from('pac_booking_notification_events')
+      .select('id,booking_id,event_type,booking_code,customer_name,customer_phone,vehicle_number,vehicle_type,service_type,booking_date,start_time,is_urgent,source,created_at')
+      .eq('workspace_id', ctx.workspace.id)
+      .is('acknowledged_at', null)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    return { notifications: data || [] };
+  }
+  if (action === 'acknowledge-notification') {
+    const id = String(body.id || '');
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Select a valid booking notification.');
+    const { error } = await ctx.admin.from('pac_booking_notification_events').update({
+      acknowledged_at: new Date().toISOString(), acknowledged_by: ctx.user.id
+    }).eq('workspace_id', ctx.workspace.id).eq('id', id).is('acknowledged_at', null);
+    if (error) throw error;
+    return { ok: true };
+  }
   if (action === 'list') {
     let query = ctx.admin.from('pac_bookings').select('*')
       .eq('workspace_id', ctx.workspace.id)
@@ -237,6 +337,17 @@ async function handle(req: Request, body: any) {
       .limit(300);
     if (body.from_date) query = query.gte('booking_date', parseDate(body.from_date));
     if (body.to_date) query = query.lte('booking_date', parseDate(body.to_date));
+    if (body.status && ['pending','confirmed','rescheduled','cancelled','completed','no_show'].includes(String(body.status))) {
+      query = query.eq('status', String(body.status));
+    }
+    if (body.vehicle_type && vehicleTypes.includes(String(body.vehicle_type))) query = query.eq('vehicle_type', String(body.vehicle_type));
+    if (body.service_type && ['Regular Wash','Foam Wash','Wax & Shine','Outside Wash'].includes(String(body.service_type))) query = query.eq('service_type', String(body.service_type));
+    if (body.is_urgent === true || body.is_urgent === false) query = query.eq('is_urgent', body.is_urgent);
+    const search = String(body.search || '').replace(/[^a-zA-Z0-9 -]/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 60);
+    if (search.length >= 2) {
+      const pattern = '%' + search + '%';
+      query = query.or('customer_name.ilike.' + pattern + ',customer_phone.ilike.' + pattern + ',vehicle_number.ilike.' + pattern + ',booking_code.ilike.' + pattern);
+    }
     const { data, error } = await query;
     if (error) throw error;
     const { data: settings, error: settingsError } = await ctx.admin.from('pac_booking_settings')
@@ -273,16 +384,28 @@ async function handle(req: Request, body: any) {
     const slot = Number(input.slot_minutes || 30);
     const capacity = Number(input.slot_capacity || 1);
     const horizon = Number(input.horizon_days || 14);
+    const notificationChannel = String(input.notification_channel || 'in_app');
+    const notificationPhone = String(input.notification_phone || '').trim();
+    const notificationTemplate = String(input.notification_whatsapp_template || '').trim();
     if (!/^\d{2}:\d{2}$/.test(opening) || !/^\d{2}:\d{2}$/.test(closing) ||
         minutes(closing) <= minutes(opening) || ![15, 30, 60].includes(slot) ||
         !Number.isInteger(capacity) || capacity < 1 || capacity > 5 ||
         !Number.isInteger(horizon) || horizon < 1 || horizon > 60) {
       throw new Error('Check the opening hours, slot size, capacity and booking window.');
     }
+    if (!['in_app','whatsapp'].includes(notificationChannel)) throw new Error('Choose a valid booking alert channel.');
+    if (notificationChannel === 'whatsapp') {
+      if (!notificationPhone) throw new Error('Enter the owner mobile number for WhatsApp booking alerts.');
+      normalizePhone(notificationPhone);
+      if (!/^[a-z0-9_]{3,80}$/i.test(notificationTemplate)) throw new Error('Enter the approved WhatsApp utility template name.');
+    }
     const { data, error } = await ctx.admin.from('pac_booking_settings').update({
       opening_time: opening, closing_time: closing, slot_minutes: slot,
       slot_capacity: capacity, horizon_days: horizon,
       public_enabled: input.public_enabled === true,
+      notification_channel: notificationChannel,
+      notification_phone: notificationPhone,
+      notification_whatsapp_template: notificationTemplate,
       updated_at: new Date().toISOString()
     }).eq('workspace_id', ctx.workspace.id).select('*').single();
     if (error) throw error;
