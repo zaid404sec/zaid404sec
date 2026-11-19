@@ -178,10 +178,14 @@ if (!html.includes('invoice-template-selector') || !html.includes('Navy Professi
 console.log('PASS: original invoice is the default; alternative professional PDF templates are selectable');
 
 if (!html.includes("if(page!=='dashboard')return true;") ||
-    !html.includes("if(page!==p)applyPendingRemoteData();") ||
-    !html.includes("requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY))")) {
-  throw new Error('Remote updates must not replace active modules and same-page renders must preserve scroll.');
+    !html.includes("if(page!==p){applyPendingRemoteData();remoteRenderPending=false;updateManualRefreshButton()}page=p;") ||
+    !html.includes("function refreshCurrentPage()") ||
+    !html.includes('id="manual-refresh"') ||
+    html.includes("if(canRenderRemoteUpdate())render();") ||
+    !html.includes("requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY)")) {
+  throw new Error('Realtime updates must be staged without auto-render; manual refresh and safe navigation must remain available.');
 }
+console.log('PASS: cloud snapshots do not auto-render; manual refresh and safe navigation preserve UI state');
 if (html.includes('location.reload(') || html.includes('window.location.reload(')) {
   throw new Error('The app must not force-reload the active business screen.');
 }
@@ -281,6 +285,9 @@ const staffBalanceFn=html.slice(staffBalanceStart,staffBalanceEnd);
 const staffBalance=vm.runInNewContext(staffBalanceFn+String.fromCharCode(10)+"calculateStaffStatementBalance({grossAccrual:12000,absenceDeduction:1000,salaryPayments:9000,advanceAdjustments:1500,openAdvances:750})",{});
 if(staffBalance!==-250)throw new Error('Staff statement must preserve negative final balances: '+staffBalance);
 console.log('PASS: employee statements preserve negative final balance values');
+const halfDayStatementBalance = vm.runInNewContext(staffBalanceFn+String.fromCharCode(10)+"calculateStaffStatementBalance({grossAccrual:12000,absenceDeduction:1000,halfDayDeduction:500,salaryPayments:0,advanceAdjustments:0,openAdvances:0})",{});
+if(halfDayStatementBalance!==10500)throw new Error('Staff statement must include half-day deductions: '+halfDayStatementBalance);
+console.log('PASS: staff statements include half-day deductions');
 if (!html.includes("'Staff Member':st.name") ||
     !html.includes("'Statement From':fromDate") ||
     !html.includes("This export contains records for <b>${esc(st.name)}</b> only.") ||
@@ -394,7 +401,7 @@ const mustContain = [
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
   'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
   'pairDevice', 'pairingCode', 'Connect / Pair this device', 'Prime-Auto-Care-',
-  'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'function staffMonthDayCount', 'function staffAttendanceSummary', 'function staffPayrollBreakdown', 'Monthly payroll calculator', 'function staffAttendanceForDate', 'function setStaffAttendanceEntry', 'function removeStaffMember', 'function staffShiftEnd', 'function staffManagerPinDigest', 'function verifyStaffManagerPin', 'staff-attendance-row', 'Manager PIN', 'Daily staff attendance', 'Present', 'Absent', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
+  'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'function staffMonthDayCount', 'function staffAttendanceSummary', 'function staffPayrollBreakdown', 'Monthly payroll calculator', 'function staffAttendanceForDate', 'function setStaffAttendanceEntry', 'function removeStaffMember', 'function staffShiftEnd', 'function staffManagerPinDigest', 'function verifyStaffManagerPin', 'staff-attendance-row', 'Manager PIN', 'Daily staff attendance', 'Present', 'Half Day', 'halfDayDays', 'halfDayDeduction', 'Absent', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
 ];
 for (const token of mustContain) {
   if (!html.includes(token)) throw new Error('Missing feature hook: ' + token);
@@ -534,6 +541,25 @@ if (novemberPayroll.calendarDays !== 30 || novemberPayroll.accruedDays !== 15 ||
   throw new Error('30-day payroll calculation failed: ' + JSON.stringify(novemberPayroll));
 }
 console.log('PASS: 30-day payroll deducts absence days and outstanding advances from monthly salary');
+const halfDayPayroll = vm.runInNewContext(
+  payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2026-11')",
+  {
+    db: { staffAdvances:[], attendance:[
+      {staffId:'staff-1',date:'2026-11-02',status:'Half Day',updatedAt:1},
+      {staffId:'staff-1',date:'2026-11-03',status:'Half Day',updatedAt:1}
+    ], expenses:[] },
+    today: () => '2026-11-15',
+    monthKey: date => date ? String(date).slice(0,7) : '2026-11',
+    sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
+  }
+);
+if (halfDayPayroll.halfDayDays !== 2 || halfDayPayroll.earnedDays !== 14 ||
+    Math.abs(halfDayPayroll.halfDayDeduction-466.67) > 0.01 ||
+    Math.abs(halfDayPayroll.attendanceDeduction-466.67) > 0.01 ||
+    Math.abs(halfDayPayroll.earnedSalary-6533.33) > 0.01) {
+  throw new Error('Half-day payroll must deduct 50% of the actual calendar-day rate per half day: ' + JSON.stringify(halfDayPayroll));
+}
+console.log('PASS: Half Day attendance counts as half a paid day in payroll');
 const excessAdvancePayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:1000},'2026-11')",
   {
@@ -612,6 +638,15 @@ if (attendanceChanges.count !== 1 || attendanceChanges.status !== 'Present' || a
   throw new Error('Absent-to-Present attendance correction did not update the same staff/date record: ' + JSON.stringify(attendanceChanges));
 }
 console.log('PASS: a staff member can be corrected from Absent to Present without creating a duplicate');
+const halfDayAttendanceContext = { db:{staff:[{id:'staff-1'}],attendance:[],_deletedIds:{}} };
+const halfDayAttendance = vm.runInNewContext(
+  staffHelpers + String.fromCharCode(10) +
+  "setStaffAttendanceEntry('staff-1','Worker One','2026-11-13','Half Day');" +
+  "({count:db.attendance.length,status:db.attendance[0]?.status})",
+  halfDayAttendanceContext
+);
+if(halfDayAttendance.count!==1||halfDayAttendance.status!=='Half Day')throw new Error('Half Day must be a saved attendance status.');
+console.log('PASS: Half Day is persisted as a distinct staff attendance status');
 const clearContext = {
   db: { staff:[{id:'staff-1'}], attendance:[{id:'attendance_2026-11-12_staff-1',staffId:'staff-1',date:'2026-11-12',status:'Absent'}], _deletedIds:{} }
 };
