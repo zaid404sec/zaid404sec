@@ -125,6 +125,7 @@ const deniedEnd = notificationPoll.indexOf('if(delivery?.supported===true', deni
 if (deliveryIndex < 0 || receiptIndex < deliveryIndex || deniedIndex < 0 ||
     deniedEnd < deniedIndex || notificationPoll.slice(deniedIndex, deniedEnd).includes('acknowledgeNotification') ||
     !notificationPoll.includes('bookingNotificationRetryAt.set(id,Date.now()+60000)') ||
+    !notificationPoll.includes('delivery?.supported!==true||delivery?.scheduled!==true') ||
     !notificationPoll.includes("document.addEventListener('visibilitychange'")) {
   throw new Error('Booking alerts must remain unread when Android delivery fails and retry after the app resumes.');
 }
