@@ -1712,7 +1712,7 @@ async function loadBookingCenter(force=false){
     try{
       const api=window.PrimeAutoCareGoogleReviews,b=db.business||{};
       if(googleReviewState.setup?.oauth_credentials_ready!==true)throw new Error('Complete the OAuth Client ID, Client Secret, redirect URI and token encryption key in the setup wizard first.');
-      await api.saveSettings({google_account_email:b.googleAccountEmail||'bmumz3909@gmail.com',google_business_profile_id:b.googleBusinessProfileId||'13506481990772076097',google_business_profile_url:b.googleBusinessProfileUrl||'https://share.google/6g3f0aJqTezi6JH5T',website_url:b.website||'https://zaid404sec.github.io/zaid404sec/website/',review_link:b.googleReviewLink||''});
+      await api.saveSettings({google_account_email:b.googleAccountEmail||'bmumz3909@gmail.com',google_business_profile_id:b.googleBusinessProfileId||'13506481990772076097',google_business_profile_url:b.googleBusinessProfileUrl||'https://share.google/6g3f0aJqTezi6JH5T',website_url:b.website||'https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/',review_link:b.googleReviewLink||''});
       const result=await api.connect();
       if(!result.auth_url)throw new Error('Google did not return an authorization URL.');
       await window.PrimeAutoCareLinks.openExternalUrl(result.auth_url);
