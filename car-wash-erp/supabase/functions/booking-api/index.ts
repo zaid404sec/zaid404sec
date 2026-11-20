@@ -170,7 +170,7 @@ async function bookingNotificationPairHash(workspaceId: string, code: string) {
   return Array.from(new Uint8Array(bytes)).map(value => value.toString(16).padStart(2, '0')).join('');
 }
 async function createBookingNotificationPairCode(ctx: any) {
-  if (!ctx.isOwner) throw new Error('Only the original Workspace Owner can authorise another phone.');
+  if (!ctx.isOwner) throw new Error('Only a verified Prime Auto Care Owner can generate a pairing code.');
   const random = crypto.getRandomValues(new Uint32Array(1))[0] % 100000000;
   const code = String(random).padStart(8, '0');
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
