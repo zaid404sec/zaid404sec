@@ -3,8 +3,8 @@
 This section supersedes conflicting older status notes below. Do not reset the live workspace or delete existing records.
 
 ### Public websites
-- Business website: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/
-- Customer booking page: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/booking/
+- Business website: https://prime-auto-care-sigma.vercel.app/
+- Customer booking page: https://prime-auto-care-sigma.vercel.app/booking/
 - Both routes were fetched successfully from Vercel with HTTP 200 and `Content-Type: text/html; charset=utf-8`.
 - Static source files: `car-wash-erp/website/index.html` and `car-wash-erp/website/booking/index.html`.
 - Vercel project: `prime-auto-care`, project ID `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`. Public alias: `prime-auto-care-mz03200786-2785s-projects.vercel.app`.
@@ -13,9 +13,9 @@ This section supersedes conflicting older status notes below. Do not reset the l
 
 ### Booking service and ownership
 - Supabase project `jkjudmkqaebrgllemris` is ACTIVE_HEALTHY.
-- Production `booking-api` is v11. It allows the Vercel website origin and maps invalid, expired and already-used pairing codes to actionable HTTP 400 responses instead of the generic 500 “Booking service is temporarily unavailable” message.
-- Production `public-reviews` is v4 and allows the Vercel website origin.
-- Legacy functions `prime-auto-care-site` v4, `prime-auto-care-booking` v3 and `prime-auto-care-website` v3 redirect visitors to the canonical Vercel pages.
+- Production `booking-api` is v12. It allows the Vercel website origin and maps invalid, expired and already-used pairing codes to actionable HTTP 400 responses instead of the generic 500 “Booking service is temporarily unavailable” message.
+- Production `public-reviews` is v5 and allows the Vercel website origin.
+- Legacy functions `prime-auto-care-site` v5, `prime-auto-care-booking` v4 and `prime-auto-care-website` v4 redirect visitors to the canonical Vercel pages.
 - The original Workspace Owner record was a stale anonymous Auth identity, while the currently active business phone had signed in under a different anonymous identity and was incorrectly marked as a member. The active phone identity is now the Workspace Owner; the previous anonymous owner identity was retained as a Member, not deleted. This correction changed only owner mapping and membership roles. Customer, booking, invoice and business records were not reset.
 - After reopening the app, the active Owner phone should see **Generate phone pairing code** in Bookings → Phone notification access. Codes are owner-generated, 8 digits, expire after 10 minutes and can be used once. A random number is not a valid pairing code. Each additional phone must already be signed in as a member of this workspace before redeeming its code.
 
