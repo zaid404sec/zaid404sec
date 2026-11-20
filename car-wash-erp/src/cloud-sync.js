@@ -166,6 +166,20 @@ async function getWorkspaceFromServer() {
   if (!data) return null;
   return normalizeWorkspace(data);
 }
+function ownerSignInFailureStatus(error) {
+  const message = String(error?.message || error || '');
+  if (/invalid login credentials|invalid email or password/i.test(message)) {
+    return 'Owner sign-in failed · check the selected email and Supabase password';
+  }
+  if (/email not confirmed/i.test(message)) {
+    return 'Owner sign-in blocked · confirm the selected Owner email in Supabase Auth';
+  }
+  if (/failed to fetch|network|timeout|load failed/i.test(message)) {
+    return 'Owner sign-in could not reach Supabase · check internet and retry';
+  }
+  const brief = message.replace(/\\s+/g, ' ').trim().slice(0, 120);
+  return brief ? `Owner restore failed · ${brief}` : 'Owner restore failed · review the message below';
+}
 async function signInOwner({ url, anonKey, email, password, getLocal, onRemote }) {
   const config = saveConfig({ url, anonKey });
   const cleanEmail = String(email || '').trim().toLowerCase();
@@ -175,47 +189,58 @@ async function signInOwner({ url, anonKey, email, password, getLocal, onRemote }
   remoteHandler = onRemote;
   initialize(config);
   setStatus('Signing in to the registered Prime Auto Care Owner account…');
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: cleanEmail,
-    password: cleanPassword
-  });
-  if (error || !data?.user) {
-    throw new Error(error?.message || 'Owner sign-in failed. Check the email and password, then try again.');
-  }
-  user = data.user;
-  let serverWorkspace;
   try {
-    serverWorkspace = await getWorkspaceFromServer();
-  } catch (workspaceError) {
-    await supabase.auth.signOut({ scope: 'local' });
-    user = null;
-    workspace = null;
-    throw workspaceError;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password: cleanPassword
+    });
+    if (error || !data?.user) {
+      throw new Error(error?.message || 'Owner sign-in failed. Check the selected email and password, then try again.');
+    }
+    user = data.user;
+    let serverWorkspace;
+    try {
+      serverWorkspace = await getWorkspaceFromServer();
+    } catch (workspaceError) {
+      await supabase.auth.signOut({ scope: 'local' });
+      user = null;
+      workspace = null;
+      throw workspaceError;
+    }
+    if (!serverWorkspace || serverWorkspace.role !== 'owner') {
+      await supabase.auth.signOut({ scope: 'local' });
+      user = null;
+      workspace = null;
+      setStatus('Owner sign-in blocked · selected account is not registered as an Owner');
+      throw new Error('This account is not registered as a Prime Auto Care Owner. Select one of the existing Owner accounts.');
+    }
+    workspace = serverWorkspace;
+    localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace));
+    setStatus('Owner verified · restoring shared business data…');
+    clearTimeout(pushTimer);
+    clearInterval(pollingTimer);
+    if (channel && supabase) await supabase.removeChannel(channel);
+    channel = null;
+    queuedPayload = null;
+    stockLedgerSchemaReady = false;
+    schemaBlocked = false;
+    lastPayloadString = '';
+    await initialSync();
+    return {
+      connected: true,
+      workspace: workspace.business_name,
+      role: 'owner',
+      message: 'Owner account verified. Your full Prime Auto Care business app and shared cloud data are restored on this device.'
+    };
+  } catch (error) {
+    if (statusText.startsWith('Signing in to the registered') ||
+        statusText.startsWith('Owner verified · restoring shared business data')) {
+      setStatus(ownerSignInFailureStatus(error));
+    }
+    throw error;
   }
-  if (!serverWorkspace || serverWorkspace.role !== 'owner') {
-    await supabase.auth.signOut({ scope: 'local' });
-    user = null;
-    workspace = null;
-    throw new Error('This account is not registered as a Prime Auto Care Owner. Use one of the existing Owner accounts.');
-  }
-  workspace = serverWorkspace;
-  localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace));
-  clearTimeout(pushTimer);
-  clearInterval(pollingTimer);
-  if (channel && supabase) await supabase.removeChannel(channel);
-  channel = null;
-  queuedPayload = null;
-  stockLedgerSchemaReady = false;
-  schemaBlocked = false;
-  lastPayloadString = '';
-  await initialSync();
-  return {
-    connected: true,
-    workspace: workspace.business_name,
-    role: 'owner',
-    message: 'Owner account verified. Your full Prime Auto Care business app and shared cloud data are restored on this device.'
-  };
 }
+
 async function pairDevice({ url, anonKey, pairingCode, getLocal, onRemote }) {
   const config = saveConfig({ url, anonKey });
   const code = String(pairingCode || '').replace(/\s/g, '').toUpperCase();
