@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.13.4') throw new Error('The package version must be 2.13.4.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.13.4 APK must retain the existing v24 application ID; signing compatibility is verified separately.');
+if (packageJson.version !== '2.13.5') throw new Error('The package version must be 2.13.5.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v25') {
+  throw new Error('The 2.13.5 APK must use the v25 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.13.4 retains the v24 application ID; signing compatibility must be verified separately.');
+console.log('PASS: Android 2.13.5 uses the v25 side-by-side application ID; original v24 app is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -30,6 +30,13 @@ if (!html.includes('color-scheme:dark') || !html.includes('backdrop-filter:blur(
     !html.includes('deep liquid-glass')) {
   throw new Error('Deep liquid-glass app theme is missing.');
 }
+if (!html.includes('Persistent Light/Dark appearance preference') ||
+    !html.includes('id="theme-selector"') ||
+    !html.includes("localStorage.getItem('prime-auto-care-theme')") ||
+    !html.includes("localStorage.setItem('prime-auto-care-theme',theme)")) {
+  throw new Error('Persistent per-device Dark/Light appearance setting is missing.');
+}
+console.log('PASS: persistent per-device Dark/Light appearance setting');
 
 if (!html.includes('Founder') || !html.includes('Owner Operator')) throw new Error('Founder and Owner Operator roles are missing.');
 console.log('PASS: Founder and Owner Operator roles');
@@ -586,8 +593,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v24') throw new Error('Android 2.11.0 application ID v24 was not set.');
-console.log('PASS: app manifest retains the existing v24 Android package ID.');
+if (appId !== 'com.washdesk.carwash.v25') throw new Error('Android 2.13.5 application ID v25 was not set.');
+console.log('PASS: app manifest uses the new v25 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
