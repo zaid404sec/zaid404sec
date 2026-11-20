@@ -121,16 +121,82 @@ async function authenticate(req: Request) {
     isOwner: member.role === 'owner' && workspace.owner_auth_user_id === data.user.id
   };
 }
+async function registerBookingDevice(ctx: any, req: Request, body: any) {
+  const workspaceId = ctx.workspace.id;
+  const userId = ctx.user.id;
+  const userAgent = req.headers.get('user-agent') || '';
+  const deviceType = /android|iphone|ipad|mobile/i.test(userAgent) ? 'mobile' : 'desktop';
+  const suppliedLabel = String(body.device_label || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+  const fallbackLabel = deviceType === 'desktop' ? 'Manager Laptop' : 'Android phone ' + userId.slice(-4).toUpperCase();
+  const deviceLabel = suppliedLabel.length >= 2 ? suppliedLabel : fallbackLabel;
+  const now = new Date().toISOString();
+  const { data: existing, error: lookupError } = await ctx.admin.from('pac_booking_device_access')
+    .select('workspace_id,auth_user_id,device_label,device_type,notifications_enabled,can_decide,revoked_at')
+    .eq('workspace_id', workspaceId).eq('auth_user_id', userId).maybeSingle();
+  if (lookupError) throw new Error('This device registration could not be checked.');
+  if (existing?.revoked_at) {
+    throw new Error('This device was removed by the Workspace Owner. Ask the Owner to reconnect it.');
+  }
+  if (existing) {
+    const patch: any = { last_seen_at: now, updated_at: now };
+    if (suppliedLabel.length >= 2 && suppliedLabel !== existing.device_label) patch.device_label = deviceLabel;
+    if (deviceType !== existing.device_type) patch.device_type = deviceType;
+    const { data, error } = await ctx.admin.from('pac_booking_device_access')
+      .update(patch).eq('workspace_id', workspaceId).eq('auth_user_id', userId)
+      .select('workspace_id,auth_user_id,device_label,device_type,notifications_enabled,can_decide,revoked_at,last_seen_at')
+      .single();
+    if (error) throw new Error('This device registration could not be refreshed.');
+    return data;
+  }
+  const { count, error: countError } = await ctx.admin.from('pac_booking_device_access')
+    .select('auth_user_id', { count: 'exact', head: true })
+    .eq('workspace_id', workspaceId).is('revoked_at', null);
+  if (countError) throw new Error('The authorised device limit could not be checked.');
+  if ((count || 0) >= 5) {
+    throw new Error('This workspace already has five active devices. Ask the Owner to remove a replaced device before connecting another one.');
+  }
+  const { data, error } = await ctx.admin.from('pac_booking_device_access').insert({
+    workspace_id: workspaceId,
+    auth_user_id: userId,
+    device_label: deviceLabel,
+    device_type: deviceType,
+    notifications_enabled: false,
+    can_decide: false,
+    granted_by: ctx.workspace.owner_auth_user_id,
+    created_at: now,
+    updated_at: now,
+    last_seen_at: now
+  }).select('workspace_id,auth_user_id,device_label,device_type,notifications_enabled,can_decide,revoked_at,last_seen_at').single();
+  if (error) {
+    if (error.code === '23505') return await registerBookingDevice(ctx, req, body);
+    throw new Error('This device could not be registered. Ask the Owner to check the five-device limit.');
+  }
+  return data;
+}
 async function canManageBookingNotifications(ctx: any) {
   if (ctx.isOwner) return true;
-  const { data, error } = await ctx.admin.from('pac_booking_notification_admins')
+  const { data, error } = await ctx.admin.from('pac_booking_device_access')
     .select('auth_user_id')
     .eq('workspace_id', ctx.workspace.id)
     .eq('auth_user_id', ctx.user.id)
-    .eq('permission', 'booking_notifications_admin')
+    .eq('notifications_enabled', true)
     .is('revoked_at', null)
     .maybeSingle();
   if (error) throw new Error('Booking notification permission could not be verified.');
+  return !!data;
+}
+async function canDecideBookings(ctx: any) {
+  if (ctx.isOwner) return true;
+  const { data, error } = await ctx.admin.from('pac_booking_device_access')
+    .select('auth_user_id,device_label,device_type')
+    .eq('workspace_id', ctx.workspace.id)
+    .eq('auth_user_id', ctx.user.id)
+    .eq('can_decide', true)
+    .eq('device_type', 'desktop')
+    .eq('device_label', 'Manager Laptop')
+    .is('revoked_at', null)
+    .maybeSingle();
+  if (error) throw new Error('Booking decision permission could not be verified.');
   return !!data;
 }
 
@@ -366,6 +432,54 @@ async function handle(req: Request, body: any) {
   }
 
   const ctx = await authenticate(req);
+  const currentDevice = await registerBookingDevice(ctx, req, body);
+  if (action === 'set-device-access') {
+    if (!ctx.isOwner) throw new Error('Only the Workspace Owner can manage authorised devices.');
+    const target = String(body.user_id || '');
+    if (!/^[0-9a-f-]{36}$/i.test(target) || target === ctx.user.id) throw new Error('Select a valid non-owner device.');
+    const { data: member, error: memberError } = await ctx.admin.from('washdesk_workspace_members')
+      .select('auth_user_id').eq('workspace_id', ctx.workspace.id).eq('auth_user_id', target).maybeSingle();
+    if (memberError || !member) throw new Error('This device is not connected to the Prime Auto Care workspace.');
+    const { data: device, error: deviceError } = await ctx.admin.from('pac_booking_device_access')
+      .select('auth_user_id,device_label,device_type,notifications_enabled,can_decide,revoked_at')
+      .eq('workspace_id', ctx.workspace.id).eq('auth_user_id', target).maybeSingle();
+    if (deviceError || !device || device.revoked_at) throw new Error('This device has not registered or has been removed.');
+    const notificationsEnabled = typeof body.notifications_enabled === 'boolean' ? body.notifications_enabled : device.notifications_enabled;
+    const canDecide = typeof body.can_decide === 'boolean' ? body.can_decide : device.can_decide;
+    if (canDecide) {
+      if (device.device_type !== 'desktop' || device.device_label !== 'Manager Laptop') {
+        throw new Error('Accept/Reject access can only be granted to the device named Manager Laptop.');
+      }
+      const { data: otherDeciders, error: deciderError } = await ctx.admin.from('pac_booking_device_access')
+        .select('auth_user_id').eq('workspace_id', ctx.workspace.id).eq('can_decide', true)
+        .is('revoked_at', null).neq('auth_user_id', target);
+      if (deciderError) throw new Error('Existing booking decision access could not be checked.');
+      if ((otherDeciders || []).some((row: any) => row.auth_user_id !== ctx.user.id)) {
+        throw new Error('Only the Owner and one Manager Laptop may accept or reject bookings.');
+      }
+    }
+    const { error } = await ctx.admin.from('pac_booking_device_access').update({
+      notifications_enabled: notificationsEnabled,
+      can_decide: canDecide,
+      granted_by: ctx.user.id,
+      updated_at: new Date().toISOString()
+    }).eq('workspace_id', ctx.workspace.id).eq('auth_user_id', target);
+    if (error) throw new Error('Device permissions could not be saved.');
+    return { ok: true, notifications_enabled: notificationsEnabled, can_decide: canDecide };
+  }
+  if (action === 'revoke-device') {
+    if (!ctx.isOwner) throw new Error('Only the Workspace Owner can remove authorised devices.');
+    const target = String(body.user_id || '');
+    if (!/^[0-9a-f-]{36}$/i.test(target) || target === ctx.user.id) throw new Error('Select a valid non-owner device.');
+    const { error } = await ctx.admin.from('pac_booking_device_access').update({
+      notifications_enabled: false,
+      can_decide: false,
+      revoked_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }).eq('workspace_id', ctx.workspace.id).eq('auth_user_id', target).is('revoked_at', null);
+    if (error) throw new Error('This device could not be removed.');
+    return { ok: true };
+  }
   if (action === 'create-notification-pair-code') {
     return await createBookingNotificationPairCode(ctx);
   }
@@ -437,22 +551,24 @@ async function handle(req: Request, body: any) {
       slot_minutes: settings.slot_minutes, slot_capacity: settings.slot_capacity,
       horizon_days: settings.horizon_days, public_enabled: settings.public_enabled
     };
-    const { data: notificationDevices, error: notificationDevicesError } = await ctx.admin
-      .from('pac_booking_notification_admins')
-      .select('auth_user_id')
-      .eq('workspace_id', ctx.workspace.id)
-      .eq('permission', 'booking_notifications_admin')
-      .is('revoked_at', null);
-    if (notificationDevicesError) throw new Error('Booking notification device access could not be verified.');
-    const notificationsEnabled = ctx.isOwner ||
-      (notificationDevices || []).some((device: any) => device.auth_user_id === ctx.user.id);
+    const { data: deviceRows, error: deviceRowsError } = await ctx.admin.from('pac_booking_device_access')
+      .select('auth_user_id,device_label,device_type,notifications_enabled,can_decide,last_seen_at,revoked_at')
+      .eq('workspace_id', ctx.workspace.id).is('revoked_at', null)
+      .order('last_seen_at', { ascending: false });
+    if (deviceRowsError) throw new Error('Authorised device access could not be loaded.');
+    const notificationsEnabled = ctx.isOwner || currentDevice.notifications_enabled === true;
+    const canDecide = ctx.isOwner || await canDecideBookings(ctx);
     return {
       bookings: data || [],
       settings: visibleSettings,
+      current_device: currentDevice,
+      devices: ctx.isOwner ? (deviceRows || []) : [],
       permissions: {
         is_owner: ctx.isOwner,
+        can_decide_bookings: canDecide,
         notifications_enabled: notificationsEnabled,
-        notification_device_count: (notificationDevices || []).length
+        notification_device_count: (deviceRows || []).filter((device: any) => device.notifications_enabled).length,
+        authorised_device_count: (deviceRows || []).length
       }
     };
   }
@@ -467,6 +583,11 @@ async function handle(req: Request, body: any) {
     const status = String(body.status || '');
     const id = String(body.id || '');
     if (!allowed.has(status) || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid booking update.');
+    if (status === 'confirmed' || status === 'rejected') {
+      if (!(await canDecideBookings(ctx))) throw new Error('Only the Owner or the authorised Manager Laptop can accept or reject bookings.');
+    } else if (!ctx.isOwner) {
+      throw new Error('Only the Workspace Owner can complete or cancel a booking.');
+    }
 
     // The database function locks the booking row, enforces allowed status transitions,
     // attributes the actor, and inserts the corresponding per-device notification event
@@ -548,7 +669,8 @@ Deno.serve(async req => {
     const lower = message.toLowerCase();
     const status = lower.includes('slot_unavailable') ? 409
       : lower.includes('rate_limit') ? 429
-      : lower.includes('public_booking_disabled') || lower.includes('only the original workspace owner') ? 403
+      : lower.includes('device limit') || lower.includes('booking_device_limit') || lower.includes('manager laptop') || lower.includes('only_one_non_owner') ? 409
+      : lower.includes('public_booking_disabled') || lower.includes('only the original workspace owner') || lower.includes('only the workspace owner') || lower.includes('only the owner') || lower.includes('not authorised') || lower.includes('not approved') || lower.includes('only the authorised') || lower.includes('device was removed') ? 403
       : lower.includes('out_of_range') || lower.includes('invalid_') || lower.includes('invalid') || lower.includes('expired') || lower.includes('already used') || lower.includes('choose') || lower.includes('enter') ? 400
       : lower.includes('sign in') || lower.includes('session') || lower.includes('paired') ? 401
       : 500;
