@@ -574,7 +574,7 @@ async function handle(req: Request, body: any) {
     return {
       bookings: data || [],
       settings: visibleSettings,
-      authorised_devices: ctx.isOwner ? activeDevices : [],
+      authorised_devices: ctx.isOwner ? activeDevices.filter((device: any) => device.auth_user_id !== ctx.user.id) : [],
       decision_requests: decisionRequests,
       permissions: {
         is_owner: ctx.isOwner,
@@ -682,9 +682,9 @@ Deno.serve(async req => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Booking request failed.';
     const lower = message.toLowerCase();
-    const status = lower.includes('slot_unavailable') ? 409
+    const status = lower.includes('slot_unavailable') || lower.includes('five authorised-device limit') || lower.includes('only one additional manager laptop') ? 409
       : lower.includes('rate_limit') ? 429
-      : lower.includes('public_booking_disabled') || lower.includes('only the original workspace owner') ? 403
+      : lower.includes('public_booking_disabled') || lower.includes('only the original workspace owner') || lower.includes('only the prime auto care owner') || lower.includes('not authorised') || lower.includes('can only accept or reject') ? 403
       : lower.includes('out_of_range') || lower.includes('invalid_') || lower.includes('invalid') || lower.includes('expired') || lower.includes('already used') || lower.includes('choose') || lower.includes('enter') ? 400
       : lower.includes('sign in') || lower.includes('session') || lower.includes('paired') ? 401
       : 500;
