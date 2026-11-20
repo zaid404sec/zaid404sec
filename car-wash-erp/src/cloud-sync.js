@@ -114,6 +114,45 @@ async function ensureSession() {
   user = signed.user;
   return user;
 }
+async function pairBookingDevice({ code, deviceLabel, deviceKind }) {
+  const config = readConfig();
+  initialize(config);
+  await ensureSession();
+  const cleanCode = String(code || '').replace(/\\D/g, '');
+  if (!/^\\d{8,12}$/.test(cleanCode)) {
+    throw new Error('Enter the 8–12 digit PAC Owner Code from the Owner.');
+  }
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(cleanCode));
+  const codeHash = Array.from(new Uint8Array(digest)).map(value => value.toString(16).padStart(2, '0')).join('');
+  const kind = deviceKind === 'desktop' ? 'desktop' : 'phone';
+  setStatus('Verifying PAC Owner Code…');
+  const { data, error } = await supabase.rpc('pac_join_workspace_with_owner_code', {
+    p_code_hash: codeHash,
+    p_device_label: String(deviceLabel || ''),
+    p_device_kind: kind
+  });
+  if (error) throw new Error(error.message || 'PAC Owner Code verification failed.');
+  if (!data?.ok) {
+    const message = data?.message || 'PAC Owner Code could not be verified.';
+    throw new Error(message);
+  }
+  workspace = normalizeWorkspace(data);
+  localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace));
+  if (workspace.role === 'owner') {
+    await initialSync();
+  } else {
+    clearTimeout(pushTimer);
+    clearInterval(pollingTimer);
+    if (channel && supabase) await supabase.removeChannel(channel);
+    channel = null;
+    queuedPayload = null;
+    stockLedgerSchemaReady = false;
+    schemaBlocked = false;
+    lastPayloadString = '';
+    setStatus('Connected as booking staff · Bookings only · Accept / Reject enabled');
+  }
+  return { connected: true, role: workspace.role, workspace: workspace.business_name, device_label: data.device_label || deviceLabel };
+}
 async function getWorkspaceFromServer() {
   if (!supabase || !user) return null;
   const { data, error } = await supabase.rpc('washdesk_get_workspace');
@@ -151,12 +190,26 @@ async function pairDevice({ url, anonKey, pairingCode, getLocal, onRemote }) {
   }
   workspace = normalizeWorkspace(data);
   localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace));
-  await initialSync();
+  if (workspace.role === 'owner') {
+    await initialSync();
+  } else {
+    clearTimeout(pushTimer);
+    clearInterval(pollingTimer);
+    if (channel && supabase) await supabase.removeChannel(channel);
+    channel = null;
+    queuedPayload = null;
+    stockLedgerSchemaReady = false;
+    schemaBlocked = false;
+    lastPayloadString = '';
+    setStatus('Connected as booking staff · Bookings only · Accept / Reject enabled');
+  }
   return {
     connected: true,
     workspace: workspace.business_name,
     role: workspace.role,
-    message: 'This device is connected to the shared Prime Auto Care database. Other paired phones and the laptop will receive updates automatically.'
+    message: workspace.role === 'owner'
+      ? 'This device is connected as an Owner. All business features and live sync are enabled.'
+      : 'This device is connected as booking staff. Only Bookings and Accept / Reject are available.'
   };
 }
 function applyRemote(payload) {
@@ -180,6 +233,10 @@ async function refreshStockLedgerSchemaStatus() {
 }
 async function publishPayload(payload) {
   if (!supabase || !user || !workspace) return false;
+  if (workspace.role !== 'owner') {
+    setStatus('Booking staff accounts cannot sync business records.');
+    return false;
+  }
   if (!stockLedgerSchemaReady || schemaBlocked) {
     queuedPayload = payload;
     setStatus('Cloud SQL update required · local changes are saved; no cloud write was attempted.');
@@ -256,7 +313,7 @@ function queueQueuedPush(delay = 700) {
   }, delay);
 }
 function schedulePush(payload) {
-  if (!user || !workspace || !supabase) return;
+  if (!user || !workspace || !supabase || workspace.role !== 'owner') return;
   // Keep the local snapshot queued, but do not send it until the new SQL version is verified.
   if (schemaBlocked || !stockLedgerSchemaReady) { queuedPayload = payload; return; }
   // Keep only the latest live DB reference while the debounce timer runs.
@@ -392,7 +449,19 @@ async function resume({ getLocal, onRemote }) {
       setStatus('Device signed in · enter the shared pairing code');
       return false;
     }
-    await initialSync();
+    if (workspace?.role === 'owner') {
+      await initialSync();
+    } else {
+      clearTimeout(pushTimer);
+      clearInterval(pollingTimer);
+      if (channel && supabase) await supabase.removeChannel(channel);
+      channel = null;
+      queuedPayload = null;
+      stockLedgerSchemaReady = false;
+      schemaBlocked = false;
+      lastPayloadString = '';
+      setStatus('Connected as booking staff · Bookings only · Accept / Reject enabled');
+    }
     return true;
   } catch (error) {
     console.error('Prime Auto Care cloud resume failed:', error);
@@ -410,7 +479,8 @@ async function resume({ getLocal, onRemote }) {
   }
 }
 async function syncNow(payload) {
-  if (!supabase || !user || !workspace) throw new Error('Connect this device with the shared device pairing code first.');
+  if (!supabase || !user || !workspace) throw new Error('Connect this device with the PAC Owner Code first.');
+  if (workspace.role !== 'owner') throw new Error('Staff devices have booking-only access. Business sync is Owner-only.');
   await refreshStockLedgerSchemaStatus();
   schemaBlocked = false;
   queuedPayload = null;
@@ -418,6 +488,7 @@ async function syncNow(payload) {
 }
 async function nextInvoiceNumber({ prefix, date, minNext }) {
   if (!supabase || !user || !workspace) throw new Error('Shared cloud database is not connected.');
+  if (workspace.role !== 'owner') throw new Error('Staff devices cannot create invoices.');
   if (!stockLedgerSchemaReady) throw new Error('Run the latest Prime Auto Care Cloud Sync SQL update before reserving shared invoice numbers.');
   const { data, error } = await supabase.rpc('washdesk_next_invoice_number', {
     p_prefix: prefix || 'CW',
@@ -463,6 +534,7 @@ async function getApiContext() {
 window.WashDeskCloud = {
   getApiContext,
   pairDevice,
+  pairBookingDevice,
   resume,
   schedulePush,
   syncNow,
