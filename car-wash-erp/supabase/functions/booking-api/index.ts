@@ -3,6 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 const allowedOrigins = new Set([
   'https://zaid404sec.github.io',
   'https://prime-auto-care-mz03200786-2785s-projects.vercel.app',
+  'https://prime-auto-care-sigma.vercel.app',
   'https://jkjudmkqaebrgllemris.supabase.co',
   'capacitor://localhost',
   'http://localhost',
