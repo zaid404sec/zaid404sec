@@ -154,6 +154,7 @@ for (const token of [
 ]) {
   if (!bookingDeviceMigration.includes(token)) throw new Error('Five-device migration is missing: '+token);
 }
+const cloudSource = await readFile(new URL('../src/cloud-sync.js', import.meta.url), 'utf8');
 const permanentOwnerCodeMigration = await readFile(new URL('../supabase/migrations/20261120180000_pac_permanent_owner_booking_code.sql', import.meta.url), 'utf8');
 for (const token of [
   'id="booking-device-role"',
@@ -912,7 +913,6 @@ if (uniqueResult.mobile !== '9824823200' || uniqueResult.mobile0091 !== '9824823
 }
 console.log('PASS: mobile numbers normalize across +91 formatting and vehicle registrations ignore spaces / punctuation');
 
-const cloudSource = await readFile(new URL('../src/cloud-sync.js', import.meta.url), 'utf8');
 if (!cloudSource.includes('https://jkjudmkqaebrgllemris.supabase.co') ||
     !cloudSource.includes('sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw')) {
   throw new Error('Prime Auto Care Supabase URL / publishable key are not prefilled.');
