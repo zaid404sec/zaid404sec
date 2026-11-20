@@ -1,21 +1,28 @@
-# WashDesk 2.13.2 — Prime Auto Care
+# WashDesk 2.13.3 — Prime Auto Care
 
 ## Current public endpoints
 - Business website: https://prime-auto-care-sigma.vercel.app/
 - Customer booking: https://prime-auto-care-sigma.vercel.app/booking/
-- Legacy Supabase website and booking URLs redirect to Vercel. Static HTML is hosted on Vercel; Supabase is the API/database backend.
+- Both Vercel routes were verified with HTTP 200 and `text/html; charset=utf-8`. Supabase remains the booking/database backend.
 
-## Current operational notes
-- Both Vercel pages were verified with HTTP 200 and `text/html; charset=utf-8`.
-- Production `booking-api` is v12 and `public-reviews` is v5. The booking API allows the Vercel origin and returns a specific client error for invalid/expired/already-used pairing codes.
-- The active business phone identity is now the Workspace Owner. The previous anonymous Owner identity was kept as a Member; no booking, invoice or business data was reset. Close/reopen the app to refresh the Owner permission and show the **Generate phone pairing code** button.
-- Pairing codes are Owner-generated, 8 digits, single-use and expire after 10 minutes. Do not type a random number.
-- Vercel's production static deployment has been created, but GitHub auto-linking still requires a GitHub Login Connection in Vercel.
-- The CI APK is debug-signed with a runner-generated key. The original production keystore was not found, and the signature differs from the installed v24 app. Do not uninstall or overwrite the working app. See `../AI_HANDOVER/PROJECT_INDEX.md`.
-- Google Basic API Access, original business-owner OAuth consent and Pub/Sub/OIDC setup remain external prerequisites. Automatic replies remain disabled by default.
+## Current device and booking alert model
+- A device joins the shared business workspace once through Settings → Business Settings → Connect / Pair this device using the existing private 64-character workspace pairing credential.
+- No separate 8-digit booking-notification code is needed. Workspace members are automatically enrolled for booking-alert access by migration `20261120130000_workspace_members_auto_booking_alerts.sql`.
+- Production booking API v13 reports each device's notification permission. Per-device acknowledgement receipts remain independent.
+- Android local notifications work while the app is active and OS notification permission is granted.
+- Browser/Electron desktop notifications work while the manager app is running after pressing **Enable notifications on this device**.
+- Push notifications while the Android app is fully closed are **not yet enabled**. FCM project/service-account setup, device token registration, server-side push sending and closed-app tests remain required.
+- Current workspace member identities and notification enrolment were checked: 36 member identities, 36 active booking-alert permission rows. This is not a verified count of physical devices; do not delete old identities without Owner review.
 
-Full system map, file locations, authentication model, endpoints, deployment notes and safe-change rules: `../AI_HANDOVER/PROJECT_INDEX.md`.
+## Operational safety
+- The canonical workspace Owner identity remains intact. No business, customer, booking, invoice or billing records were reset.
+- Do not commit or place the workspace pairing credential, Supabase service-role key, Firebase service-account JSON, OAuth secrets or signing key in source archives.
+- Android application ID remains `com.washdesk.carwash.v24`. The CI APK is debug-signed and does not match the installed certificate. Do not overwrite the currently working installation; the original production keystore was not found.
+- Vercel GitHub auto-linking is not yet configured, so static website source changes still need a manual Vercel deployment.
 
+Full system map, setup, authentication, deployment and safe-change instructions: `../AI_HANDOVER/PROJECT_INDEX.md`.
+
+---
 ---
 
 ## Version 2.12.0 — booking operations and Google reply moderation (release candidate)
