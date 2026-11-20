@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.13.3') throw new Error('The package version must be 2.13.3.');
+if (packageJson.version !== '2.13.4') throw new Error('The package version must be 2.13.4.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.13.3 APK must retain the existing v24 application ID; signing compatibility is verified separately.');
+  throw new Error('The 2.13.4 APK must retain the existing v24 application ID; signing compatibility is verified separately.');
 }
-console.log('PASS: Android 2.13.3 retains the v24 application ID; signing compatibility must be verified separately.');
+console.log('PASS: Android 2.13.4 retains the v24 application ID; signing compatibility must be verified separately.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -58,6 +58,7 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119090408_booking_notification_realtime_20261119.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119190447_booking_create_atomic_notification_events_20261120.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261120130000_workspace_members_auto_booking_alerts.sql', import.meta.url)) ||
+     !existsSync(new URL('../supabase/migrations/20261120150000_booking_device_roles.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119160000_google_vault_setup_wizard.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
@@ -116,7 +117,17 @@ for (const token of ['pac_auto_enrol_workspace_member_for_booking_alerts','after
 if (!bookingApiSource.includes('notification_device_count') || !bookingApiSource.includes('notifications_enabled')) {
   throw new Error('Booking API must report per-device notification enrolment status.');
 }
-console.log('PASS: workspace members are automatically enrolled for booking alerts; no separate 8-digit code is required');
+for (const token of ['async function registerBookingDevice','async function canDecideBookings',"action === 'set-device-access'","action === 'revoke-device'","Only the Owner or the authorised Manager Laptop",'pac_booking_device_access','authorised_device_count']) {
+  if (!bookingApiSource.includes(token)) throw new Error('Five-device booking access or Owner/Manager decision enforcement is missing: '+token);
+}
+for (const token of ['booking-device-name-form','booking-device-permission','booking-device-revoke','Manager Laptop','can_decide_bookings','notifications_enabled']) {
+  if (!html.includes(token)) throw new Error('Owner device-management UI is missing: '+token);
+}
+const deviceRolesMigration = await readFile(new URL('../supabase/migrations/20261120150000_booking_device_roles.sql', import.meta.url), 'utf8');
+for (const token of ['pac_booking_device_access','notifications_enabled boolean not null default false','can_decide boolean not null default false','primary key (workspace_id, auth_user_id)','grant all on public.pac_booking_device_access to service_role','Owner Phone']) {
+  if (!deviceRolesMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Five-device permission migration is incomplete: '+token);
+}
+console.log('PASS: max-five-device allowlist, Owner-managed alerts, Owner + Manager Laptop booking decisions, and API-side authorisation');
 const localNotificationsSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
 if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
     !localNotificationsSource.includes('requestBookingAlertPermission') ||
