@@ -102,8 +102,8 @@ for (const token of ['pac_booking_notification_admins','booking_notifications_ad
   if (!bookingNotificationMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Booking notification permission migration is incomplete: '+token);
 }
 console.log('PASS: the paired booking desk receives scoped alerts without changing the original Workspace Owner');
-for (const token of ['create-notification-pair-code','redeem-notification-pair-code','pac_booking_notification_pair_codes','pac_booking_notification_receipts','notification_id','auth_user_id','device_acknowledged']) {
-  if (!bookingApiSource.includes(token)) throw new Error('Per-device booking notification pairing/receipt support is missing: '+token);
+for (const token of ['pac_booking_notification_receipts','notification_id','acknowledge-notification','auth_user_id']) {
+  if (!bookingApiSource.includes(token)) throw new Error('Per-device booking notification acknowledgement support is missing: '+token);
 }
 if (bookingApiSource.includes('acknowledged_at: new Date().toISOString(), acknowledged_by: ctx.user.id')) {
   throw new Error('Booking acknowledgement must be per-device, not a global event acknowledgement.');
@@ -111,19 +111,13 @@ if (bookingApiSource.includes('acknowledged_at: new Date().toISOString(), acknow
 if (!html.includes('booking-enable-notifications') ||
     !html.includes('requestBookingAlertPermission') ||
     !html.includes('notifications_enabled') ||
-    html.includes('8-digit owner pairing code') ||
-    html.includes('booking-notification-create-code') ||
-    html.includes('booking-notification-redeem-code')) {
-  throw new Error('Booking alerts must use workspace-device enrolment without a second 8-digit code.');
-}
-const workspaceAlertMigration = await readFile(new URL('../supabase/migrations/20261120130000_workspace_members_auto_booking_alerts.sql', import.meta.url), 'utf8');
-for (const token of ['pac_auto_enrol_workspace_member_for_booking_alerts','after insert or update of workspace_id, role','pac_booking_notification_admins','washdesk_workspace_members']) {
-  if (!workspaceAlertMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Workspace booking-alert auto-enrolment migration is incomplete: '+token);
+    !bookingApiSource.includes("if (!(await canReceiveBookingAlerts(ctx)))")) {
+  throw new Error('Booking notifications must use the active authorised staff-device session.');
 }
 if (!bookingApiSource.includes('notification_device_count') || !bookingApiSource.includes('notifications_enabled')) {
-  throw new Error('Booking API must report per-device notification enrolment status.');
+  throw new Error('Booking API must report current authorised staff-device notification status.');
 }
-console.log('PASS: existing workspace alert enrollment is retained; the optional one-time code pairing flow is available for additional accounts');
+console.log('PASS: booking alerts require a PAC-code-authorised active device; notifications are acknowledged per device');
 const localNotificationsSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
 if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
     !localNotificationsSource.includes('requestBookingAlertPermission') ||
