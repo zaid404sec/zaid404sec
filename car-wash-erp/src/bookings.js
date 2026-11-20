@@ -28,5 +28,8 @@ window.PrimeAutoCareBookings = {
   saveSettings: settings => bookingRequest('save-settings', { settings }),
   notifications: () => bookingRequest('notifications'),
   acknowledgeNotification: id => bookingRequest('acknowledge-notification', { id }),
-  revokeNotificationDevice: user_id => bookingRequest('revoke-notification-device', { user_id })
+  revokeNotificationDevice: user_id => bookingRequest('revoke-notification-device', { user_id }),
+  requestDeviceAccess: (device_label, device_kind) => bookingRequest('request-booking-device-access', { device_label, device_kind }),
+  reviewDeviceAccess: (auth_user_id, approved, can_decide_bookings = false) => bookingRequest('review-booking-device-access', { auth_user_id, approved, can_decide_bookings }),
+  revokeDeviceAccess: auth_user_id => bookingRequest('revoke-booking-device-access', { auth_user_id })
 };
