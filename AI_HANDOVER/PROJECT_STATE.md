@@ -1,46 +1,63 @@
-## Latest verified production and notification state — 20 November 2026
+## Latest release candidate — Prime Auto Care 2.13.4
 
-This section supersedes older status notes below. Preserve the existing Prime Auto Care workspace, Owner identity, customer records, invoices, bookings and business data. Do not reset or reseed production data.
+_Last updated: 20 November 2026 (Asia/Kolkata)_
 
-### Public websites
+This section records the five-device access redesign being prepared for release. Do not reset the live workspace or customer/business records.
+
+### Public websites — already live
 - Business website: https://prime-auto-care-sigma.vercel.app/
 - Customer booking page: https://prime-auto-care-sigma.vercel.app/booking/
-- Both routes were fetched successfully from Vercel with HTTP 200 and `Content-Type: text/html; charset=utf-8`.
-- Static source files: `car-wash-erp/website/index.html` and `car-wash-erp/website/booking/index.html`.
-- Vercel project: `prime-auto-care`, project ID `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`. Public alias: `prime-auto-care-mz03200786-2785s-projects.vercel.app`.
-- Supabase Edge Functions rewrite ordinary HTML GET responses to `text/plain`; they are not used to serve public HTML. Legacy Supabase website endpoints redirect to the Vercel pages.
-- Vercel Git auto-linking is not configured. Direct Vercel deployments have been used; future source changes must be deployed manually until the GitHub Login Connection is configured.
+- Both pages were previously fetched from Vercel with HTTP 200 and `Content-Type: text/html; charset=utf-8`.
+- Website source: `car-wash-erp/website/index.html`; booking source: `car-wash-erp/website/booking/index.html`.
+- Vercel project: `prime-auto-care`, project ID `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`.
+- GitHub auto-linking is not configured; direct Vercel deployment was used for the existing public pages.
 
-### Workspace identity and device enrolment
-- Supabase project: `jkjudmkqaebrgllemris`, status `ACTIVE_HEALTHY`.
+### Workspace and access model
+- Supabase project: `jkjudmkqaebrgllemris`.
 - Workspace: Prime Auto Care, ID `9cd6c212-f1fa-4758-bb5e-23758dabfaa7`.
-- The active Owner Auth identity remains the canonical workspace Owner. The Owner role was not changed by the notification redesign.
-- The existing 64-character workspace pairing credential remains the join credential for new devices. Do not paste it into source, docs, support replies or build artifacts. Treat it as a private secret.
-- To connect another phone or laptop: open Settings → Business Settings → Connect / Pair this device, enter the existing workspace pairing credential, and complete the cloud sync handshake. Do this once per device.
-- There is no longer a separate 8-digit booking-notification pairing step in the app UI. An authenticated workspace member is automatically enrolled for booking alerts.
-- Additive migration: `20261120130000_workspace_members_auto_booking_alerts.sql`. It creates a trigger that enrolls new/re-paired workspace members and backfills current workspace members into `pac_booking_notification_admins`. It does not alter workspace roles or business records.
-- Migration result verified: 36 workspace member identities and 36 active booking-alert permission rows. This is an identity count, not a verified count of five physical devices; older anonymous app installations may remain as historical member identities. Do not delete these identities without the Owner identifying the five intended devices.
-- Existing temporary 8-digit pairing tables and API actions are retained for backwards compatibility but are no longer part of the normal UI flow. Do not re-add the 8-digit input panel.
+- Preserve the canonical Owner identity and existing workspace membership.
+- Existing 64-character workspace pairing credential remains the device's one-time workspace join credential. It must never be placed in source, ZIP files or public documentation.
+- The 2.13.4 candidate adds Owner-approved device records with a maximum of five active devices including the Owner Phone.
+- Intended devices: Owner Phone; Dad Phone 2; Dad Phone 3; Manager Phone 4; Manager Laptop.
+- Phones are alert-only by default. The Owner may approve the Manager Laptop as the one additional device with Accept/Reject permission.
+- The Owner Phone retains full administration and booking authority.
+- The Manager Laptop is limited server-side to Accept and Reject. It cannot Complete/Cancel or change booking settings.
+- Device requests must be paired to the workspace first, then approved in Bookings by the Owner. The Owner can revoke devices.
+- No shared permanent 8-digit booking PIN is used. The number `26102005` shared in chat is not stored or used as a credential.
 
-### Booking API and notifications
-- Production `booking-api` is v13.
-- Booking list responses now include `permissions.notifications_enabled` and `permissions.notification_device_count`.
-- Per-device notification receipts are preserved: acknowledging an alert on one device does not mark it read on other devices.
-- Booking-created and booking-status events are written to the database and distributed through Supabase Realtime; the app also polls as a recovery path.
-- Android uses Capacitor Local Notifications while the app is active and permitted to run. The app now has a user-triggered notification permission control.
-- Browser/Electron desktop support uses the Web Notifications API while the app is running. The manager laptop must press **Enable notifications on this device** and allow notifications in its OS/browser.
-- **Background push while the Android app is fully closed is not yet enabled.** It requires Firebase Cloud Messaging (FCM), an approved Firebase project configuration/service account, token registration, server-side push sending and end-to-end tests. Never claim that closed-app push is operational until those are configured and tested.
-- WhatsApp booking alerts are not considered active unless the WhatsApp sender, destination and approved utility template are configured and a provider delivery is confirmed.
+### API and migration
+- Additive migration: `car-wash-erp/supabase/migrations/20261120150000_owner_managed_five_device_booking_access.sql`.
+- New table: `public.pac_booking_devices`.
+- The migration seeds the canonical Owner as the first active device and does not delete or rewrite historical workspace memberships or business records.
+- New API actions: request, review and revoke booking-device access.
+- Notifications and acknowledgements require an active authorised device.
+- Status changes require Owner or approved Manager Laptop permission. The Manager Laptop can only confirm or reject.
+- Per-device notification receipts remain independent.
+- Migration and Edge Function deployment must complete before the 2.13.4 app is used in production.
 
-### Application source and build
-- Application source version: **2.13.3**.
+### Notifications
+- Android local notifications require app runtime and notification permission.
+- Desktop browser/Electron notifications require app runtime and OS/browser notification permission.
+- FCM background push for a fully closed Android app is not yet configured; do not claim it is operational until FCM credentials, token registration, sender and handset tests are complete.
+- Desktop closed-browser push also needs Web Push subscription and VAPID credentials.
+- SMS/WhatsApp are separate paid/provider integrations and are not part of this no-cost push implementation.
+
+### Build and release
+- Candidate source version: 2.13.4.
 - Android application ID remains `com.washdesk.carwash.v24`.
-- The 2.13.3 source contains workspace auto-enrolment, the simplified booking alerts panel, Android local notification permission, and browser/Electron desktop notification support.
-- Check the latest GitHub Actions run for the 2.13.3 APK, Windows installer, source archive and full handover before sharing build artifacts.
-- The CI APK is debug-signed. The original production keystore was not found, and the runner certificate does not match the installed app certificate. Do not ask the Owner to uninstall/replace the working app or promise an in-place update. A production-signed release needs the original signing key or a separately tested migration plan.
-- Secrets, API keys, workspace pairing credentials, FCM service-account JSON and keystore passwords must never be committed to source or included in handover ZIPs.
+- The CI Android APK is debug-signed by the runner unless the original production keystore is available. It is not safe to overwrite the currently installed Owner app with a differently signed APK.
+- Use the repository's build workflow to produce the APK, Windows EXE, project source archive, complete repository handover and checksums.
+- Verify the full workflow run and artifacts before distribution. A PR-only workflow run is a test build; merge/deploy state must be verified separately.
+- Never package the original Android keystore, passwords, Supabase service-role key, FCM service account, OAuth secrets, workspace pairing credential or environment files.
 
----
+### Source locations
+- App UI: `car-wash-erp/index.html`
+- Booking API client: `car-wash-erp/src/bookings.js`
+- Booking API: `car-wash-erp/supabase/functions/booking-api/index.ts`
+- Database migration: `car-wash-erp/supabase/migrations/20261120150000_owner_managed_five_device_booking_access.sql`
+- Android/Electron packaging: `.github/workflows/build-installers.yml`
+- Detailed device workflow: `AI_HANDOVER/BOOKING_NOTIFICATIONS.md`
+
 ---
 
 # Current verified state — 20 November 2026

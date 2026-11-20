@@ -1,23 +1,68 @@
-## Latest verified production and notification state — 20 November 2026
+## Latest release candidate — Prime Auto Care 2.13.4
 
-This section supersedes older status notes below. Preserve the existing production workspace and Owner identity. Do not reset business records.
+_Last updated: 20 November 2026 (Asia/Kolkata)_
 
-- **Business website:** https://prime-auto-care-sigma.vercel.app/
-- **Customer booking page:** https://prime-auto-care-sigma.vercel.app/booking/
-- Both Vercel pages were verified as HTTP 200 with `Content-Type: text/html; charset=utf-8`.
-- **Vercel project:** `prime-auto-care`, project ID `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`. GitHub auto-linking is still not configured; current production static assets were deployed directly.
-- **Supabase project:** `jkjudmkqaebrgllemris`. Production `booking-api` is v13.
-- **Application source version:** 2.13.3. The source changes are committed to `main`; the new APK/EXE artifacts still need a verifiable CI build before distribution.
-- **Owner identity:** the active Owner Auth identity remains the canonical Owner. The notification redesign did not promote or demote anyone and did not reset customer, invoice, booking or business records.
-- **Workspace pairing:** the existing private 64-character workspace credential remains the single join credential for a new phone/laptop. Each device pairs once via Settings → Business Settings → Connect / Pair this device. Never commit or distribute the secret in source files.
-- **Booking alert enrolment:** there is no longer a separate 8-digit notification code in the normal UI. An authenticated workspace member is automatically enrolled for booking alerts. Migration `20261120130000_workspace_members_auto_booking_alerts.sql` backfilled the current 36 member identities and added an insert/update trigger for future or re-paired devices. This is 36 Auth identities, not a verified count of five physical devices; old anonymous installation identities may remain. Do not delete them without the Owner identifying the target devices.
-- **Per-device receipts:** each device has an independent acknowledgement record. Acknowledging an alert on one device does not hide it on another.
-- **Android notifications:** Capacitor Local Notifications can show booking alerts while the app is active and has notification permission.
-- **Manager laptop:** Web Notifications API support is included for browser/Electron when the app is running; the user must enable notifications on that device.
-- **Background delivery limitation:** push delivery while the Android app is fully closed remains pending FCM setup, token registration, server-side sender credentials and end-to-end validation. Do not state that closed-app notifications are active before that work is complete.
-- **Application source:** 2.13.3, package ID `com.washdesk.carwash.v24`. Verify the latest CI run and artifacts before distributing.
-- **Android signing:** CI APK is debug-signed; the original production keystore was not found. Its certificate does not match the installed app. Do not overwrite/uninstall the working Owner installation until signing continuity or a verified migration is available.
-- Never place the workspace pairing credential, service-role keys, FCM secrets, OAuth secrets or keystore passwords in the handover or source archive.
+### Public website URLs
+- Business website: https://prime-auto-care-sigma.vercel.app/
+- Customer booking website: https://prime-auto-care-sigma.vercel.app/booking/
+- Both live routes were previously verified as HTTP 200 with `Content-Type: text/html; charset=utf-8`.
+- Vercel project: `prime-auto-care`; project ID: `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`.
+- Static website source: `car-wash-erp/website/index.html`.
+- Static customer booking source: `car-wash-erp/website/booking/index.html`.
+- Current Vercel Git auto-linking is not configured; the existing pages were deployed directly.
+
+### Agreed device roles
+Five active devices maximum, including the Owner Phone:
+1. Owner Phone — full Owner authority.
+2. Dad Phone 2 — booking alerts only.
+3. Dad Phone 3 — booking alerts only.
+4. Manager Phone 4 — booking alerts only.
+5. Manager Laptop — booking alerts plus Accept/Reject only, after Owner approval.
+
+The Owner remains the only administrator. The Manager Laptop is the one additional decision-capable device. It cannot Complete/Cancel a booking or change booking settings. Phones cannot Accept or Reject.
+
+### New device access workflow
+- Each new phone/laptop must first join the existing shared workspace using the private workspace pairing credential.
+- The new device then sends a named device access request from Bookings.
+- The Owner approves alerts-only access for phones.
+- The Owner may grant Accept/Reject only to the Manager Laptop (Desktop device type).
+- Maximum five active devices is enforced by the booking API.
+- The Owner can revoke device access.
+- The old 8-digit Generate/Authorise panel is not used. The chat-supplied `26102005` is not used as an authentication secret.
+- Historical workspace member identities are retained; they are not automatically treated as approved devices by the new device allowlist.
+
+### Release contents and source map
+- `car-wash-erp/index.html`: main business app UI.
+- `car-wash-erp/src/`: client modules, cloud sync, booking client, notification helpers, reports and native integrations.
+- `car-wash-erp/supabase/functions/booking-api/index.ts`: authenticated booking, device access and status transition API.
+- `car-wash-erp/supabase/migrations/`: database schema and additive migrations.
+- `car-wash-erp/website/index.html`: public business website.
+- `car-wash-erp/website/booking/index.html`: public customer booking page.
+- `car-wash-erp/electron/`: Windows desktop app.
+- `car-wash-erp/android/` and Capacitor config: Android packaging configuration and app ID.
+- `.github/workflows/build-installers.yml`: CI builds Android APK, Windows installer, source, handover and checksums.
+- `AI_HANDOVER/`: project state, architecture, migration history, setup and troubleshooting documentation.
+
+### Database and backend
+- Supabase project ref: `jkjudmkqaebrgllemris`.
+- Workspace ID: `9cd6c212-f1fa-4758-bb5e-23758dabfaa7`.
+- New additive migration: `20261120150000_owner_managed_five_device_booking_access.sql`.
+- New table: `public.pac_booking_devices`.
+- App/API must only be described as production-ready after the migration and matching Edge Function are both deployed and verified.
+- Existing Owner identity, members, customers, invoices, bookings and business records must be preserved.
+- Existing workspace pairing credential, Supabase service-role key, FCM credentials and Android signing key are not part of the handover package.
+
+### Notification delivery limitations
+- Realtime database events, app polling, Android local notifications and desktop notifications require the app/runtime to be active and permissions granted.
+- Fully closed Android delivery still requires Firebase Cloud Messaging setup, secure server-side credentials, device tokens, a push sender and physical-device tests.
+- Closed-browser desktop Web Push also needs VAPID keys and subscription setup.
+- Do not promise SMS/WhatsApp delivery from this system without a configured provider and approved templates.
+
+### Signing and installation caution
+The repository CI workflow produces a debug-signed APK if no original release keystore is available. A debug APK with a different signing certificate cannot be installed as an in-place update over an existing signed app. Do not uninstall the working Owner application or overwrite local data until signing continuity and a safe migration are verified.
+
+### Credentials and ownership
+This handover documents architecture and account/service locations, not passwords. Email addresses supplied by the Owner are not written into the public repository. Confirm primary/recovery email assignment within the authenticated Owner account before enabling any email-based recovery. Never include passwords, 2FA codes, workspace join credentials, Supabase service keys, Google OAuth secrets, FCM service accounts or keystore passwords in ZIPs.
 
 ---
 
