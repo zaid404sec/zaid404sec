@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.13.3') throw new Error('The package version must be 2.13.3.');
+if (packageJson.version !== '2.13.4') throw new Error('The package version must be 2.13.4.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.13.3 APK must retain the existing v24 application ID; signing compatibility is verified separately.');
+  throw new Error('The 2.13.4 APK must retain the existing v24 application ID; signing compatibility is verified separately.');
 }
-console.log('PASS: Android 2.13.3 retains the v24 application ID; signing compatibility must be verified separately.');
+console.log('PASS: Android 2.13.4 retains the v24 application ID; signing compatibility must be verified separately.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
