@@ -1,3 +1,14 @@
+const DEVICE_LABEL_KEY = 'prime-auto-care-booking-device-label-v1';
+
+function bookingDeviceLabel() {
+  try {
+    const saved = String(localStorage.getItem(DEVICE_LABEL_KEY) || '').trim();
+    if (saved) return saved;
+  } catch {}
+  const ua = String(navigator.userAgent || '');
+  return /android|iphone|ipad|mobile/i.test(ua) ? 'Android Phone' : 'Manager Laptop';
+}
+
 async function bookingRequest(action, body = {}) {
   const context = await window.WashDeskCloud?.getApiContext?.();
   if (!context?.url || !context?.anonKey || !context?.accessToken) {
@@ -10,7 +21,7 @@ async function bookingRequest(action, body = {}) {
       apikey: context.anonKey,
       Authorization: 'Bearer ' + context.accessToken
     },
-    body: JSON.stringify({ action, ...body })
+    body: JSON.stringify({ action, ...body, device_label: bookingDeviceLabel() })
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -28,5 +39,15 @@ window.PrimeAutoCareBookings = {
   saveSettings: settings => bookingRequest('save-settings', { settings }),
   notifications: () => bookingRequest('notifications'),
   acknowledgeNotification: id => bookingRequest('acknowledge-notification', { id }),
-  revokeNotificationDevice: user_id => bookingRequest('revoke-notification-device', { user_id })
+  createNotificationPairCode: () => bookingRequest('create-notification-pair-code'),
+  redeemNotificationPairCode: code => bookingRequest('redeem-notification-pair-code', { code }),
+  revokeNotificationDevice: user_id => bookingRequest('revoke-notification-device', { user_id }),
+  setDeviceLabel: label => {
+    const clean = String(label || '').trim().replace(/\\s+/g, ' ').slice(0, 40);
+    if (clean.length < 2) throw new Error('Enter a device name with at least 2 characters.');
+    localStorage.setItem(DEVICE_LABEL_KEY, clean);
+    return clean;
+  },
+  setDeviceAccess: (user_id, permissions) => bookingRequest('set-device-access', { user_id, ...permissions }),
+  revokeDevice: user_id => bookingRequest('revoke-device', { user_id })
 };
