@@ -437,7 +437,24 @@ async function handle(req: Request, body: any) {
       slot_minutes: settings.slot_minutes, slot_capacity: settings.slot_capacity,
       horizon_days: settings.horizon_days, public_enabled: settings.public_enabled
     };
-    return { bookings: data || [], settings: visibleSettings, permissions: { is_owner: ctx.isOwner } };
+    const { data: notificationDevices, error: notificationDevicesError } = await ctx.admin
+      .from('pac_booking_notification_admins')
+      .select('auth_user_id')
+      .eq('workspace_id', ctx.workspace.id)
+      .eq('permission', 'booking_notifications_admin')
+      .is('revoked_at', null);
+    if (notificationDevicesError) throw new Error('Booking notification device access could not be verified.');
+    const notificationsEnabled = ctx.isOwner ||
+      (notificationDevices || []).some((device: any) => device.auth_user_id === ctx.user.id);
+    return {
+      bookings: data || [],
+      settings: visibleSettings,
+      permissions: {
+        is_owner: ctx.isOwner,
+        notifications_enabled: notificationsEnabled,
+        notification_device_count: (notificationDevices || []).length
+      }
+    };
   }
   if (action === 'create-staff') {
     const settingsResult = await ctx.admin.from('pac_booking_settings').select('*').eq('workspace_id', ctx.workspace.id).single();
