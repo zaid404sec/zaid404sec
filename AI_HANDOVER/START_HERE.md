@@ -6,16 +6,16 @@ Use these current details before making any further changes:
 - Public customer booking page: https://prime-auto-care-sigma.vercel.app/booking/
 - Both pages have been verified as HTTP 200 HTML pages on Vercel.
 - Vercel project: `prime-auto-care`, project ID `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`. The current deployment was uploaded directly. GitHub automatic deployment still needs a GitHub Login Connection in Vercel.
-- Production Supabase project: `jkjudmkqaebrgllemris`; booking API v11; public reviews v4. The old Supabase website routes redirect to Vercel.
+- Production Supabase project: `jkjudmkqaebrgllemris`; booking API v12; public reviews v5. Legacy Supabase website/booking routes redirect to Vercel.
 - The active business phone identity is now the Workspace Owner. The previous anonymous Owner identity remains a Member. No business data was reset.
-- Restart the app to refresh permissions. The active Owner should see **Generate phone pairing code** in Bookings → Phone notification access. Each code expires after 10 minutes and is single-use.
-- Source version: 2.13.2. Verify the main-branch workflow run and artifacts before describing APK/EXE builds as ready.
+- The active phone is the Workspace Owner now. Fully close/reopen the app or press Refresh on the Bookings page; it should show **Generate phone pairing code**. The Owner phone does not need to enter a code. It generates a separate 8-digit code for each additional already-paired member phone. Codes expire after 10 minutes and are single-use; random numbers are not valid.
+- Source version: 2.13.2. Latest successful build: [GitHub Actions run #446925](https://github.com/zaid404sec/zaid404sec/actions/runs/44692515707). Android APK, Windows installer, backend type-check, source and full release packaging all passed.
 - Android CI APK signing does not match the installed APK; the original keystore was not found. Do not uninstall or overwrite the live app.
 
 ---
 # Prime Auto Care — Portable AI Handover Kit
 
-_Last verified: 19 November 2026_
+_Last verified: 20 November 2026_
 
 ## The one link to give a new AI
 
@@ -30,9 +30,7 @@ https://github.com/zaid404sec/zaid404sec/tree/main/car-wash-erp
 **This handover folder:**  
 https://github.com/zaid404sec/zaid404sec/tree/main/AI_HANDOVER
 
-**Latest main-branch baseline:** version **2.11.0**, branch main, commit  
-`dd88813195b1c3de25e3afb36a9f116e77c85830` (GitHub Actions run #259 succeeded).  
-**Current development candidate:** WashDesk 2.12.0 on feature branch feature/washdesk-2.12.0-bookings-google-reviews; do not treat it as released until its pull request is merged and the main-branch build artifacts are verified.
+**Historical release references:** older version and candidate descriptions in this document are retained as release history only. The current release, production URLs, API versions, Workspace Owner mapping, build run and Android signing caveat are in the top section and `PROJECT_INDEX.md`.
 
 This documentation is a portable project memory, not a replacement for the repository. The application source code in `car-wash-erp/` is the authoritative implementation. The newest main-branch source ZIP is available at https://github.com/zaid404sec/zaid404sec/archive/refs/heads/main.zip. Always re-read the current `main` branch before editing; a ZIP or old chat can become outdated.
 
