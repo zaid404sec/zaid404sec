@@ -44,5 +44,5 @@ set device_label = 'Owner Phone',
     status = 'active',
     can_decide_bookings = true,
     approved_at = coalesce(public.pac_booking_devices.approved_at, now()),
-    approved_by = public.pac_booking_devices.approved_by,
+    approved_by = excluded.approved_by,
     revoked_at = null;
