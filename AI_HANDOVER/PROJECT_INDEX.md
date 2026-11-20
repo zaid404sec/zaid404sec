@@ -4,6 +4,20 @@ _Last verified: 20 November 2026 (Asia/Kolkata)_
 
 This file is a navigation and continuity guide for a developer or another AI assistant. The repository source code is authoritative. Always inspect the current `main` branch and live service state before changing production.
 
+## Current 2.13.4 release-candidate guide
+
+- Five-device permissions and setup: [DEVICE_ACCESS_AND_BOOKING_DECISIONS.md](DEVICE_ACCESS_AND_BOOKING_DECISIONS.md)
+- Source branch: `release/prime-auto-care-2.13.4-device-decisions`
+- Release version: 2.13.4; this branch must pass CI and be deployed before its new permission model is considered live.
+- Owner Phone: notifications + full administration + Accept/Reject.
+- Dad Phone 1, Dad Phone 2 and Manager Phone: notifications only after Owner approval.
+- Manager Laptop: notifications + Accept/Reject only after Owner grants decision permission.
+- Maximum five active devices; alerts are individually enabled by the Owner.
+- Existing public URLs remain:
+  - Business: https://prime-auto-care-sigma.vercel.app/
+  - Customer booking: https://prime-auto-care-sigma.vercel.app/booking/
+
+
 ## 1. Current public URLs
 
 - Business website: https://prime-auto-care-sigma.vercel.app/
