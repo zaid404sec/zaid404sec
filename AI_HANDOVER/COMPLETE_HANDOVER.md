@@ -1,3 +1,25 @@
+## Prime Auto Care 2.13.4 — current release-candidate handover
+
+- **Business website:** https://prime-auto-care-sigma.vercel.app/
+- **Customer booking page:** https://prime-auto-care-sigma.vercel.app/booking/
+- **GitHub:** https://github.com/zaid404sec/zaid404sec
+- **Supabase project:** `jkjudmkqaebrgllemris`
+- **Vercel project:** `prime-auto-care` (`prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`)
+- **Release version:** 2.13.4; Android app ID remains `com.washdesk.carwash.v24`.
+- **Release branch:** `release/prime-auto-care-2.13.4-device-decisions`.
+
+### Device permissions
+The new source implements a maximum-five active-device allowlist. Owner Phone can manage workspace settings and Accept/Reject. Dad Phone 1, Dad Phone 2 and Manager Phone are alert-only. The Manager Laptop may Accept/Reject only after it is connected to the workspace, registered as a desktop named exactly `Manager Laptop`, and explicitly granted decision permission by the Owner. Backend checks enforce the same rule. Each device's alert permission is separately enabled by the Owner, and notification acknowledgements remain per-device.
+
+The migration is `car-wash-erp/supabase/migrations/20261120150000_booking_device_roles.sql`. The release is a candidate until CI passes, the migration is applied, the booking API is deployed, and all five intended devices are verified. Do not remove historical workspace identities or reset any business records.
+
+### Important delivery limitations
+Android in-app/local and desktop browser notifications require the app/session to be running and OS/browser permissions enabled. Background push while Android is fully closed still requires FCM project setup, token registration, server-side sender credentials and device tests. The original production Android signing keystore was not found in the earlier handover; do not replace the existing installed Owner app with a debug APK unless signing compatibility has been verified. GitHub auto-deployment to Vercel is not yet linked, so website source updates require a manual static deployment.
+
+Full steps, database model and device setup: `AI_HANDOVER/DEVICE_ACCESS_AND_BOOKING_DECISIONS.md`.
+
+---
+
 ## Latest verified production and notification state — 20 November 2026
 
 This section supersedes older status notes below. Preserve the existing production workspace and Owner identity. Do not reset business records.
