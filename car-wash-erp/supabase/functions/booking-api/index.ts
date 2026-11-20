@@ -399,6 +399,11 @@ async function handle(req: Request, body: any) {
     return { ok: true, booking, message: 'Your request is received. Prime Auto Care will confirm the appointment shortly.' };
   }
 
+  const ctx = await authenticate(req);
+  const memberBookingActions = new Set(['list','notifications','acknowledge-notification','update-status']);
+  if (!ctx.isOwner && !memberBookingActions.has(action)) {
+    throw new Error('This staff device is limited to Bookings. Only the Owner can change business settings, devices or records.');
+  }
   if (action === 'get-booking-access-settings') {
     if (!ctx.isOwner) throw new Error('Only the Owner can manage the PAC Owner Code.');
     const { data: codeRow, error: codeError } = await ctx.admin.from('pac_booking_access_codes')
@@ -427,11 +432,6 @@ async function handle(req: Request, body: any) {
     },{onConflict:'workspace_id'});
     if (error) throw new Error('PAC Owner Code could not be saved.');
     return { ok:true, code_configured:true, message:'Permanent PAC Owner Code saved. Existing authorised devices remain connected.' };
-  }
-  const ctx = await authenticate(req);
-  const memberBookingActions = new Set(['list','notifications','acknowledge-notification','update-status']);
-  if (!ctx.isOwner && !memberBookingActions.has(action)) {
-    throw new Error('This staff device is limited to Bookings. Only the Owner can change business settings, devices or records.');
   }
   if (action === 'request-booking-device-access') {
     if (ctx.isOwner) return { ok: true, status: 'active', already_authorised: true };
