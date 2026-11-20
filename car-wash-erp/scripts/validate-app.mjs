@@ -149,7 +149,7 @@ for (const token of [
   'request-booking-device-access','review-booking-device-access','revoke-booking-device-access',
   'canDecideBookings(ctx)','device_kind === \'desktop\'',
   '!ctx.isOwner && ![\'confirmed\', \'rejected\'].includes(status)',
-  'five authorised-device limit','notification_device_count','max_notification_devices: 5'
+  'max_staff_devices:4','notification_device_count','max_notification_devices: 4'
 ]) {
   if (!fiveDeviceBookingApiSource.includes(token)) throw new Error('Booking device access enforcement is missing: '+token);
 }
@@ -179,7 +179,7 @@ for (const token of [
   'id="pac-owner-code-panel"',
   'data-action="save-pac-owner-code"',
   'PAC Owner Code',
-  'This staff device is limited to Bookings',
+  'Staff devices can view bookings and Accept or Reject them.',
   'Only the Owner can remove connected devices'
 ]) {
   if (!html.includes(token)) throw new Error('Permanent PAC Owner Code UI or staff access restrictions are missing: '+token);
@@ -213,6 +213,10 @@ for (const token of [
   'washdesk_next_invoice_number_owner_internal'
 ]) {
   if (!permanentOwnerCodeMigration.includes(token)) throw new Error('Permanent Owner Code database security migration is incomplete: '+token);
+}
+const staffLimitMigration = await readFile(new URL('../supabase/migrations/20261120183000_pac_owner_code_staff_device_limit.sql', import.meta.url), 'utf8');
+for (const token of ['for update;', "m.role = 'member'", 'd.status = \'active\'']) {
+  if (!staffLimitMigration.includes(token)) throw new Error('Staff device limit must count active Member devices only: '+token);
 }
 console.log('PASS: permanent PAC Owner Code, direct booking-only pairing, Owner-only business sync and Owner-managed device removal');
 
