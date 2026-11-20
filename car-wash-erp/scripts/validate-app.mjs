@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.13.5') throw new Error('The package version must be 2.13.5.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v25') {
-  throw new Error('The 2.13.5 APK must use the v25 application ID for side-by-side installation; the original signing key was not supplied.');
+if (packageJson.version !== '2.13.6') throw new Error('The package version must be 2.13.6.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v26') {
+  throw new Error('The 2.13.6 APK must use the v26 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.13.5 uses the v25 side-by-side application ID; original v24 app is preserved.');
+console.log('PASS: Android 2.13.6 uses the v26 side-by-side application ID; original v24 app is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -102,28 +102,21 @@ for (const token of ['pac_booking_notification_admins','booking_notifications_ad
   if (!bookingNotificationMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Booking notification permission migration is incomplete: '+token);
 }
 console.log('PASS: the paired booking desk receives scoped alerts without changing the original Workspace Owner');
-for (const token of ['create-notification-pair-code','redeem-notification-pair-code','pac_booking_notification_pair_codes','pac_booking_notification_receipts','notification_id','auth_user_id','device_acknowledged']) {
-  if (!bookingApiSource.includes(token)) throw new Error('Per-device booking notification pairing/receipt support is missing: '+token);
+for (const token of ['pac_booking_notification_receipts','notification_id','acknowledge-notification','auth_user_id']) {
+  if (!bookingApiSource.includes(token)) throw new Error('Per-device booking notification acknowledgement support is missing: '+token);
 }
 if (bookingApiSource.includes('acknowledged_at: new Date().toISOString(), acknowledged_by: ctx.user.id')) {
   throw new Error('Booking acknowledgement must be per-device, not a global event acknowledgement.');
 }
 if (!html.includes('booking-enable-notifications') ||
     !html.includes('requestBookingAlertPermission') ||
-    !html.includes('notifications_enabled') ||
-    html.includes('8-digit owner pairing code') ||
-    html.includes('booking-notification-create-code') ||
-    html.includes('booking-notification-redeem-code')) {
-  throw new Error('Booking alerts must use workspace-device enrolment without a second 8-digit code.');
-}
-const workspaceAlertMigration = await readFile(new URL('../supabase/migrations/20261120130000_workspace_members_auto_booking_alerts.sql', import.meta.url), 'utf8');
-for (const token of ['pac_auto_enrol_workspace_member_for_booking_alerts','after insert or update of workspace_id, role','pac_booking_notification_admins','washdesk_workspace_members']) {
-  if (!workspaceAlertMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Workspace booking-alert auto-enrolment migration is incomplete: '+token);
+    !bookingApiSource.includes("if (!(await canReceiveBookingAlerts(ctx)))")) {
+  throw new Error('Booking notifications must use the active authorised staff-device session.');
 }
 if (!bookingApiSource.includes('notification_device_count') || !bookingApiSource.includes('notifications_enabled')) {
-  throw new Error('Booking API must report per-device notification enrolment status.');
+  throw new Error('Booking API must report current authorised staff-device notification status.');
 }
-console.log('PASS: workspace members are automatically enrolled for booking alerts; no separate 8-digit code is required');
+console.log('PASS: booking alerts require a PAC-code-authorised active device; notifications are acknowledged per device');
 const localNotificationsSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
 if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
     !localNotificationsSource.includes('requestBookingAlertPermission') ||
@@ -147,9 +140,9 @@ for (const token of ['requestDeviceAccess','reviewDeviceAccess','revokeDeviceAcc
 }
 for (const token of [
   'request-booking-device-access','review-booking-device-access','revoke-booking-device-access',
-  'canDecideBookings(ctx)','device_kind === \'desktop\'',
+  'canDecideBookings(ctx)',
   '!ctx.isOwner && ![\'confirmed\', \'rejected\'].includes(status)',
-  'five authorised-device limit','notification_device_count','max_notification_devices: 5'
+  'max_staff_devices:4','notification_device_count','max_notification_devices: 4'
 ]) {
   if (!fiveDeviceBookingApiSource.includes(token)) throw new Error('Booking device access enforcement is missing: '+token);
 }
@@ -161,17 +154,65 @@ for (const token of [
 ]) {
   if (!bookingDeviceMigration.includes(token)) throw new Error('Five-device migration is missing: '+token);
 }
+const cloudSource = await readFile(new URL('../src/cloud-sync.js', import.meta.url), 'utf8');
+const permanentOwnerCodeMigration = await readFile(new URL('../supabase/migrations/20261120180000_pac_permanent_owner_booking_code.sql', import.meta.url), 'utf8');
 for (const token of [
-  'data-action="booking-device-request"',
-  'data-action="booking-device-review"',
-  'data-action="booking-device-revoke"',
-  'state.permissions?.can_decide_bookings===true',
-  'Approve + Accept / Reject',
-  'Waiting for Owner approval'
+  'id="booking-device-role"',
+  'Owner Phone',
+  'Dad Phone',
+  'Zaid Phone',
+  'Jack Phone',
+  'Manager Phone',
+  'value="owner">Owner',
+  'value="member" selected>Member',
+  'value="not-sure">Not sure',
+  'id="booking-device-label"',
+  'id="booking-device-kind"',
+  'id="booking-pair-code"',
+  'data-action="booking-pair-code-verify"',
+  'id="pac-owner-code-panel"',
+  'data-action="save-pac-owner-code"',
+  'PAC Owner Code',
+  'Staff devices can view bookings and Accept or Reject them.',
+  'Only the Owner can remove connected devices'
 ]) {
-  if (!html.includes(token)) throw new Error('Owner-managed device UI is missing: '+token);
+  if (!html.includes(token)) throw new Error('Permanent PAC Owner Code UI or staff access restrictions are missing: '+token);
 }
-console.log('PASS: five-device registration, Owner approvals, one Manager Laptop decision role and server-enforced Accept/Reject permissions');
+for (const token of ['getBookingAccessSettings','setPermanentOwnerCode','pairWithOwnerCode']) {
+  if (!bookingClientSource.includes(token)) throw new Error('Permanent PAC Owner Code client API is missing: '+token);
+}
+for (const token of [
+  'async function pairBookingDevice',
+  'pac_join_workspace_with_owner_code',
+  "workspace.role !== 'owner'",
+  'Staff devices have booking-only access'
+]) {
+  if (!cloudSource.includes(token)) throw new Error('Booking-only cloud session restriction is missing: '+token);
+}
+for (const token of [
+  'get-booking-access-settings','set-booking-owner-code',
+  'memberBookingActions',
+  'device?.can_decide_bookings === true',
+  'Staff devices can only Accept or Reject bookings',
+  'Only the Owner can create or change the PAC Owner Code'
+]) {
+  if (!fiveDeviceBookingApiSource.includes(token)) throw new Error('Permanent Owner Code API enforcement is missing: '+token);
+}
+for (const token of [
+  'pac_booking_access_codes',
+  'pac_booking_access_code_attempts',
+  'pac_join_workspace_with_owner_code',
+  "m.role = 'owner'",
+  'washdesk_merge_sync_owner_internal',
+  'washdesk_next_invoice_number_owner_internal'
+]) {
+  if (!permanentOwnerCodeMigration.includes(token)) throw new Error('Permanent Owner Code database security migration is incomplete: '+token);
+}
+const staffLimitMigration = await readFile(new URL('../supabase/migrations/20261120183000_pac_owner_code_staff_device_limit.sql', import.meta.url), 'utf8');
+for (const token of ['for update;', "m.role = 'member'", 'd.status = \'active\'']) {
+  if (!staffLimitMigration.includes(token)) throw new Error('Staff device limit must count active Member devices only: '+token);
+}
+console.log('PASS: permanent PAC Owner Code, direct booking-only pairing, Owner-only business sync and Owner-managed device removal');
 
 const notificationPollStart = html.indexOf('async function pollBookingNotifications(){');
 const notificationPollEnd = html.indexOf('async function loadBookingCenter(', notificationPollStart);
@@ -593,8 +634,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v25') throw new Error('Android 2.13.5 application ID v25 was not set.');
-console.log('PASS: app manifest uses the new v25 Android package ID.');
+if (appId !== 'com.washdesk.carwash.v26') throw new Error('Android 2.13.6 application ID v26 was not set.');
+console.log('PASS: app manifest uses the new v26 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -872,7 +913,6 @@ if (uniqueResult.mobile !== '9824823200' || uniqueResult.mobile0091 !== '9824823
 }
 console.log('PASS: mobile numbers normalize across +91 formatting and vehicle registrations ignore spaces / punctuation');
 
-const cloudSource = await readFile(new URL('../src/cloud-sync.js', import.meta.url), 'utf8');
 if (!cloudSource.includes('https://jkjudmkqaebrgllemris.supabase.co') ||
     !cloudSource.includes('sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw')) {
   throw new Error('Prime Auto Care Supabase URL / publishable key are not prefilled.');

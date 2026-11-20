@@ -161,16 +161,19 @@ async function canDecideBookings(ctx: any) {
   if (ctx.isOwner) return true;
   const device = await getAuthorisedBookingDevice(ctx);
   return device?.status === 'active'
-    && device?.device_kind === 'desktop'
     && device?.can_decide_bookings === true;
 }
 
+async function pacOwnerCodeHash(code: string) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
+  return Array.from(new Uint8Array(bytes)).map(value => value.toString(16).padStart(2, '0')).join('');
+}
 async function bookingNotificationPairHash(workspaceId: string, code: string) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(workspaceId + ':' + code));
   return Array.from(new Uint8Array(bytes)).map(value => value.toString(16).padStart(2, '0')).join('');
 }
 async function createBookingNotificationPairCode(ctx: any) {
-  if (!ctx.isOwner) throw new Error('Only the original Workspace Owner can authorise another phone.');
+  if (!ctx.isOwner) throw new Error('Only a verified Prime Auto Care Owner can generate a pairing code.');
   const random = crypto.getRandomValues(new Uint32Array(1))[0] % 100000000;
   const code = String(random).padStart(8, '0');
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -397,6 +400,39 @@ async function handle(req: Request, body: any) {
   }
 
   const ctx = await authenticate(req);
+  const memberBookingActions = new Set(['list','notifications','acknowledge-notification','update-status']);
+  if (!ctx.isOwner && !memberBookingActions.has(action)) {
+    throw new Error('This staff device is limited to Bookings. Only the Owner can change business settings, devices or records.');
+  }
+  if (action === 'get-booking-access-settings') {
+    if (!ctx.isOwner) throw new Error('Only the Owner can manage the PAC Owner Code.');
+    const { data: codeRow, error: codeError } = await ctx.admin.from('pac_booking_access_codes')
+      .select('updated_at,enabled').eq('workspace_id',ctx.workspace.id).maybeSingle();
+    if (codeError) throw new Error('PAC Owner Code settings could not be loaded.');
+    const { data: devices, error: devicesError } = await ctx.admin.from('pac_booking_devices')
+      .select('auth_user_id,device_label,device_kind,status,can_decide_bookings,last_seen_at')
+      .eq('workspace_id',ctx.workspace.id).eq('status','active')
+      .neq('auth_user_id',ctx.user.id).order('requested_at',{ascending:true});
+    if (devicesError) throw new Error('Authorised devices could not be loaded.');
+    const { data: members, error: membersError } = await ctx.admin.from('washdesk_workspace_members')
+      .select('auth_user_id').eq('workspace_id',ctx.workspace.id).eq('role','member');
+    if (membersError) throw new Error('Workspace member roles could not be checked.');
+    const memberIds = new Set((members||[]).map((member:any)=>member.auth_user_id));
+    const staffDevices = (devices||[]).filter((device:any)=>memberIds.has(device.auth_user_id));
+    return { is_owner:true, code_configured:!!codeRow?.enabled, code_updated_at:codeRow?.updated_at||null,
+      authorised_devices:staffDevices, max_staff_devices:4 };
+  }
+  if (action === 'set-booking-owner-code') {
+    if (!ctx.isOwner) throw new Error('Only the Owner can create or change the PAC Owner Code.');
+    const code = String(body.code||'').replace(/\s/g,'');
+    if (!/^\d{8,12}$/.test(code)) throw new Error('Choose a permanent code containing 8 to 12 digits.');
+    const { error } = await ctx.admin.from('pac_booking_access_codes').upsert({
+      workspace_id:ctx.workspace.id, code_hash:await pacOwnerCodeHash(code),
+      updated_by:ctx.user.id, updated_at:new Date().toISOString(), enabled:true
+    },{onConflict:'workspace_id'});
+    if (error) throw new Error('PAC Owner Code could not be saved.');
+    return { ok:true, code_configured:true, message:'Permanent PAC Owner Code saved. Existing authorised devices remain connected.' };
+  }
   if (action === 'request-booking-device-access') {
     if (ctx.isOwner) return { ok: true, status: 'active', already_authorised: true };
     const deviceLabel = String(body.device_label || '').replace(/[^a-zA-Z0-9 ._()\-]/g, '').trim().slice(0, 60);
@@ -437,7 +473,9 @@ async function handle(req: Request, body: any) {
       .eq('auth_user_id', target)
       .eq('status', 'pending')
       .maybeSingle();
-    if (requestError || !requested) throw new Error('This device request is no longer pending. Refresh the device list.');
+    const { data: requestedMember, error: requestedMemberError } = await ctx.admin.from('washdesk_workspace_members')
+      .select('role').eq('workspace_id',ctx.workspace.id).eq('auth_user_id',target).maybeSingle();
+    if (requestError || !requested || requestedMemberError || requestedMember?.role !== 'member') throw new Error('This device request is no longer valid. Owner accounts cannot be reviewed as staff devices.');
     if (approved) {
       const { count: activeCount, error: countError } = await ctx.admin.from('pac_booking_devices')
         .select('auth_user_id', { count: 'exact', head: true })
@@ -477,6 +515,9 @@ async function handle(req: Request, body: any) {
     if (!ctx.isOwner) throw new Error('Only the Prime Auto Care Owner can revoke a device.');
     const target = String(body.auth_user_id || '');
     if (!/^[0-9a-f-]{36}$/i.test(target) || target === ctx.user.id) throw new Error('Select a valid non-owner device.');
+    const { data: targetMember, error: targetMemberError } = await ctx.admin.from('washdesk_workspace_members')
+      .select('role').eq('workspace_id',ctx.workspace.id).eq('auth_user_id',target).maybeSingle();
+    if (targetMemberError || !targetMember || targetMember.role !== 'member') throw new Error('Only a registered staff device can be removed. Owner accounts cannot be revoked here.');
     const { error } = await ctx.admin.from('pac_booking_devices').update({
       status: 'revoked', can_decide_bookings: false, revoked_at: new Date().toISOString()
     }).eq('workspace_id', ctx.workspace.id).eq('auth_user_id', target).eq('status', 'active');
@@ -554,28 +595,31 @@ async function handle(req: Request, body: any) {
       slot_minutes: settings.slot_minutes, slot_capacity: settings.slot_capacity,
       horizon_days: settings.horizon_days, public_enabled: settings.public_enabled
     };
+    if (!ctx.isOwner && !(await canReceiveBookingAlerts(ctx))) {
+      throw new Error('Enter the PAC Owner Code in Bookings to connect this device first.');
+    }
     const { data: registeredDevices, error: deviceError } = await ctx.admin
       .from('pac_booking_devices')
       .select('auth_user_id,device_label,device_kind,status,can_decide_bookings,requested_at,approved_at')
       .eq('workspace_id', ctx.workspace.id)
-      .in('status', ['active', 'pending']);
+      .eq('status', 'active');
     if (deviceError) throw new Error('Authorised device access could not be verified.');
-    const currentDevice = (registeredDevices || []).find((device: any) => device.auth_user_id === ctx.user.id) || null;
-    const activeDevices = (registeredDevices || []).filter((device: any) => device.status === 'active');
-    const decisionRequests = ctx.isOwner
-      ? (registeredDevices || []).filter((device: any) => device.status === 'pending')
-      : [];
+    const { data: deviceMembers, error: deviceMembersError } = await ctx.admin.from('washdesk_workspace_members')
+      .select('auth_user_id').eq('workspace_id',ctx.workspace.id).eq('role','member');
+    if (deviceMembersError) throw new Error('Workspace device roles could not be checked.');
+    const memberDeviceIds = new Set((deviceMembers||[]).map((member:any)=>member.auth_user_id));
+    const memberDevices = (registeredDevices||[]).filter((device:any)=>memberDeviceIds.has(device.auth_user_id));
+    const currentDevice = memberDevices.find((device: any) => device.auth_user_id === ctx.user.id) || null;
+    const activeDevices = memberDevices.filter((device: any) => device.status === 'active');
     const notificationsEnabled = ctx.isOwner || currentDevice?.status === 'active';
     const canDecide = ctx.isOwner || (
-      currentDevice?.status === 'active'
-      && currentDevice?.device_kind === 'desktop'
-      && currentDevice?.can_decide_bookings === true
+      currentDevice?.status === 'active' && currentDevice?.can_decide_bookings === true
     );
     return {
       bookings: data || [],
       settings: visibleSettings,
       authorised_devices: ctx.isOwner ? activeDevices.filter((device: any) => device.auth_user_id !== ctx.user.id) : [],
-      decision_requests: decisionRequests,
+      decision_requests: [],
       permissions: {
         is_owner: ctx.isOwner,
         notifications_enabled: notificationsEnabled,
@@ -583,11 +627,12 @@ async function handle(req: Request, body: any) {
         current_device_status: ctx.isOwner ? 'active' : (currentDevice?.status || 'not_registered'),
         current_device_label: ctx.isOwner ? 'Owner Phone' : (currentDevice?.device_label || ''),
         notification_device_count: activeDevices.length,
-        max_notification_devices: 5
+        max_notification_devices: 4
       }
     };
   }
   if (action === 'create-staff') {
+    if (!ctx.isOwner) throw new Error('Staff devices can only review existing bookings. Only the Owner can create staff bookings.');
     const settingsResult = await ctx.admin.from('pac_booking_settings').select('*').eq('workspace_id', ctx.workspace.id).single();
     if (settingsResult.error) throw settingsResult.error;
     const booking = await createBooking(ctx.admin, settingsResult.data, body.booking || {}, 'staff', ctx.user.id);
@@ -599,9 +644,9 @@ async function handle(req: Request, body: any) {
     const id = String(body.id || '');
     if (!allowed.has(status) || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid booking update.');
     const canDecide = await canDecideBookings(ctx);
-    if (!canDecide) throw new Error('This device can receive booking alerts but cannot accept or reject bookings. Ask the Owner to authorise the Manager Laptop.');
+    if (!canDecide) throw new Error('This staff device does not have permission to Accept or Reject bookings. Enter the PAC Owner Code on an authorised staff device.');
     if (!ctx.isOwner && !['confirmed', 'rejected'].includes(status)) {
-      throw new Error('The Manager Laptop can only Accept or Reject pending bookings. Other booking changes require the Owner.');
+      throw new Error('Staff devices can only Accept or Reject bookings. All other booking changes require the Owner.');
     }
 
     // The database function locks the booking row, enforces allowed status transitions,
