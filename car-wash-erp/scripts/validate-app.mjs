@@ -140,7 +140,7 @@ for (const token of ['requestDeviceAccess','reviewDeviceAccess','revokeDeviceAcc
 }
 for (const token of [
   'request-booking-device-access','review-booking-device-access','revoke-booking-device-access',
-  'canDecideBookings(ctx)',,
+  'canDecideBookings(ctx)',
   '!ctx.isOwner && ![\'confirmed\', \'rejected\'].includes(status)',
   'max_staff_devices:4','notification_device_count','max_notification_devices: 4'
 ]) {
