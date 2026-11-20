@@ -1,13 +1,13 @@
 # WashDesk 2.13.2 — Prime Auto Care
 
 ## Current public endpoints
-- Business website: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/
-- Customer booking: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/booking/
+- Business website: https://prime-auto-care-sigma.vercel.app/
+- Customer booking: https://prime-auto-care-sigma.vercel.app/booking/
 - Legacy Supabase website and booking URLs redirect to Vercel. Static HTML is hosted on Vercel; Supabase is the API/database backend.
 
 ## Current operational notes
 - Both Vercel pages were verified with HTTP 200 and `text/html; charset=utf-8`.
-- Production `booking-api` is v11 and `public-reviews` is v4. The booking API allows the Vercel origin and returns a specific client error for invalid/expired/already-used pairing codes.
+- Production `booking-api` is v12 and `public-reviews` is v5. The booking API allows the Vercel origin and returns a specific client error for invalid/expired/already-used pairing codes.
 - The active business phone identity is now the Workspace Owner. The previous anonymous Owner identity was kept as a Member; no booking, invoice or business data was reset. Close/reopen the app to refresh the Owner permission and show the **Generate phone pairing code** button.
 - Pairing codes are Owner-generated, 8 digits, single-use and expire after 10 minutes. Do not type a random number.
 - Vercel's production static deployment has been created, but GitHub auto-linking still requires a GitHub Login Connection in Vercel.
