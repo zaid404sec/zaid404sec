@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
 const allowedOrigins = new Set([
   'https://zaid404sec.github.io',
+  'https://prime-auto-care-mz03200786-2785s-projects.vercel.app',
   'https://jkjudmkqaebrgllemris.supabase.co',
   'capacitor://localhost',
   'http://localhost',
@@ -529,8 +530,8 @@ Deno.serve(async req => {
     const lower = message.toLowerCase();
     const status = lower.includes('slot_unavailable') ? 409
       : lower.includes('rate_limit') ? 429
-      : lower.includes('public_booking_disabled') ? 403
-      : lower.includes('out_of_range') || lower.includes('invalid_') || lower.includes('choose') || lower.includes('enter') ? 400
+      : lower.includes('public_booking_disabled') || lower.includes('only the original workspace owner') ? 403
+      : lower.includes('out_of_range') || lower.includes('invalid_') || lower.includes('invalid') || lower.includes('expired') || lower.includes('already used') || lower.includes('choose') || lower.includes('enter') ? 400
       : lower.includes('sign in') || lower.includes('session') || lower.includes('paired') ? 401
       : 500;
     console.error('Booking API request failed:', message);
