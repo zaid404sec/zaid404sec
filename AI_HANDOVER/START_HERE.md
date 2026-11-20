@@ -1,3 +1,18 @@
+## Latest live status — 20 November 2026
+
+Use these current details before making any further changes:
+
+- Public business website: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/
+- Public customer booking page: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/booking/
+- Both pages have been verified as HTTP 200 HTML pages on Vercel.
+- Vercel project: `prime-auto-care`, project ID `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`. The current deployment was uploaded directly. GitHub automatic deployment still needs a GitHub Login Connection in Vercel.
+- Production Supabase project: `jkjudmkqaebrgllemris`; booking API v11; public reviews v4. The old Supabase website routes redirect to Vercel.
+- The active business phone identity is now the Workspace Owner. The previous anonymous Owner identity remains a Member. No business data was reset.
+- Restart the app to refresh permissions. The active Owner should see **Generate phone pairing code** in Bookings → Phone notification access. Each code expires after 10 minutes and is single-use.
+- Source version: 2.13.2. Verify the main-branch workflow run and artifacts before describing APK/EXE builds as ready.
+- Android CI APK signing does not match the installed APK; the original keystore was not found. Do not uninstall or overwrite the live app.
+
+---
 # Prime Auto Care — Portable AI Handover Kit
 
 _Last verified: 19 November 2026_
