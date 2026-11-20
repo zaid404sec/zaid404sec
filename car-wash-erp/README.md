@@ -1,3 +1,14 @@
+# Prime Auto Care Manager — Release 2.13.5
+
+## 2.13.5 hotfix notes (2026-11-20)
+- Both configured Owner accounts, `bmumz3909@gmail.com` and `mz03200786@gmail.com`, are authorised by their Prime Auto Care workspace Owner membership. Neither Owner is asked to approve the other Owner's actions.
+- The existing booking transaction flow remains the source of truth for Accept/Reject decisions, conflict protection, actor attribution and notification events.
+- The existing multi-device booking alert flow and five-authorised-device limit are retained. Non-Owner alert devices do not gain booking decision authority.
+- Added persistent Dark/Light mode under Settings → Business Settings → Appearance. The preference is saved locally on each device.
+- Existing Prime Auto Care website, customer booking portal, bookings, customers, invoices, reports, inventory, staff, cloud sync and other features are retained.
+- The Android package ID is `com.washdesk.carwash.v25` so this debug-signed build installs alongside the older v24 app instead of attempting an incompatible in-place update. Keep the previous app until records have been checked in the new app.
+- Android notifications in this release use the existing local notification / active-app alert flow. Fully closed-app Firebase push delivery is not represented as enabled or verified.
+
 # WashDesk 2.13.3 — Prime Auto Care
 
 ## Current public endpoints
@@ -8,14 +19,14 @@
 ## Current device and booking alert model
 - A device joins the shared business workspace once through Settings → Business Settings → Connect / Pair this device using the existing private 64-character workspace pairing credential.
 - No separate 8-digit booking-notification code is needed. Workspace members are automatically enrolled for booking-alert access by migration `20261120130000_workspace_members_auto_booking_alerts.sql`.
-- Production booking API v13 reports each device's notification permission. Per-device acknowledgement receipts remain independent.
+- Production booking API v19 reports each device's notification permission. Per-device acknowledgement receipts remain independent.
 - Android local notifications work while the app is active and OS notification permission is granted.
 - Browser/Electron desktop notifications work while the manager app is running after pressing **Enable notifications on this device**.
 - Push notifications while the Android app is fully closed are **not yet enabled**. FCM project/service-account setup, device token registration, server-side push sending and closed-app tests remain required.
 - Current workspace member identities and notification enrolment were checked: 36 member identities, 36 active booking-alert permission rows. This is not a verified count of physical devices; do not delete old identities without Owner review.
 
 ## Operational safety
-- The canonical workspace Owner identity remains intact. No business, customer, booking, invoice or billing records were reset.
+- Both configured workspace Owner memberships remain intact. No business, customer, booking, invoice or billing records were reset.
 - Do not commit or place the workspace pairing credential, Supabase service-role key, Firebase service-account JSON, OAuth secrets or signing key in source archives.
 - Android application ID remains `com.washdesk.carwash.v24`. The CI APK is debug-signed and does not match the installed certificate. Do not overwrite the currently working installation; the original production keystore was not found.
 - Vercel GitHub auto-linking is not yet configured, so static website source changes still need a manual Vercel deployment.
