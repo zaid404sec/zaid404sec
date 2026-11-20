@@ -8,6 +8,16 @@
 - Existing booking website/system, cloud records, Dark/Light mode, business modules and Owner-only booking decisions are retained.
 - Version 2.13.6 uses Android package ID `com.washdesk.carwash.v26` to install alongside previous debug builds because original signing key was not supplied.
 
+## 2.13.6 simple booking device setup (2026-11-20)
+
+- Replaced confusing device registration/Owner approval instructions with a clear selector: Owner Phone, Dad Phone (alerts only), Owner, Member, Not sure.
+- Owners can generate a one-time 8-digit pairing code. It expires after 10 minutes and can be redeemed once.
+- Member/Dad Phone selects enter the code directly in Bookings and tap Verify Code.
+- Pairing code grants booking alerts only. It cannot make a Member an Owner or grant Accept/Reject booking decisions.
+- Owner accounts are automatically authorised by verified workspace Owner role.
+- Existing booking website/system, cloud records, Dark/Light mode, business modules and Owner-only booking decisions are retained.
+- Version 2.13.6 uses Android package ID `com.washdesk.carwash.v26` to install alongside previous debug builds because original signing key was not supplied.
+
 # Prime Auto Care Manager — Release 2.13.6
 
 ## 2.13.6 hotfix notes (2026-11-20)
