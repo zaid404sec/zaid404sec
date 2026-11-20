@@ -1,4 +1,8 @@
--- Prime Auto Care: one shared database for all phones and the Windows laptop.
+-- Prime Auto Care Shared Cloud SQL — compatibility release 2.13.8 (core Cloud Sync schema v1).
+-- Installs/updates workspace membership, shared snapshot, stock-ledger and invoice-numbering SQL.
+-- This SQL does not create, reset or change Supabase Auth email/password credentials.
+-- A Supabase "Invalid login credentials" response must be fixed by using the correct registered Owner email/password.
+
 -- Run this complete file ONCE in Supabase Dashboard -> SQL Editor.
 -- The final SELECT returns a private 64-character device pairing code.
 -- Enter that SAME code once on every Prime Auto Care device.
