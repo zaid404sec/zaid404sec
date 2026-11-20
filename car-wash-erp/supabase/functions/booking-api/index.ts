@@ -409,8 +409,13 @@ async function handle(req: Request, body: any) {
       .eq('workspace_id',ctx.workspace.id).eq('status','active')
       .neq('auth_user_id',ctx.user.id).order('requested_at',{ascending:true});
     if (devicesError) throw new Error('Authorised devices could not be loaded.');
+    const { data: members, error: membersError } = await ctx.admin.from('washdesk_workspace_members')
+      .select('auth_user_id').eq('workspace_id',ctx.workspace.id).eq('role','member');
+    if (membersError) throw new Error('Workspace member roles could not be checked.');
+    const memberIds = new Set((members||[]).map((member:any)=>member.auth_user_id));
+    const staffDevices = (devices||[]).filter((device:any)=>memberIds.has(device.auth_user_id));
     return { is_owner:true, code_configured:!!codeRow?.enabled, code_updated_at:codeRow?.updated_at||null,
-      authorised_devices:devices||[], max_staff_devices:4 };
+      authorised_devices:staffDevices, max_staff_devices:4 };
   }
   if (action === 'set-booking-owner-code') {
     if (!ctx.isOwner) throw new Error('Only the Owner can create or change the PAC Owner Code.');
@@ -468,7 +473,9 @@ async function handle(req: Request, body: any) {
       .eq('auth_user_id', target)
       .eq('status', 'pending')
       .maybeSingle();
-    if (requestError || !requested) throw new Error('This device request is no longer pending. Refresh the device list.');
+    const { data: requestedMember, error: requestedMemberError } = await ctx.admin.from('washdesk_workspace_members')
+      .select('role').eq('workspace_id',ctx.workspace.id).eq('auth_user_id',target).maybeSingle();
+    if (requestError || !requested || requestedMemberError || requestedMember?.role !== 'member') throw new Error('This device request is no longer valid. Owner accounts cannot be reviewed as staff devices.');
     if (approved) {
       const { count: activeCount, error: countError } = await ctx.admin.from('pac_booking_devices')
         .select('auth_user_id', { count: 'exact', head: true })
@@ -508,6 +515,9 @@ async function handle(req: Request, body: any) {
     if (!ctx.isOwner) throw new Error('Only the Prime Auto Care Owner can revoke a device.');
     const target = String(body.auth_user_id || '');
     if (!/^[0-9a-f-]{36}$/i.test(target) || target === ctx.user.id) throw new Error('Select a valid non-owner device.');
+    const { data: targetMember, error: targetMemberError } = await ctx.admin.from('washdesk_workspace_members')
+      .select('role').eq('workspace_id',ctx.workspace.id).eq('auth_user_id',target).maybeSingle();
+    if (targetMemberError || !targetMember || targetMember.role !== 'member') throw new Error('Only a registered staff device can be removed. Owner accounts cannot be revoked here.');
     const { error } = await ctx.admin.from('pac_booking_devices').update({
       status: 'revoked', can_decide_bookings: false, revoked_at: new Date().toISOString()
     }).eq('workspace_id', ctx.workspace.id).eq('auth_user_id', target).eq('status', 'active');
@@ -594,8 +604,13 @@ async function handle(req: Request, body: any) {
       .eq('workspace_id', ctx.workspace.id)
       .eq('status', 'active');
     if (deviceError) throw new Error('Authorised device access could not be verified.');
-    const currentDevice = (registeredDevices || []).find((device: any) => device.auth_user_id === ctx.user.id) || null;
-    const activeDevices = (registeredDevices || []).filter((device: any) => device.status === 'active');
+    const { data: deviceMembers, error: deviceMembersError } = await ctx.admin.from('washdesk_workspace_members')
+      .select('auth_user_id').eq('workspace_id',ctx.workspace.id).eq('role','member');
+    if (deviceMembersError) throw new Error('Workspace device roles could not be checked.');
+    const memberDeviceIds = new Set((deviceMembers||[]).map((member:any)=>member.auth_user_id));
+    const memberDevices = (registeredDevices||[]).filter((device:any)=>memberDeviceIds.has(device.auth_user_id));
+    const currentDevice = memberDevices.find((device: any) => device.auth_user_id === ctx.user.id) || null;
+    const activeDevices = memberDevices.filter((device: any) => device.status === 'active');
     const notificationsEnabled = ctx.isOwner || currentDevice?.status === 'active';
     const canDecide = ctx.isOwner || (
       currentDevice?.status === 'active' && currentDevice?.can_decide_bookings === true
