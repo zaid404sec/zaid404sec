@@ -4,6 +4,20 @@ _Last verified: 20 November 2026 (Asia/Kolkata)_
 
 This file is a navigation and continuity guide for a developer or another AI assistant. The repository source code is authoritative. Always inspect the current `main` branch and live service state before changing production.
 
+## Current 2.13.4 release-candidate guide
+
+- Five-device permissions and setup: [DEVICE_ACCESS_AND_BOOKING_DECISIONS.md](DEVICE_ACCESS_AND_BOOKING_DECISIONS.md)
+- Source branch: `release/prime-auto-care-2.13.4-device-decisions`
+- Release version: 2.13.4; this branch must pass CI and be deployed before its new permission model is considered live.
+- Owner Phone: notifications + full administration + Accept/Reject.
+- Dad Phone 1, Dad Phone 2 and Manager Phone: notifications only after Owner approval.
+- Manager Laptop: notifications + Accept/Reject only after Owner grants decision permission.
+- Maximum five active devices; alerts are individually enabled by the Owner.
+- Existing public URLs remain:
+  - Business: https://prime-auto-care-sigma.vercel.app/
+  - Customer booking: https://prime-auto-care-sigma.vercel.app/booking/
+
+
 ## 1. Current public URLs
 
 - Business website: https://prime-auto-care-sigma.vercel.app/
@@ -32,38 +46,36 @@ The two Vercel routes were fetched and verified as HTTP 200 with `Content-Type: 
 ## 2. Current application and backend state
 
 - Product/application name: Prime Auto Care / WashDesk.
-- Application version in `car-wash-erp/package.json`: **2.13.3**.
+- Application version in `car-wash-erp/package.json`: **2.13.2**.
 - Android application ID: `com.washdesk.carwash.v24`.
 - Supabase project ref: `jkjudmkqaebrgllemris`.
 - Supabase project status: `ACTIVE_HEALTHY`.
 - Supabase project region: `ap-northeast-2`.
-- Production booking API: `booking-api` v13.
+- Production booking API: `booking-api` v12.
 - Public review feed: `public-reviews` v5.
 - Legacy website redirects: `prime-auto-care-site` v4, `prime-auto-care-booking` v3, `prime-auto-care-website` v3.
 - Other deployed Google Review functions include `google-review-api`, `google-review-oauth-callback`, `google-review-worker` and `google-review-pubsub-webhook`. Re-check their live versions before future work.
 
-### Booking API v13 and device notification changes
+### Booking API v11 changes
 
 - CORS accepts the Vercel public website origin.
-- The list response includes `permissions.notifications_enabled` and `permissions.notification_device_count`.
-- Workspace members are automatically enrolled for booking alerts by database trigger; a second 8-digit notification pairing code is no longer part of the standard app flow.
-- The old one-time 8-digit notification-code API actions and tables remain for backwards compatibility but are no longer exposed in the normal Bookings UI.
+- Invalid, expired and already-used one-time phone pairing codes now return an actionable client error (HTTP 400); they should no longer be hidden behind the generic HTTP 500 “Booking service is temporarily unavailable” message.
 - Public booking actions are `public-config`, `availability` and `create-public`.
-- Authenticated workspace actions include listing/managing bookings, status changes, per-device notification reads and Owner-only revocation of notification access.
+- Authenticated workspace actions include listing/managing bookings, status changes and owner-only notification pairing-code generation.
 
-## 3. Workspace ownership, device enrolment and sign-in model
+## 3. Workspace ownership and sign-in model
 
 **Important: the app's workspace sign-in is anonymous Supabase authentication, not email/password login.**
 
-- The database does not contain an email address for anonymous phone identities. A GitHub or Vercel account email does not automatically become the WashDesk Workspace Owner.
-- The active business phone identity is now the canonical Prime Auto Care Workspace Owner. The Owner identity and role were rechecked after the notification redesign and remain intact.
-- Older anonymous identities have been retained as workspace Members. The notification redesign did not delete identities, reset the workspace, or alter customer, invoice, booking, inventory or billing records.
-- The existing private 64-character workspace pairing credential is the one-time-in-practice join credential for a new device. Connect each phone/laptop once through Settings → Business Settings → Connect / Pair this device. Do not publish, commit or put the code into a handover file.
-- **There is no separate 8-digit booking-notification code in the normal UI.** Any authenticated workspace member is automatically enrolled for booking alerts. The Owner and device notification permission remain separate concepts.
-- The database migration `20261120130000_workspace_members_auto_booking_alerts.sql` backfilled existing workspace members into `pac_booking_notification_admins` and created an after-insert/update trigger for newly paired or re-paired devices.
-- Live database check: 36 workspace member identities and 36 active booking-alert permission rows. This is an identity count, not a count of physical phones/laptops; old anonymous installation identities may remain. Do not delete these identities without the Owner identifying the intended five devices.
-- If a phone has lost its local anonymous Supabase session, it must rejoin the existing workspace. Do not transfer ownership merely because a newly installed phone has a fresh anonymous identity.
-- Do not clear the active Owner phone's app/WebView data or uninstall it without a verified Owner recovery path.
+- The database does not contain an email address for these anonymous phone identities. A GitHub or Vercel account email does not automatically become the WashDesk Workspace Owner.
+- On 20 November, the currently active business phone was found signed in under a newly created anonymous identity that had the `member` role. The original Workspace Owner was a separate, dormant anonymous identity.
+- The workspace owner mapping was corrected: the active phone identity is now the Workspace Owner. The previous anonymous owner identity was retained as a normal Member rather than deleted.
+- This change updates owner/member mapping only. It did not reset the workspace, customer records, invoices, bookings, inventory or other business data.
+- After a full app close and reopen, the active Owner phone should see **Generate phone pairing code** in Bookings → Phone notification access.
+- A phone pairing code is generated by the Owner from that screen. It is 8 digits, expires after 10 minutes and can be redeemed only once. A random number is not a valid code.
+- Each additional phone must already be signed in as a member of this workspace before redeeming its own one-time code.
+- Do not uninstall, clear app data, clear WebView data or reinstall the active Owner phone: the Supabase anonymous session is stored on that device. Losing that local session can lose access to the Owner identity.
+- Do not transfer ownership again without inspecting the live workspace owner ID, current phone's Supabase auth user ID and the user's explicit confirmation.
 
 ## 4. Booking page request flow
 
@@ -76,7 +88,6 @@ The two Vercel routes were fetched and verified as HTTP 200 with `Content-Type: 
 7. Booking events are recorded for the internal booking desk. Paired devices receive live Realtime events/fallback refresh; native Android notifications require the app to be active and notification permission granted. Background delivery while the app is fully closed still needs FCM setup.
 
 Relevant code:
-- Device and booking alert setup: `AI_HANDOVER/BOOKING_NOTIFICATIONS.md`.
 - Public form and API calls: `car-wash-erp/website/booking/index.html`.
 - Business website and booking link: `car-wash-erp/website/index.html`.
 - App booking panel/rendering: `car-wash-erp/index.html`.
