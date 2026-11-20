@@ -63,13 +63,32 @@ function bookingNotificationId(value) {
   }
   return (hash >>> 0) % 2000000000 + 1;
 }
+export async function requestBookingAlertPermission() {
+  if (Capacitor.isNativePlatform()) {
+    let permission = await LocalNotifications.checkPermissions();
+    if (permission.display !== 'granted') permission = await LocalNotifications.requestPermissions();
+    if (permission.display === 'granted') {
+      await registerListeners();
+      await ensureBookingAlertChannel();
+    }
+    return {
+      supported: true,
+      permissionGranted: permission.display === 'granted',
+      permissionDenied: permission.display !== 'granted'
+    };
+  }
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return { supported: false, reason: 'This browser does not support desktop notifications.' };
+  }
+  let permission = window.Notification.permission;
+  if (permission === 'default') permission = await window.Notification.requestPermission();
+  return {
+    supported: true,
+    permissionGranted: permission === 'granted',
+    permissionDenied: permission === 'denied'
+  };
+}
 export async function sendBookingAlertNotification(booking = {}) {
-  if (!Capacitor.isNativePlatform()) return { supported: false };
-  let permission = await LocalNotifications.checkPermissions();
-  if (permission.display !== 'granted') permission = await LocalNotifications.requestPermissions();
-  if (permission.display !== 'granted') return { supported: true, permissionDenied: true };
-  await registerListeners();
-  await ensureBookingAlertChannel();
   const urgent = booking.is_urgent === true;
   const eventType = String(booking.event_type || 'booking_created');
   const titles = {
@@ -88,19 +107,48 @@ export async function sendBookingAlertNotification(booking = {}) {
   const actor = String(booking.actor_label || '').slice(0, 60);
   const body = [bookingCode, customer, vehicle, service, date + (time ? ' ' + time : ''), actor ? 'By ' + actor : ''].filter(Boolean).join(' · ').slice(0, 240);
   const id = bookingNotificationId(booking.id || booking.booking_code || (customer + vehicle + date + time));
-  await LocalNotifications.schedule({ notifications: [{
-    id,
-    title,
+
+  if (Capacitor.isNativePlatform()) {
+    const permission = await LocalNotifications.checkPermissions();
+    if (permission.display !== 'granted') return { supported: true, permissionRequired: permission.display === 'prompt' || permission.display === 'prompt-with-rationale', permissionDenied: permission.display === 'denied' };
+    await registerListeners();
+    await ensureBookingAlertChannel();
+    await LocalNotifications.schedule({ notifications: [{
+      id,
+      title,
+      body,
+      channelId: BOOKING_ALERT_CHANNEL_ID,
+      sound: 'default',
+      autoCancel: true,
+      extra: { action: 'bookingAlert', bookingId: String(booking.booking_id || ''), bookingCode, isUrgent: urgent },
+      schedule: { at: new Date(Date.now() + 250), allowWhileIdle: true }
+    }]});
+    return { supported: true, scheduled: true, id };
+  }
+
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return { supported: false, reason: 'This browser does not support desktop notifications.' };
+  }
+  if (window.Notification.permission === 'default') return { supported: true, permissionRequired: true };
+  if (window.Notification.permission !== 'granted') return { supported: true, permissionDenied: true };
+
+  const notification = new window.Notification(title, {
     body,
-    channelId: BOOKING_ALERT_CHANNEL_ID,
-    sound: 'default',
-    autoCancel: true,
-    extra: { action: 'bookingAlert', bookingId: String(booking.booking_id || ''), bookingCode, isUrgent: urgent },
-    schedule: { at: new Date(Date.now() + 250), allowWhileIdle: true }
-  }]});
+    tag: 'prime-auto-care-booking-' + id,
+    renotify: true,
+    icon: './prime-auto-care-icon-192.png',
+    badge: './prime-auto-care-icon-192.png',
+    data: { bookingId: String(booking.booking_id || ''), bookingCode }
+  });
+  notification.onclick = () => {
+    try { window.focus(); } catch { /* foregrounding is browser-controlled */ }
+    window.dispatchEvent(new CustomEvent('prime-auto-care-booking-notification-open', {
+      detail: { bookingId: String(booking.booking_id || ''), bookingCode }
+    }));
+    notification.close();
+  };
   return { supported: true, scheduled: true, id };
 }
-
 async function ensureChannel() {
   try {
     await LocalNotifications.createChannel({ id: CHANNEL_ID, name: 'Opening announcement reminder', description: 'Daily reminder to prepare the Prime Auto Care opening announcement', importance: 4 });
@@ -153,4 +201,4 @@ export async function syncOpeningReminderIfPermitted(settings = {}) {
   if (!Capacitor.isNativePlatform()) return { supported: false, enabled: false };
   return scheduleOpeningReminder({ ...settings, requestPermission: false });
 }
-window.PrimeAutoCareNotifications = { scheduleOpeningReminder, syncOpeningReminderIfPermitted, getReminderStatus, sendTestNotification, sendBookingAlertNotification, isNative: () => Capacitor.isNativePlatform() };
+window.PrimeAutoCareNotifications = { scheduleOpeningReminder, syncOpeningReminderIfPermitted, getReminderStatus, sendTestNotification, requestBookingAlertPermission, sendBookingAlertNotification, isNative: () => Capacitor.isNativePlatform() };
