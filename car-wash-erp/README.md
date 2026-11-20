@@ -1,33 +1,30 @@
-## 2.13.6 simple booking device setup (2026-11-20)
-
-- Replaced confusing device registration/Owner approval instructions with a clear selector: Owner Phone, Dad Phone (alerts only), Owner, Member, Not sure.
-- Owners can generate a one-time 8-digit pairing code. It expires after 10 minutes and can be redeemed once.
-- Member/Dad Phone selects enter the code directly in Bookings and tap Verify Code.
-- Pairing code grants booking alerts only. It cannot make a Member an Owner or grant Accept/Reject booking decisions.
-- Owner accounts are automatically authorised by verified workspace Owner role.
-- Existing booking website/system, cloud records, Dark/Light mode, business modules and Owner-only booking decisions are retained.
-- Version 2.13.6 uses Android package ID `com.washdesk.carwash.v26` to install alongside previous debug builds because original signing key was not supplied.
-
-## 2.13.6 simple booking device setup (2026-11-20)
-
-- Replaced confusing device registration/Owner approval instructions with a clear selector: Owner Phone, Dad Phone (alerts only), Owner, Member, Not sure.
-- Owners can generate a one-time 8-digit pairing code. It expires after 10 minutes and can be redeemed once.
-- Member/Dad Phone selects enter the code directly in Bookings and tap Verify Code.
-- Pairing code grants booking alerts only. It cannot make a Member an Owner or grant Accept/Reject booking decisions.
-- Owner accounts are automatically authorised by verified workspace Owner role.
-- Existing booking website/system, cloud records, Dark/Light mode, business modules and Owner-only booking decisions are retained.
-- Version 2.13.6 uses Android package ID `com.washdesk.carwash.v26` to install alongside previous debug builds because original signing key was not supplied.
-
 # Prime Auto Care Manager — Release 2.13.6
 
-## 2.13.6 hotfix notes (2026-11-20)
-- Both configured Owner accounts, `bmumz3909@gmail.com` and `mz03200786@gmail.com`, are authorised by their Prime Auto Care workspace Owner membership. Neither Owner is asked to approve the other Owner's actions.
-- The existing booking transaction flow remains the source of truth for Accept/Reject decisions, conflict protection, actor attribution and notification events.
-- The existing multi-device booking alert flow and five-authorised-device limit are retained. Non-Owner alert devices do not gain booking decision authority.
-- Added persistent Dark/Light mode under Settings → Business Settings → Appearance. The preference is saved locally on each device.
-- Existing Prime Auto Care website, customer booking portal, bookings, customers, invoices, reports, inventory, staff, cloud sync and other features are retained.
-- The Android package ID is `com.washdesk.carwash.v25` so this debug-signed build installs alongside the older v24 app instead of attempting an incompatible in-place update. Keep the previous app until records have been checked in the new app.
-- Android notifications in this release use the existing local notification / active-app alert flow. Fully closed-app Firebase push delivery is not represented as enabled or verified.
+## Permanent PAC Owner Code and booking-only staff access
+- Owner Settings is available in **Business Settings** on any device with a verified Owner workspace session. Both registered Owner accounts, `bmumz3909@gmail.com` and `mz03200786@gmail.com`, have the Owner role. The existing Owner phone can create the code; no second Owner approval or another phone is needed.
+- The Owner manually chooses an 8–12 digit numeric **PAC Owner Code** in Business Settings, enters it twice and saves it. Only a secure hash is stored on the server. The code remains active until the Owner changes it.
+- Staff select a device label (Dad Phone, Zaid Phone, Jack Phone or Manager Phone), choose Mobile or Laptop, select Member, enter the code in Bookings and connect immediately. No pending approval workflow is used.
+- The permanent code grants booking-only staff access: read bookings, receive/acknowledge alerts, and Accept or Reject. It never promotes a Member to Owner.
+- Staff devices see only the Bookings module. Other business modules, business data sync, invoice creation, booking settings, PAC Owner Code changes and device removal remain Owner-only. Server-side role checks and database policies enforce the boundary.
+- Up to four staff devices can be connected in addition to the Owner phone. The Owner can remove a staff device from Business Settings. Changing the code prevents new use of the old code; existing device access remains until revoked.
+- Device type may be Mobile or Laptop. Both types can Accept / Reject when connected with the PAC Owner Code.
+- Existing website, public booking portal, bookings, cloud data for Owners, customers, invoices, reports, inventory, staff, persistent Dark/Light mode and other business features are retained.
+
+## Android and Windows release notes
+- Version: `2.13.6`.
+- Android package ID: `com.washdesk.carwash.v26`, built side-by-side with earlier debug APKs.
+- CI Android APK is debug-signed. The original production signing keystore was not supplied, so an in-place update over a release signed with a different key is not guaranteed. Keep the prior app and backup until the new APK is installed and checked.
+- Android notifications use the existing local notification / active-app alert flow. Fully closed-app Firebase push delivery is not represented as enabled or verified.
+- Build artifacts from the validated GitHub Actions run include the APK, Windows installer EXE, project-source ZIP, full handover ZIP, and complete release ZIP with checksums.
+
+## Owner setup
+1. On the existing Owner phone, open **Settings → Business Settings**.
+2. Find **Permanent PAC Owner Code**.
+3. Choose an 8–12 digit code, enter it twice, and save.
+4. Share the code with the intended staff only.
+5. To disconnect a staff device, use **Connected staff devices → Remove**. To replace a code, enter and save a new one in the same Owner Settings panel.
+
+See `docs/SIMPLE-DEVICE-PAIRING-2.13.6.md` for the device pairing walkthrough.
 
 # WashDesk 2.13.3 — Prime Auto Care
 
