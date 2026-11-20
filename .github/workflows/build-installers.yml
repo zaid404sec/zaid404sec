@@ -286,7 +286,7 @@ jobs:
           Android package ID: com.washdesk.carwash.v27
           GitHub commit: $GITHUB_SHA
           Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-          IMPORTANT: this CI APK is debug-signed with a runner-generated key. Its signing certificate is not the same as the previous 2.11.0 APK, so Android will NOT accept it as an in-place update. Do not install over the existing v27 app. Use a spare device, or wait for a release build signed with the original keystore. Never commit the keystore or its passwords.
+          IMPORTANT: this CI APK uses the new Android package ID com.washdesk.carwash.v27. It installs alongside the previous Prime Auto Care 2.13.6 app (package ID v26); it does not overwrite or update that installation. Keep the old app installed. On the new 2.13.7 app, open Business Settings and sign in with one of the existing registered Owner email accounts to restore the full business app and shared records. Verify invoices, customers, expenses, staff and inventory before uninstalling the old app. The CI APK is debug-signed; future in-place upgrades require the original production signing keystore to be configured securely in the build environment. Never commit the keystore or its passwords.
           This package excludes passwords, API tokens, OAuth secrets, private SSH keys and workspace pairing codes.
           EOF
           (cd release-package && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
