@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.13.2') throw new Error('The package version must be 2.13.2.');
+if (packageJson.version !== '2.13.3') throw new Error('The package version must be 2.13.3.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v24') {
-  throw new Error('The 2.13.2 APK must retain the existing v24 application ID; signing compatibility is verified separately.');
+  throw new Error('The 2.13.3 APK must retain the existing v24 application ID; signing compatibility is verified separately.');
 }
-console.log('PASS: Android 2.13.2 retains the v24 application ID; signing compatibility must be verified separately.');
+console.log('PASS: Android 2.13.3 retains the v24 application ID; signing compatibility must be verified separately.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -57,6 +57,7 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119085605_google_ai_key_vault_setup_20261119.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119090408_booking_notification_realtime_20261119.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119190447_booking_create_atomic_notification_events_20261120.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261120130000_workspace_members_auto_booking_alerts.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119160000_google_vault_setup_wizard.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
@@ -100,23 +101,36 @@ for (const token of ['create-notification-pair-code','redeem-notification-pair-c
 if (bookingApiSource.includes('acknowledged_at: new Date().toISOString(), acknowledged_by: ctx.user.id')) {
   throw new Error('Booking acknowledgement must be per-device, not a global event acknowledgement.');
 }
-if (!html.includes('booking-notification-create-code') ||
-    !html.includes('booking-notification-redeem-code') ||
-    !html.includes('notificationPairCode')) {
-  throw new Error('WashDesk must expose the owner-issued phone pairing flow.');
+if (!html.includes('booking-enable-notifications') ||
+    !html.includes('requestBookingAlertPermission') ||
+    !html.includes('notifications_enabled') ||
+    html.includes('8-digit owner pairing code') ||
+    html.includes('booking-notification-create-code') ||
+    html.includes('booking-notification-redeem-code')) {
+  throw new Error('Booking alerts must use workspace-device enrolment without a second 8-digit code.');
 }
-console.log('PASS: owner-issued one-time codes authorise each phone independently; one phone acknowledgement does not hide alerts from others');
+const workspaceAlertMigration = await readFile(new URL('../supabase/migrations/20261120130000_workspace_members_auto_booking_alerts.sql', import.meta.url), 'utf8');
+for (const token of ['pac_auto_enrol_workspace_member_for_booking_alerts','after insert or update of workspace_id, role','pac_booking_notification_admins','washdesk_workspace_members']) {
+  if (!workspaceAlertMigration.toLowerCase().includes(token.toLowerCase())) throw new Error('Workspace booking-alert auto-enrolment migration is incomplete: '+token);
+}
+if (!bookingApiSource.includes('notification_device_count') || !bookingApiSource.includes('notifications_enabled')) {
+  throw new Error('Booking API must report per-device notification enrolment status.');
+}
+console.log('PASS: workspace members are automatically enrolled for booking alerts; no separate 8-digit code is required');
 const localNotificationsSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
 if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
+    !localNotificationsSource.includes('requestBookingAlertPermission') ||
     !localNotificationsSource.includes('BOOKING_ALERT_CHANNEL_ID') ||
     !localNotificationsSource.includes('booking_confirmed') ||
     !localNotificationsSource.includes('booking_rejected') ||
+    !localNotificationsSource.includes('new window.Notification') ||
     !html.includes('sendBookingAlertNotification') ||
     !html.includes("BOOKING ACCEPTED") ||
-    !html.includes("BOOKING REJECTED")) {
-  throw new Error('Native Android booking notifications are missing from the app polling flow.');
+    !html.includes("BOOKING REJECTED") ||
+    !html.includes('booking-enable-notifications')) {
+  throw new Error('Native and desktop booking notification support is missing from the app polling flow.');
 }
-console.log('PASS: new booking alerts can show as Android system notifications when the app is active and permission is granted');
+console.log('PASS: Android local and desktop browser booking notifications have explicit permission controls');
 const notificationPollStart = html.indexOf('async function pollBookingNotifications(){');
 const notificationPollEnd = html.indexOf('async function loadBookingCenter(', notificationPollStart);
 if (notificationPollStart < 0 || notificationPollEnd < 0) throw new Error('Booking notification poller could not be inspected.');
