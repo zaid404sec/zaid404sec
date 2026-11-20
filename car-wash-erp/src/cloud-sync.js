@@ -118,8 +118,8 @@ async function pairBookingDevice({ code, deviceLabel, deviceKind }) {
   const config = readConfig();
   initialize(config);
   await ensureSession();
-  const cleanCode = String(code || '').replace(/\\D/g, '');
-  if (!/^\\d{8,12}$/.test(cleanCode)) {
+  const cleanCode = String(code || '').replace(/\D/g, '');
+  if (!/^\d{8,12}$/.test(cleanCode)) {
     throw new Error('Enter the 8–12 digit PAC Owner Code from the Owner.');
   }
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(cleanCode));
