@@ -2,11 +2,10 @@ const DEVICE_LABEL_KEY = 'prime-auto-care-booking-device-label-v1';
 
 function bookingDeviceLabel() {
   try {
-    const saved = String(localStorage.getItem(DEVICE_LABEL_KEY) || '').trim();
-    if (saved) return saved;
-  } catch {}
-  const ua = String(navigator.userAgent || '');
-  return /android|iphone|ipad|mobile/i.test(ua) ? 'Android Phone' : 'Manager Laptop';
+    return String(localStorage.getItem(DEVICE_LABEL_KEY) || '').trim();
+  } catch {
+    return '';
+  }
 }
 
 async function bookingRequest(action, body = {}) {
