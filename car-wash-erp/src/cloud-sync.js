@@ -177,7 +177,7 @@ function ownerSignInFailureStatus(error) {
   if (/failed to fetch|network|timeout|load failed/i.test(message)) {
     return 'Owner sign-in could not reach Supabase · check internet and retry';
   }
-  const brief = message.replace(/\\s+/g, ' ').trim().slice(0, 120);
+  const brief = message.replace(/\s+/g, ' ').trim().slice(0, 120);
   return brief ? `Owner restore failed · ${brief}` : 'Owner restore failed · review the message below';
 }
 async function signInOwner({ url, anonKey, email, password, getLocal, onRemote }) {
