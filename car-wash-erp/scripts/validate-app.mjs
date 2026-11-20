@@ -133,7 +133,7 @@ if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
 console.log('PASS: Android local and desktop browser booking notifications have explicit permission controls');
 
 const bookingClientSource = await readFile(new URL('../src/bookings.js', import.meta.url), 'utf8');
-const bookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
+const fiveDeviceBookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
 const bookingDeviceMigration = await readFile(new URL('../supabase/migrations/20261120150000_owner_managed_five_device_booking_access.sql', import.meta.url), 'utf8');
 for (const token of ['requestDeviceAccess','reviewDeviceAccess','revokeDeviceAccess']) {
   if (!bookingClientSource.includes(token)) throw new Error('Booking device client API is missing: '+token);
@@ -144,7 +144,7 @@ for (const token of [
   '!ctx.isOwner && ![\'confirmed\', \'rejected\'].includes(status)',
   'five authorised-device limit','notification_device_count','max_notification_devices: 5'
 ]) {
-  if (!bookingApiSource.includes(token)) throw new Error('Booking device access enforcement is missing: '+token);
+  if (!fiveDeviceBookingApiSource.includes(token)) throw new Error('Booking device access enforcement is missing: '+token);
 }
 for (const token of [
   'create table if not exists public.pac_booking_devices',
