@@ -118,7 +118,7 @@ async function authenticate(req: Request) {
     user: data.user,
     member,
     workspace,
-    isOwner: member.role === 'owner' && workspace.owner_auth_user_id === data.user.id
+    isOwner: member.role === 'owner'
   };
 }
 async function canManageBookingNotifications(ctx: any) {
