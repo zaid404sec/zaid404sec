@@ -1,3 +1,41 @@
+## Latest source update — Prime Auto Care 2.13.4 (release candidate)
+
+This section describes the source changes on branch `release/prime-auto-care-2.13.4-device-decisions`. Do not mistake a release-candidate branch for a deployed production backend. The live production API remains v13 until the 2.13.4 migration and function are deployed and verified.
+
+### Public websites
+- Business website: https://prime-auto-care-sigma.vercel.app/
+- Customer booking page: https://prime-auto-care-sigma.vercel.app/booking/
+- Vercel serves the static public HTML pages; Supabase remains the API/database backend.
+- No public website content changed in 2.13.4.
+
+### Five-device policy in 2.13.4 source
+- Maximum five active registered devices, including the Owner Phone.
+- Owner Phone: notifications on; full administration; Accept / Reject.
+- Dad Phone 1, Dad Phone 2, Manager Phone: notification-only after Owner approval.
+- Manager Laptop: notification access after Owner approval; may Accept / Reject only after it is registered as a desktop device named exactly `Manager Laptop` and the Owner grants the permission.
+- API routes enforce the rule; client-side button hiding is not relied upon for security.
+- New device registrations default to alerts off and decision access off.
+- Owner can enable/disable alerts, grant/revoke Manager Laptop decision access and revoke a replaced device.
+- Each device has its own notification receipt.
+
+### Source changes
+- New migration: `car-wash-erp/supabase/migrations/20261120150000_booking_device_roles.sql`.
+- New allowlist table: `public.pac_booking_device_access`; additive only.
+- Booking API source adds device registration, five-device active cap, Owner-managed notification access and Manager Laptop decision permission.
+- Bookings UI adds device naming and Owner device-management controls.
+- The old separate 8-digit notification code is not part of the new UI. The workspace's private 64-character pairing credential remains the one-time workspace join credential and must never be included in the handover.
+- Detailed setup: `AI_HANDOVER/DEVICE_ACCESS_AND_BOOKING_DECISIONS.md`.
+
+### Production and QA gates
+- The migration and booking API source are in the release branch; do not claim the new policy is active in production until migration and Edge Function deployments have been applied and verified.
+- Existing production data, workspace Owner identity, bookings, invoices and customer records must be preserved.
+- Android local alerts and desktop browser notifications require the app/session to be active and local notification permission.
+- Background push while Android is fully closed remains pending FCM configuration, device token registration, sender credentials and real-device tests.
+- Previous production Android keystore remains unavailable. Treat CI APKs as test artifacts unless the signing certificate matches the installed app.
+- GitHub-to-Vercel auto-deploy is not yet linked. Current public website URLs remain unchanged.
+
+---
+
 ## Latest verified production and notification state — 20 November 2026
 
 This section supersedes older status notes below. Preserve the existing Prime Auto Care workspace, Owner identity, customer records, invoices, bookings and business data. Do not reset or reseed production data.
