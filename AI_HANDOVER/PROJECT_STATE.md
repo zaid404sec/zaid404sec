@@ -1,3 +1,33 @@
+## Latest corrected production state — 20 November 2026
+
+This section supersedes conflicting older status notes below. Do not reset the live workspace or delete existing records.
+
+### Public websites
+- Business website: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/
+- Customer booking page: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/booking/
+- Both routes were fetched successfully from Vercel with HTTP 200 and `Content-Type: text/html; charset=utf-8`.
+- Static source files: `car-wash-erp/website/index.html` and `car-wash-erp/website/booking/index.html`.
+- Vercel project: `prime-auto-care`, project ID `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`. Public alias: `prime-auto-care-mz03200786-2785s-projects.vercel.app`.
+- Supabase Edge Functions rewrite static HTML responses to `text/plain`; they are no longer used to serve the public HTML. The old Supabase site, booking and legacy website endpoints now issue HTTP 308 redirects to the Vercel pages.
+- Vercel Git auto-linking is not configured yet: creating the Git-linked project returned that a GitHub Login Connection must be added first. Current production deployment was uploaded directly to the Vercel project. Connect the GitHub account in Vercel before expecting every main-branch push to deploy automatically.
+
+### Booking service and ownership
+- Supabase project `jkjudmkqaebrgllemris` is ACTIVE_HEALTHY.
+- Production `booking-api` is v11. It allows the Vercel website origin and maps invalid, expired and already-used pairing codes to actionable HTTP 400 responses instead of the generic 500 “Booking service is temporarily unavailable” message.
+- Production `public-reviews` is v4 and allows the Vercel website origin.
+- Legacy functions `prime-auto-care-site` v4, `prime-auto-care-booking` v3 and `prime-auto-care-website` v3 redirect visitors to the canonical Vercel pages.
+- The original Workspace Owner record was a stale anonymous Auth identity, while the currently active business phone had signed in under a different anonymous identity and was incorrectly marked as a member. The active phone identity is now the Workspace Owner; the previous anonymous owner identity was retained as a Member, not deleted. This correction changed only owner mapping and membership roles. Customer, booking, invoice and business records were not reset.
+- After reopening the app, the active Owner phone should see **Generate phone pairing code** in Bookings → Phone notification access. Codes are owner-generated, 8 digits, expire after 10 minutes and can be used once. A random number is not a valid pairing code. Each additional phone must already be signed in as a member of this workspace before redeeming its code.
+
+### Build and installation safety
+- Application version in `car-wash-erp/package.json` is now 2.13.2. A main-branch CI build is expected from the source update; verify its actual run and artifacts before distributing them.
+- Android application ID remains `com.washdesk.carwash.v24`.
+- The CI APK is debug-signed. The original production keystore was not found, and the runner signing certificate does not match the previously installed APK. Do not uninstall or overwrite the currently working app until a production-signed compatible build or a verified migration plan is available.
+- The Windows EXE can be rebuilt from the current source through `.github/workflows/build-installers.yml`.
+- Secrets, API keys, owner pairing codes and keystore passwords must never be committed to source or included in handover ZIPs.
+
+---
+
 # Current verified state — 20 November 2026
 
 > This current-state section supersedes older historical status notes below. Preserve the existing data and original Workspace Owner.
