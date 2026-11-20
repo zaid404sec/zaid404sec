@@ -1,26 +1,37 @@
-# WashDesk 2.13.3 — Prime Auto Care
+# WashDesk 2.13.4 — Prime Auto Care
 
 ## Current public endpoints
 - Business website: https://prime-auto-care-sigma.vercel.app/
-- Customer booking: https://prime-auto-care-sigma.vercel.app/booking/
-- Both Vercel routes were verified with HTTP 200 and `text/html; charset=utf-8`. Supabase remains the booking/database backend.
+- Customer booking page: https://prime-auto-care-sigma.vercel.app/booking/
+- These Vercel pages are the customer-facing website routes. Supabase remains the booking API and database backend.
 
-## Current device and booking alert model
-- A device joins the shared business workspace once through Settings → Business Settings → Connect / Pair this device using the existing private 64-character workspace pairing credential.
-- No separate 8-digit booking-notification code is needed. Workspace members are automatically enrolled for booking-alert access by migration `20261120130000_workspace_members_auto_booking_alerts.sql`.
-- Production booking API v13 reports each device's notification permission. Per-device acknowledgement receipts remain independent.
-- Android local notifications work while the app is active and OS notification permission is granted.
-- Browser/Electron desktop notifications work while the manager app is running after pressing **Enable notifications on this device**.
-- Push notifications while the Android app is fully closed are **not yet enabled**. FCM project/service-account setup, device token registration, server-side push sending and closed-app tests remain required.
-- Current workspace member identities and notification enrolment were checked: 36 member identities, 36 active booking-alert permission rows. This is not a verified count of physical devices; do not delete old identities without Owner review.
+## Device access and booking decisions
+- This release adds an Owner-managed allowlist of up to five active devices in `pac_booking_device_access`.
+- Owner Phone has full workspace administration and can Accept / Reject bookings.
+- Dad Phone 1, Dad Phone 2 and Manager Phone are notification-only.
+- Manager Laptop must be registered as a desktop device with the exact label `Manager Laptop`; the Owner must explicitly grant Accept / Reject.
+- The API enforces the decision rule. The other three phones cannot accept/reject, even if someone attempts to call the API directly.
+- The Owner enables booking alerts independently for each device. New device registrations are alert-disabled until approved.
+- Each notification is acknowledged independently per device.
+- The existing private 64-character workspace pairing credential remains the one-time workspace join method. There is no separate permanent 8-digit notification PIN.
+- Full setup guide: `../AI_HANDOVER/DEVICE_ACCESS_AND_BOOKING_DECISIONS.md`.
 
-## Operational safety
-- The canonical workspace Owner identity remains intact. No business, customer, booking, invoice or billing records were reset.
-- Do not commit or place the workspace pairing credential, Supabase service-role key, Firebase service-account JSON, OAuth secrets or signing key in source archives.
-- Android application ID remains `com.washdesk.carwash.v24`. The CI APK is debug-signed and does not match the installed certificate. Do not overwrite the currently working installation; the original production keystore was not found.
-- Vercel GitHub auto-linking is not yet configured, so static website source changes still need a manual Vercel deployment.
+## Delivery limitations to retain
+- Android in-app/local alerts and browser/Electron desktop alerts require the app/session to be running and notification permission to be granted.
+- Background push while the Android app is fully closed is not yet live. FCM project setup, device token registration, server-side sender credentials and end-to-end closed-app tests are still required.
+- The original production Android signing keystore was not found in the earlier handover. Verify the new APK signing certificate; do not overwrite the currently installed app unless it matches the existing signing key.
+- GitHub-to-Vercel automatic deployment is not linked yet. The two current customer URLs remain the verified public pages.
+- No service-role keys, workspace pairing credential, FCM service-account JSON, OAuth secrets or signing passwords belong in the ZIP.
 
-Full system map, setup, authentication, deployment and safe-change instructions: `../AI_HANDOVER/PROJECT_INDEX.md`.
+## Release workflow
+- Version: 2.13.4
+- Android application ID: `com.washdesk.carwash.v24`
+- Source branch: `release/prime-auto-care-2.13.4-device-decisions`
+- Repository: https://github.com/zaid404sec/zaid404sec
+- Run `npm install` and `npm run validate` from `car-wash-erp` before packaging.
+- The 2.13.4 release must pass GitHub Actions before APK/EXE artifacts are presented as build-verified.
+
+---
 
 ---
 ---

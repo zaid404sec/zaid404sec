@@ -1,3 +1,25 @@
+## Prime Auto Care 2.13.4 — current release-candidate handover
+
+- **Business website:** https://prime-auto-care-sigma.vercel.app/
+- **Customer booking page:** https://prime-auto-care-sigma.vercel.app/booking/
+- **GitHub:** https://github.com/zaid404sec/zaid404sec
+- **Supabase project:** `jkjudmkqaebrgllemris`
+- **Vercel project:** `prime-auto-care` (`prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`)
+- **Release version:** 2.13.4; Android app ID remains `com.washdesk.carwash.v24`.
+- **Release branch:** `release/prime-auto-care-2.13.4-device-decisions`.
+
+### Device permissions
+The new source implements a maximum-five active-device allowlist. Owner Phone can manage workspace settings and Accept/Reject. Dad Phone 1, Dad Phone 2 and Manager Phone are alert-only. The Manager Laptop may Accept/Reject only after it is connected to the workspace, registered as a desktop named exactly `Manager Laptop`, and explicitly granted decision permission by the Owner. Backend checks enforce the same rule. Each device's alert permission is separately enabled by the Owner, and notification acknowledgements remain per-device.
+
+The migration is `car-wash-erp/supabase/migrations/20261120150000_booking_device_roles.sql`. The release is a candidate until CI passes, the migration is applied, the booking API is deployed, and all five intended devices are verified. Do not remove historical workspace identities or reset any business records.
+
+### Important delivery limitations
+Android in-app/local and desktop browser notifications require the app/session to be running and OS/browser permissions enabled. Background push while Android is fully closed still requires FCM project setup, token registration, server-side sender credentials and device tests. The original production Android signing keystore was not found in the earlier handover; do not replace the existing installed Owner app with a debug APK unless signing compatibility has been verified. GitHub auto-deployment to Vercel is not yet linked, so website source updates require a manual static deployment.
+
+Full steps, database model and device setup: `AI_HANDOVER/DEVICE_ACCESS_AND_BOOKING_DECISIONS.md`.
+
+---
+
 ## Latest verified production and notification state — 20 November 2026
 
 This section supersedes older status notes below. Preserve the existing production workspace and Owner identity. Do not reset business records.
@@ -7,7 +29,6 @@ This section supersedes older status notes below. Preserve the existing producti
 - Both Vercel pages were verified as HTTP 200 with `Content-Type: text/html; charset=utf-8`.
 - **Vercel project:** `prime-auto-care`, project ID `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`. GitHub auto-linking is still not configured; current production static assets were deployed directly.
 - **Supabase project:** `jkjudmkqaebrgllemris`. Production `booking-api` is v13.
-- **Application source version:** 2.13.3. The source changes are committed to `main`; the new APK/EXE artifacts still need a verifiable CI build before distribution.
 - **Owner identity:** the active Owner Auth identity remains the canonical Owner. The notification redesign did not promote or demote anyone and did not reset customer, invoice, booking or business records.
 - **Workspace pairing:** the existing private 64-character workspace credential remains the single join credential for a new phone/laptop. Each device pairs once via Settings → Business Settings → Connect / Pair this device. Never commit or distribute the secret in source files.
 - **Booking alert enrolment:** there is no longer a separate 8-digit notification code in the normal UI. An authenticated workspace member is automatically enrolled for booking alerts. Migration `20261120130000_workspace_members_auto_booking_alerts.sql` backfilled the current 36 member identities and added an insert/update trigger for future or re-paired devices. This is 36 Auth identities, not a verified count of five physical devices; old anonymous installation identities may remain. Do not delete them without the Owner identifying the target devices.
