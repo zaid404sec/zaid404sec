@@ -2,8 +2,8 @@
 
 Use these current details before making any further changes:
 
-- Public business website: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/
-- Public customer booking page: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/booking/
+- Public business website: https://prime-auto-care-sigma.vercel.app/
+- Public customer booking page: https://prime-auto-care-sigma.vercel.app/booking/
 - Both pages have been verified as HTTP 200 HTML pages on Vercel.
 - Vercel project: `prime-auto-care`, project ID `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`. The current deployment was uploaded directly. GitHub automatic deployment still needs a GitHub Login Connection in Vercel.
 - Production Supabase project: `jkjudmkqaebrgllemris`; booking API v11; public reviews v4. The old Supabase website routes redirect to Vercel.
