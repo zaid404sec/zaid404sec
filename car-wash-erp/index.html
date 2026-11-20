@@ -1359,7 +1359,8 @@ html,body{background:radial-gradient(ellipse at 12% 5%,rgba(218,184,118,.16),tra
         : '<p class="help">This device is not yet enrolled for booking alerts. Reconnect it to the Prime Auto Care workspace in Settings, then refresh Bookings.</p>') +
       '<div class="stock-alert" style="margin-top:12px"><span>Current device access</span><b>'+(state.permissions?.notifications_enabled?'Enabled':'Not connected')+'</b></div>' +
       '<div class="actions" style="margin-top:12px"><button class="btn primary" type="button" data-action="booking-enable-notifications">Enable notifications on this device</button></div>' +
-      '<p class="help">To connect another phone or laptop, open Settings → Business Settings → Connect / Pair this device and use the existing Prime Auto Care workspace pairing code. That single workspace connection also enables booking alerts. Keep the code private.</p></div>';
+      '<p class="help">To connect another phone or laptop, open Settings → Business Settings → Connect / Pair this device and use the existing Prime Auto Care workspace pairing code. That single workspace connection also enables booking-alert access. Keep the code private.</p>' +
+      '<p class="help">Android local alerts and desktop browser alerts require the app to be running. Push delivery while an Android app is fully closed still requires Firebase Cloud Messaging setup.</p></div>';
     return pageHead('Bookings','One appointment view for online requests, phone bookings and urgent walk-ins.','<a class="btn primary" href="'+PUBLIC_BOOKING_URL+'" target="_blank" rel="noopener">Open public booking page ↗</a><button class="btn" data-action="booking-refresh">Refresh</button>')+
       error+
       notificationPairingPanel+
