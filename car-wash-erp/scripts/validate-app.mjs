@@ -161,26 +161,60 @@ for (const token of [
 ]) {
   if (!bookingDeviceMigration.includes(token)) throw new Error('Five-device migration is missing: '+token);
 }
+const permanentOwnerCodeMigration = await readFile(new URL('../supabase/migrations/20261120180000_pac_permanent_owner_booking_code.sql', import.meta.url), 'utf8');
 for (const token of [
   'id="booking-device-role"',
   'Owner Phone',
-  'Dad Phone — alerts only',
-  'value="owner-account">Owner',
-  'value="member">Member',
+  'Dad Phone',
+  'Zaid Phone',
+  'Jack Phone',
+  'Manager Phone',
+  'value="owner">Owner',
+  'value="member" selected>Member',
   'value="not-sure">Not sure',
+  'id="booking-device-label"',
+  'id="booking-device-kind"',
   'id="booking-pair-code"',
   'data-action="booking-pair-code-verify"',
-  'data-action="booking-pair-code-generate"',
-  'expires in 10 minutes',
-  'Pairing grants booking alerts only',
-  'A pairing code cannot convert a Member into an Owner'
+  'id="pac-owner-code-panel"',
+  'data-action="save-pac-owner-code"',
+  'PAC Owner Code',
+  'This staff device is limited to Bookings',
+  'Only the Owner can remove connected devices'
 ]) {
-  if (!html.includes(token)) throw new Error('Simple one-time device pairing UI is missing: '+token);
+  if (!html.includes(token)) throw new Error('Permanent PAC Owner Code UI or staff access restrictions are missing: '+token);
 }
-for (const token of ['createPairCode','redeemPairCode','create-notification-pair-code','redeem-notification-pair-code']) {
-  if (!bookingClientSource.includes(token)) throw new Error('Pairing code client API is missing: '+token);
+for (const token of ['getBookingAccessSettings','setPermanentOwnerCode','pairWithOwnerCode']) {
+  if (!bookingClientSource.includes(token)) throw new Error('Permanent PAC Owner Code client API is missing: '+token);
 }
-console.log('PASS: simple role selector, Owner-generated one-time code, verification UI and Owner-only booking decisions');
+for (const token of [
+  'async function pairBookingDevice',
+  'pac_join_workspace_with_owner_code',
+  "workspace.role !== 'owner'",
+  'Staff devices have booking-only access'
+]) {
+  if (!cloudSource.includes(token)) throw new Error('Booking-only cloud session restriction is missing: '+token);
+}
+for (const token of [
+  'get-booking-access-settings','set-booking-owner-code',
+  'memberBookingActions',
+  'device?.can_decide_bookings === true',
+  'Staff devices can only Accept or Reject bookings',
+  'Only the Owner can create or change the PAC Owner Code'
+]) {
+  if (!fiveDeviceBookingApiSource.includes(token)) throw new Error('Permanent Owner Code API enforcement is missing: '+token);
+}
+for (const token of [
+  'pac_booking_access_codes',
+  'pac_booking_access_code_attempts',
+  'pac_join_workspace_with_owner_code',
+  "m.role = 'owner'",
+  'washdesk_merge_sync_owner_internal',
+  'washdesk_next_invoice_number_owner_internal'
+]) {
+  if (!permanentOwnerCodeMigration.includes(token)) throw new Error('Permanent Owner Code database security migration is incomplete: '+token);
+}
+console.log('PASS: permanent PAC Owner Code, direct booking-only pairing, Owner-only business sync and Owner-managed device removal');
 
 const notificationPollStart = html.indexOf('async function pollBookingNotifications(){');
 const notificationPollEnd = html.indexOf('async function loadBookingCenter(', notificationPollStart);
