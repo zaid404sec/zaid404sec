@@ -6,8 +6,8 @@ This file is a navigation and continuity guide for a developer or another AI ass
 
 ## 1. Current public URLs
 
-- Business website: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/
-- Customer booking page: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/booking/
+- Business website: https://prime-auto-care-sigma.vercel.app/
+- Customer booking page: https://prime-auto-care-sigma.vercel.app/booking/
 - GitHub repository: https://github.com/zaid404sec/zaid404sec
 - Application source folder: https://github.com/zaid404sec/zaid404sec/tree/main/car-wash-erp
 - AI handover folder: https://github.com/zaid404sec/zaid404sec/tree/main/AI_HANDOVER
@@ -24,9 +24,9 @@ The two Vercel routes were fetched and verified as HTTP 200 with `Content-Type: 
 - The Vercel production deployment was uploaded as static files. GitHub automatic deployment is **not yet linked**: the Vercel Git linking attempt reported that a GitHub Login Connection must first be added. To enable automatic deployment, connect the GitHub account to Vercel and link this repository/project. Until then, a website source change must be followed by a Vercel deployment.
 - Supabase Edge Functions rewrite HTML responses as `text/plain` in this project. The static HTML is therefore hosted on Vercel; Supabase remains the database/API backend.
 - Legacy Supabase routes redirect to the new URLs:
-  - `prime-auto-care-site` v4 → Vercel business website (and its booking subroute).
-  - `prime-auto-care-booking` v3 → Vercel booking page.
-  - `prime-auto-care-website` v3 → Vercel business website.
+  - `prime-auto-care-site` v5 → Vercel business website (and its booking subroute).
+  - `prime-auto-care-booking` v4 → Vercel booking page.
+  - `prime-auto-care-website` v4 → Vercel business website.
 - The business site calls the public review feed at `/functions/v1/public-reviews`; that function's CORS allowlist includes the Vercel alias.
 
 ## 2. Current application and backend state
@@ -37,8 +37,8 @@ The two Vercel routes were fetched and verified as HTTP 200 with `Content-Type: 
 - Supabase project ref: `jkjudmkqaebrgllemris`.
 - Supabase project status: `ACTIVE_HEALTHY`.
 - Supabase project region: `ap-northeast-2`.
-- Production booking API: `booking-api` v11.
-- Public review feed: `public-reviews` v4.
+- Production booking API: `booking-api` v12.
+- Public review feed: `public-reviews` v5.
 - Legacy website redirects: `prime-auto-care-site` v4, `prime-auto-care-booking` v3, `prime-auto-care-website` v3.
 - Other deployed Google Review functions include `google-review-api`, `google-review-oauth-callback`, `google-review-worker` and `google-review-pubsub-webhook`. Re-check their live versions before future work.
 
