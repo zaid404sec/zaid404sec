@@ -1,3 +1,29 @@
+## 2.13.7 Owner business-app restore and staff booking access (2026-11-20)
+
+### What was fixed
+- A fresh install of the Owner app must not be paired through the old 64-character anonymous device key. That key creates a Member session on an already-owned workspace and can make the navigation show Bookings only.
+- The Business Settings page now includes **Owner account sign-in**. Select either registered Owner account, enter its password locally in the app, and restore the shared business database. The server must confirm the account's existing workspace role is `owner` before the full business app is enabled.
+- The Owner session restores Dashboard, invoices, customers, expenses, staff, inventory, reports, business settings, website/admin functions and the shared records.
+- Staff devices continue to use **Bookings → Device Setup → Member → PAC Owner Code → Verify Code & Connect**. Staff see Bookings and can Accept/Reject only.
+- The permanent PAC Owner Code remains Owner-managed. Staff cannot access business settings, change the code, alter business records, or remove devices.
+- The legacy 64-character workspace pairing SQL function now preserves an existing verified Owner membership and will no longer downgrade it to Member.
+- Added migration `20261120190000_preserve_owner_role_on_workspace_pairing.sql` and aligned `cloud-sync-setup.sql`.
+- Version 2.13.7 uses Android package ID `com.washdesk.carwash.v27` because the original production signing key was not supplied. Install side-by-side with earlier debug builds and sign in with an existing Owner account to restore all shared business data.
+
+### Fresh Owner install
+1. Install Prime Auto Care 2.13.7.
+2. Open Business Settings.
+3. Under Shared Cloud Database, select the registered Owner email account and enter its password.
+4. Tap **Sign in as Owner & restore full business app**.
+5. Confirm that Dashboard, invoices, records and other business modules return.
+
+### Staff install
+1. Open Bookings.
+2. Choose a device label, Mobile/Laptop and Member.
+3. Enter the permanent PAC Owner Code created by the Owner.
+4. Tap **Verify Code & Connect**.
+5. Enable device notifications if required. Staff receive Booking access and Accept/Reject permission only.
+
 # Prime Auto Care Manager — Release 2.13.6
 
 ## Permanent PAC Owner Code and booking-only staff access
