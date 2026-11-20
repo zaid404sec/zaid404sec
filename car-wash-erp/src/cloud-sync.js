@@ -547,9 +547,11 @@ window.WashDeskCloud = {
 };
 window.addEventListener('online', () => {
   retryDelay = 1500;
-  if (user && workspace && localProvider) {
+  if (user && workspace && localProvider && workspace.role === 'owner') {
     schedulePush(localProvider());
     if (!channel) void initialSync().catch(error => console.warn('Prime Auto Care cloud reconnect:', error));
+  } else if (user && workspace && workspace.role === 'member') {
+    setStatus('Connected as booking staff · Bookings only · business sync is Owner-only');
   } else if (localProvider && remoteHandler) {
     // Retry session and workspace restoration when the app was opened offline.
     void resume({ getLocal: localProvider, onRemote: remoteHandler }).catch(error => console.warn('Prime Auto Care saved device reconnect:', error));
