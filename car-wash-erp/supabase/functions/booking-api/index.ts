@@ -414,8 +414,8 @@ async function handle(req: Request, body: any) {
   }
   if (action === 'set-booking-owner-code') {
     if (!ctx.isOwner) throw new Error('Only the Owner can create or change the PAC Owner Code.');
-    const code = String(body.code||'').replace(/\\s/g,'');
-    if (!/^\\d{8,12}$/.test(code)) throw new Error('Choose a permanent code containing 8 to 12 digits.');
+    const code = String(body.code||'').replace(/\s/g,'');
+    if (!/^\d{8,12}$/.test(code)) throw new Error('Choose a permanent code containing 8 to 12 digits.');
     const { error } = await ctx.admin.from('pac_booking_access_codes').upsert({
       workspace_id:ctx.workspace.id, code_hash:await pacOwnerCodeHash(code),
       updated_by:ctx.user.id, updated_at:new Date().toISOString(), enabled:true
