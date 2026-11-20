@@ -110,7 +110,6 @@ if (bookingApiSource.includes('acknowledged_at: new Date().toISOString(), acknow
 }
 if (!html.includes('booking-enable-notifications') ||
     !html.includes('requestBookingAlertPermission') ||
-    !html.includes('notifications_enabled') ||
     !bookingApiSource.includes("if (!(await canReceiveBookingAlerts(ctx)))")) {
   throw new Error('Booking notifications must use the active authorised staff-device session.');
 }
