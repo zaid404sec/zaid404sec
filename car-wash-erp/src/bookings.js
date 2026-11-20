@@ -32,6 +32,12 @@ window.PrimeAutoCareBookings = {
   requestDeviceAccess: (device_label, device_kind) => bookingRequest('request-booking-device-access', { device_label, device_kind }),
   reviewDeviceAccess: (auth_user_id, approved, can_decide_bookings = false) => bookingRequest('review-booking-device-access', { auth_user_id, approved, can_decide_bookings }),
   revokeDeviceAccess: auth_user_id => bookingRequest('revoke-booking-device-access', { auth_user_id }),
-  createPairCode: () => bookingRequest('create-notification-pair-code'),
-  redeemPairCode: code => bookingRequest('redeem-notification-pair-code', { code })
+  getBookingAccessSettings: () => bookingRequest('get-booking-access-settings'),
+  setPermanentOwnerCode: code => bookingRequest('set-booking-owner-code', { code }),
+  pairWithOwnerCode: (code, deviceLabel, deviceKind) => {
+    if (typeof window.WashDeskCloud?.pairBookingDevice !== 'function') {
+      throw new Error('The PAC Owner Code pairing feature is not available in this app version.');
+    }
+    return window.WashDeskCloud.pairBookingDevice({ code, deviceLabel, deviceKind });
+  }
 };
