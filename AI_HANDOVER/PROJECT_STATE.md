@@ -1,6 +1,6 @@
-## Latest corrected production state — 20 November 2026
+## Latest verified production and notification state — 20 November 2026
 
-This section supersedes conflicting older status notes below. Do not reset the live workspace or delete existing records.
+This section supersedes older status notes below. Preserve the existing Prime Auto Care workspace, Owner identity, customer records, invoices, bookings and business data. Do not reset or reseed production data.
 
 ### Public websites
 - Business website: https://prime-auto-care-sigma.vercel.app/
@@ -8,24 +8,39 @@ This section supersedes conflicting older status notes below. Do not reset the l
 - Both routes were fetched successfully from Vercel with HTTP 200 and `Content-Type: text/html; charset=utf-8`.
 - Static source files: `car-wash-erp/website/index.html` and `car-wash-erp/website/booking/index.html`.
 - Vercel project: `prime-auto-care`, project ID `prj_TDEAylEd55OPJKN7oXgI7IoEFNAP`. Public alias: `prime-auto-care-mz03200786-2785s-projects.vercel.app`.
-- Supabase Edge Functions rewrite static HTML responses to `text/plain`; they are no longer used to serve the public HTML. The old Supabase site, booking and legacy website endpoints now issue HTTP 308 redirects to the Vercel pages.
-- Vercel Git auto-linking is not configured yet: creating the Git-linked project returned that a GitHub Login Connection must be added first. Current production deployment was uploaded directly to the Vercel project. Connect the GitHub account in Vercel before expecting every main-branch push to deploy automatically.
+- Supabase Edge Functions rewrite ordinary HTML GET responses to `text/plain`; they are not used to serve public HTML. Legacy Supabase website endpoints redirect to the Vercel pages.
+- Vercel Git auto-linking is not configured. Direct Vercel deployments have been used; future source changes must be deployed manually until the GitHub Login Connection is configured.
 
-### Booking service and ownership
-- Supabase project `jkjudmkqaebrgllemris` is ACTIVE_HEALTHY.
-- Production `booking-api` is v12. It allows the Vercel website origin and maps invalid, expired and already-used pairing codes to actionable HTTP 400 responses instead of the generic 500 “Booking service is temporarily unavailable” message.
-- Production `public-reviews` is v5 and allows the Vercel website origin.
-- Legacy functions `prime-auto-care-site` v5, `prime-auto-care-booking` v4 and `prime-auto-care-website` v4 redirect visitors to the canonical Vercel pages.
-- The original Workspace Owner record was a stale anonymous Auth identity, while the currently active business phone had signed in under a different anonymous identity and was incorrectly marked as a member. The active phone identity is now the Workspace Owner; the previous anonymous owner identity was retained as a Member, not deleted. This correction changed only owner mapping and membership roles. Customer, booking, invoice and business records were not reset.
-- After reopening the app, the active Owner phone should see **Generate phone pairing code** in Bookings → Phone notification access. Codes are owner-generated, 8 digits, expire after 10 minutes and can be used once. A random number is not a valid pairing code. Each additional phone must already be signed in as a member of this workspace before redeeming its code.
+### Workspace identity and device enrolment
+- Supabase project: `jkjudmkqaebrgllemris`, status `ACTIVE_HEALTHY`.
+- Workspace: Prime Auto Care, ID `9cd6c212-f1fa-4758-bb5e-23758dabfaa7`.
+- The active Owner Auth identity remains the canonical workspace Owner. The Owner role was not changed by the notification redesign.
+- The existing 64-character workspace pairing credential remains the join credential for new devices. Do not paste it into source, docs, support replies or build artifacts. Treat it as a private secret.
+- To connect another phone or laptop: open Settings → Business Settings → Connect / Pair this device, enter the existing workspace pairing credential, and complete the cloud sync handshake. Do this once per device.
+- There is no longer a separate 8-digit booking-notification pairing step in the app UI. An authenticated workspace member is automatically enrolled for booking alerts.
+- Additive migration: `20261120130000_workspace_members_auto_booking_alerts.sql`. It creates a trigger that enrolls new/re-paired workspace members and backfills current workspace members into `pac_booking_notification_admins`. It does not alter workspace roles or business records.
+- Migration result verified: 36 workspace member identities and 36 active booking-alert permission rows. This is an identity count, not a verified count of five physical devices; older anonymous app installations may remain as historical member identities. Do not delete these identities without the Owner identifying the five intended devices.
+- Existing temporary 8-digit pairing tables and API actions are retained for backwards compatibility but are no longer part of the normal UI flow. Do not re-add the 8-digit input panel.
 
-### Build and installation safety
-- Application version in `car-wash-erp/package.json` is now 2.13.2. A main-branch CI build is expected from the source update; verify its actual run and artifacts before distributing them.
+### Booking API and notifications
+- Production `booking-api` is v13.
+- Booking list responses now include `permissions.notifications_enabled` and `permissions.notification_device_count`.
+- Per-device notification receipts are preserved: acknowledging an alert on one device does not mark it read on other devices.
+- Booking-created and booking-status events are written to the database and distributed through Supabase Realtime; the app also polls as a recovery path.
+- Android uses Capacitor Local Notifications while the app is active and permitted to run. The app now has a user-triggered notification permission control.
+- Browser/Electron desktop support uses the Web Notifications API while the app is running. The manager laptop must press **Enable notifications on this device** and allow notifications in its OS/browser.
+- **Background push while the Android app is fully closed is not yet enabled.** It requires Firebase Cloud Messaging (FCM), an approved Firebase project configuration/service account, token registration, server-side push sending and end-to-end tests. Never claim that closed-app push is operational until those are configured and tested.
+- WhatsApp booking alerts are not considered active unless the WhatsApp sender, destination and approved utility template are configured and a provider delivery is confirmed.
+
+### Application source and build
+- Application source version: **2.13.3**.
 - Android application ID remains `com.washdesk.carwash.v24`.
-- The CI APK is debug-signed. The original production keystore was not found, and the runner signing certificate does not match the previously installed APK. Do not uninstall or overwrite the currently working app until a production-signed compatible build or a verified migration plan is available.
-- The Windows EXE can be rebuilt from the current source through `.github/workflows/build-installers.yml`.
-- Secrets, API keys, owner pairing codes and keystore passwords must never be committed to source or included in handover ZIPs.
+- The 2.13.3 source contains workspace auto-enrolment, the simplified booking alerts panel, Android local notification permission, and browser/Electron desktop notification support.
+- Check the latest GitHub Actions run for the 2.13.3 APK, Windows installer, source archive and full handover before sharing build artifacts.
+- The CI APK is debug-signed. The original production keystore was not found, and the runner certificate does not match the installed app certificate. Do not ask the Owner to uninstall/replace the working app or promise an in-place update. A production-signed release needs the original signing key or a separately tested migration plan.
+- Secrets, API keys, workspace pairing credentials, FCM service-account JSON and keystore passwords must never be committed to source or included in handover ZIPs.
 
+---
 ---
 
 # Current verified state — 20 November 2026
