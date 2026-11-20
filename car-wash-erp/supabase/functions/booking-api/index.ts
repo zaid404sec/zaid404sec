@@ -126,7 +126,7 @@ async function registerBookingDevice(ctx: any, req: Request, body: any) {
   const userId = ctx.user.id;
   const userAgent = req.headers.get('user-agent') || '';
   const deviceType = /android|iphone|ipad|mobile/i.test(userAgent) ? 'mobile' : 'desktop';
-  const suppliedLabel = String(body.device_label || '').trim().replace(/\\s+/g, ' ').slice(0, 40);
+  const suppliedLabel = String(body.device_label || '').trim().replace(/\s+/g, ' ').slice(0, 40);
   const fallbackLabel = deviceType === 'desktop' ? 'Manager Laptop' : 'Android phone ' + userId.slice(-4).toUpperCase();
   const deviceLabel = suppliedLabel.length >= 2 ? suppliedLabel : fallbackLabel;
   const now = new Date().toISOString();
@@ -669,7 +669,8 @@ Deno.serve(async req => {
     const lower = message.toLowerCase();
     const status = lower.includes('slot_unavailable') ? 409
       : lower.includes('rate_limit') ? 429
-      : lower.includes('public_booking_disabled') || lower.includes('only the original workspace owner') || lower.includes('only the workspace owner') || lower.includes('only the owner') || lower.includes('not authorised') || lower.includes('not approved') || lower.includes('only the authorised') ? 403
+      : lower.includes('device limit') || lower.includes('booking_device_limit') || lower.includes('manager laptop') || lower.includes('only_one_non_owner') ? 409
+      : lower.includes('public_booking_disabled') || lower.includes('only the original workspace owner') || lower.includes('only the workspace owner') || lower.includes('only the owner') || lower.includes('not authorised') || lower.includes('not approved') || lower.includes('only the authorised') || lower.includes('device was removed') ? 403
       : lower.includes('out_of_range') || lower.includes('invalid_') || lower.includes('invalid') || lower.includes('expired') || lower.includes('already used') || lower.includes('choose') || lower.includes('enter') ? 400
       : lower.includes('sign in') || lower.includes('session') || lower.includes('paired') ? 401
       : 500;
