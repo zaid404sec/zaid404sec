@@ -19,6 +19,8 @@ _Last verified: 19 November 2026_
 
 ## The one link to give a new AI
 
+**Read this first — complete architecture and recovery map:** [PROJECT_INDEX.md](PROJECT_INDEX.md). It documents the current websites, Vercel/Supabase deployment, anonymous Owner identity, phone pairing, backend APIs, source folders, build process, signing warning and safety rules.
+
 **Repository (real source code):**  
 https://github.com/zaid404sec/zaid404sec
 
