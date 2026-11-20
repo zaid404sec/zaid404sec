@@ -107,6 +107,8 @@ declare
   v_code text := upper(regexp_replace(coalesce(p_pairing_code, ''), '\s', '', 'g'));
   v_role text;
   v_business_name text;
+  v_existing_workspace uuid;
+  v_existing_role text;
 begin
   if v_auth_user is null then
     raise exception 'AUTHENTICATION_REQUIRED: Secure device sign-in is required.';
@@ -125,6 +127,16 @@ begin
     raise exception 'INVALID_PAIRING_CODE: The pairing code is not valid for this project.';
   end if;
 
+  select workspace_id, role
+    into v_existing_workspace, v_existing_role
+    from public.washdesk_workspace_members
+    where auth_user_id = v_auth_user
+    for update;
+
+  if found and v_existing_workspace <> v_workspace_id then
+    raise exception 'ALREADY_PAIRED_TO_ANOTHER_WORKSPACE: This account already belongs to a different workspace.';
+  end if;
+
   if v_owner_user is null then
     update public.washdesk_workspaces
       set owner_auth_user_id = v_auth_user
@@ -132,13 +144,22 @@ begin
     v_owner_user := v_auth_user;
   end if;
 
-  v_role := case when v_owner_user = v_auth_user then 'owner' else 'member' end;
+  -- Preserve a previously verified Owner membership even when the legacy
+  -- canonical owner UUID belongs to the original anonymous installation.
+  v_role := case
+    when v_owner_user = v_auth_user or v_existing_role = 'owner' then 'owner'
+    else 'member'
+  end;
 
   insert into public.washdesk_workspace_members(auth_user_id, workspace_id, role)
   values (v_auth_user, v_workspace_id, v_role)
   on conflict (auth_user_id) do update
     set workspace_id = excluded.workspace_id,
-        role = excluded.role;
+        role = case
+          when public.washdesk_workspace_members.workspace_id = excluded.workspace_id
+            and public.washdesk_workspace_members.role = 'owner' then 'owner'
+          else excluded.role
+        end;
 
   return jsonb_build_object(
     'workspace_id', v_workspace_id,
@@ -182,6 +203,7 @@ as $$
     from public.washdesk_workspace_members m
     join public.washdesk_workspaces w on w.id = m.workspace_id
     where m.auth_user_id = auth.uid()
+      and m.role = 'owner'
       and w.owner_auth_user_id = p_owner_user_id
   );
 $$;
