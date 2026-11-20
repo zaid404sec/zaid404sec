@@ -42,7 +42,7 @@ window.PrimeAutoCareBookings = {
   redeemNotificationPairCode: code => bookingRequest('redeem-notification-pair-code', { code }),
   revokeNotificationDevice: user_id => bookingRequest('revoke-notification-device', { user_id }),
   setDeviceLabel: label => {
-    const clean = String(label || '').trim().replace(/\\s+/g, ' ').slice(0, 40);
+    const clean = String(label || '').trim().replace(/\s+/g, ' ').slice(0, 40);
     if (clean.length < 2) throw new Error('Enter a device name with at least 2 characters.');
     localStorage.setItem(DEVICE_LABEL_KEY, clean);
     return clean;
