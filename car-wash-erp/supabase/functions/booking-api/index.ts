@@ -134,6 +134,37 @@ async function canManageBookingNotifications(ctx: any) {
   return !!data;
 }
 
+async function getAuthorisedBookingDevice(ctx: any) {
+  if (ctx.isOwner) {
+    return { status: 'active', device_label: 'Owner Phone', device_kind: 'phone', can_decide_bookings: true };
+  }
+  const { data, error } = await ctx.admin.from('pac_booking_devices')
+    .select('status,device_label,device_kind,can_decide_bookings')
+    .eq('workspace_id', ctx.workspace.id)
+    .eq('auth_user_id', ctx.user.id)
+    .maybeSingle();
+  if (error) throw new Error('This device access could not be verified.');
+  if (data?.status === 'active') {
+    void ctx.admin.from('pac_booking_devices')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('workspace_id', ctx.workspace.id)
+      .eq('auth_user_id', ctx.user.id);
+  }
+  return data || null;
+}
+async function canReceiveBookingAlerts(ctx: any) {
+  if (ctx.isOwner) return true;
+  const device = await getAuthorisedBookingDevice(ctx);
+  return device?.status === 'active';
+}
+async function canDecideBookings(ctx: any) {
+  if (ctx.isOwner) return true;
+  const device = await getAuthorisedBookingDevice(ctx);
+  return device?.status === 'active'
+    && device?.device_kind === 'desktop'
+    && device?.can_decide_bookings === true;
+}
+
 async function bookingNotificationPairHash(workspaceId: string, code: string) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(workspaceId + ':' + code));
   return Array.from(new Uint8Array(bytes)).map(value => value.toString(16).padStart(2, '0')).join('');
@@ -366,6 +397,92 @@ async function handle(req: Request, body: any) {
   }
 
   const ctx = await authenticate(req);
+  if (action === 'request-booking-device-access') {
+    if (ctx.isOwner) return { ok: true, status: 'active', already_authorised: true };
+    const deviceLabel = String(body.device_label || '').replace(/[^a-zA-Z0-9 ._()\-]/g, '').trim().slice(0, 60);
+    const deviceKind = String(body.device_kind || 'phone');
+    if (deviceLabel.length < 3) throw new Error('Enter a clear device name, such as Dad Phone 2 or Manager Laptop.');
+    if (!['phone', 'desktop', 'other'].includes(deviceKind)) throw new Error('Choose a valid device type.');
+    const { data: existing, error: existingError } = await ctx.admin.from('pac_booking_devices')
+      .select('status,device_label,device_kind')
+      .eq('workspace_id', ctx.workspace.id)
+      .eq('auth_user_id', ctx.user.id)
+      .maybeSingle();
+    if (existingError) throw new Error('Current device registration could not be checked.');
+    if (existing?.status === 'active') return { ok: true, status: 'active', already_authorised: true };
+    const { data, error } = await ctx.admin.from('pac_booking_devices').upsert({
+      workspace_id: ctx.workspace.id,
+      auth_user_id: ctx.user.id,
+      device_label: deviceLabel,
+      device_kind: deviceKind,
+      status: 'pending',
+      can_decide_bookings: false,
+      requested_at: new Date().toISOString(),
+      approved_at: null,
+      approved_by: null,
+      revoked_at: null
+    }, { onConflict: 'workspace_id,auth_user_id' }).select('status,device_label,device_kind').single();
+    if (error) throw new Error('This device access request could not be saved.');
+    return { ok: true, status: data.status, device_label: data.device_label };
+  }
+  if (action === 'review-booking-device-access') {
+    if (!ctx.isOwner) throw new Error('Only the Prime Auto Care Owner can approve devices.');
+    const target = String(body.auth_user_id || '');
+    const approved = body.approved === true;
+    const canDecide = body.can_decide_bookings === true;
+    if (!/^[0-9a-f-]{36}$/i.test(target) || target === ctx.user.id) throw new Error('Select a valid non-owner device request.');
+    const { data: requested, error: requestError } = await ctx.admin.from('pac_booking_devices')
+      .select('auth_user_id,device_kind,status,device_label')
+      .eq('workspace_id', ctx.workspace.id)
+      .eq('auth_user_id', target)
+      .eq('status', 'pending')
+      .maybeSingle();
+    if (requestError || !requested) throw new Error('This device request is no longer pending. Refresh the device list.');
+    if (approved) {
+      const { count: activeCount, error: countError } = await ctx.admin.from('pac_booking_devices')
+        .select('auth_user_id', { count: 'exact', head: true })
+        .eq('workspace_id', ctx.workspace.id)
+        .eq('status', 'active');
+      if (countError) throw new Error('The authorised device count could not be checked.');
+      if ((activeCount || 0) >= 5) throw new Error('The five authorised-device limit has been reached. Revoke an old device first.');
+      if (canDecide) {
+        if (requested.device_kind !== 'desktop') throw new Error('Accept/Reject permission can only be granted to the Manager Laptop.');
+        const { count: decisionCount, error: decisionError } = await ctx.admin.from('pac_booking_devices')
+          .select('auth_user_id', { count: 'exact', head: true })
+          .eq('workspace_id', ctx.workspace.id)
+          .eq('status', 'active')
+          .eq('can_decide_bookings', true)
+          .neq('auth_user_id', ctx.user.id);
+        if (decisionError) throw new Error('Existing booking decision permissions could not be checked.');
+        if ((decisionCount || 0) >= 1) throw new Error('Only one additional Manager Laptop can receive Accept/Reject permission.');
+      }
+      const { error } = await ctx.admin.from('pac_booking_devices').update({
+        status: 'active',
+        can_decide_bookings: canDecide,
+        approved_at: new Date().toISOString(),
+        approved_by: ctx.user.id,
+        revoked_at: null
+      }).eq('workspace_id', ctx.workspace.id).eq('auth_user_id', target).eq('status', 'pending');
+      if (error) throw new Error('This device could not be approved.');
+      return { ok: true, status: 'active', can_decide_bookings: canDecide };
+    }
+    const { error } = await ctx.admin.from('pac_booking_devices').update({
+      status: 'rejected', can_decide_bookings: false, approved_by: ctx.user.id,
+      approved_at: new Date().toISOString()
+    }).eq('workspace_id', ctx.workspace.id).eq('auth_user_id', target).eq('status', 'pending');
+    if (error) throw new Error('This device request could not be rejected.');
+    return { ok: true, status: 'rejected' };
+  }
+  if (action === 'revoke-booking-device-access') {
+    if (!ctx.isOwner) throw new Error('Only the Prime Auto Care Owner can revoke a device.');
+    const target = String(body.auth_user_id || '');
+    if (!/^[0-9a-f-]{36}$/i.test(target) || target === ctx.user.id) throw new Error('Select a valid non-owner device.');
+    const { error } = await ctx.admin.from('pac_booking_devices').update({
+      status: 'revoked', can_decide_bookings: false, revoked_at: new Date().toISOString()
+    }).eq('workspace_id', ctx.workspace.id).eq('auth_user_id', target).eq('status', 'active');
+    if (error) throw new Error('This device could not be revoked.');
+    return { ok: true };
+  }
   if (action === 'create-notification-pair-code') {
     return await createBookingNotificationPairCode(ctx);
   }
@@ -382,7 +499,7 @@ async function handle(req: Request, body: any) {
     return { ok: true };
   }
   if (action === 'notifications') {
-    if (!(await canManageBookingNotifications(ctx))) throw new Error('This phone is not authorised to receive Prime Auto Care booking alerts. Ask the owner for a one-time pairing code.');
+    if (!(await canReceiveBookingAlerts(ctx))) throw new Error('This device is not authorised for Prime Auto Care booking alerts. Request access from the Owner in Bookings.');
     const { data: receipts, error: receiptError } = await ctx.admin.from('pac_booking_notification_receipts')
       .select('notification_id').eq('workspace_id', ctx.workspace.id).eq('auth_user_id', ctx.user.id);
     if (receiptError) throw new Error('This phone\'s booking notification receipts could not be read.');
@@ -396,7 +513,7 @@ async function handle(req: Request, body: any) {
     return { notifications: (data || []).filter((item: any) => !acknowledged.has(String(item.id))).slice(0, 20) };
   }
   if (action === 'acknowledge-notification') {
-    if (!(await canManageBookingNotifications(ctx))) throw new Error('This phone is not authorised to acknowledge Prime Auto Care booking alerts.');
+    if (!(await canReceiveBookingAlerts(ctx))) throw new Error('This device is not authorised to acknowledge Prime Auto Care booking alerts.');
     const id = String(body.id || '');
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Select a valid booking notification.');
     const { data: event, error: eventError } = await ctx.admin.from('pac_booking_notification_events')
@@ -437,22 +554,36 @@ async function handle(req: Request, body: any) {
       slot_minutes: settings.slot_minutes, slot_capacity: settings.slot_capacity,
       horizon_days: settings.horizon_days, public_enabled: settings.public_enabled
     };
-    const { data: notificationDevices, error: notificationDevicesError } = await ctx.admin
-      .from('pac_booking_notification_admins')
-      .select('auth_user_id')
+    const { data: registeredDevices, error: deviceError } = await ctx.admin
+      .from('pac_booking_devices')
+      .select('auth_user_id,device_label,device_kind,status,can_decide_bookings,requested_at,approved_at')
       .eq('workspace_id', ctx.workspace.id)
-      .eq('permission', 'booking_notifications_admin')
-      .is('revoked_at', null);
-    if (notificationDevicesError) throw new Error('Booking notification device access could not be verified.');
-    const notificationsEnabled = ctx.isOwner ||
-      (notificationDevices || []).some((device: any) => device.auth_user_id === ctx.user.id);
+      .in('status', ctx.isOwner ? ['active', 'pending'] : ['active']);
+    if (deviceError) throw new Error('Authorised device access could not be verified.');
+    const currentDevice = (registeredDevices || []).find((device: any) => device.auth_user_id === ctx.user.id) || null;
+    const activeDevices = (registeredDevices || []).filter((device: any) => device.status === 'active');
+    const decisionRequests = ctx.isOwner
+      ? (registeredDevices || []).filter((device: any) => device.status === 'pending')
+      : [];
+    const notificationsEnabled = ctx.isOwner || currentDevice?.status === 'active';
+    const canDecide = ctx.isOwner || (
+      currentDevice?.status === 'active'
+      && currentDevice?.device_kind === 'desktop'
+      && currentDevice?.can_decide_bookings === true
+    );
     return {
       bookings: data || [],
       settings: visibleSettings,
+      authorised_devices: ctx.isOwner ? activeDevices : [],
+      decision_requests: decisionRequests,
       permissions: {
         is_owner: ctx.isOwner,
         notifications_enabled: notificationsEnabled,
-        notification_device_count: (notificationDevices || []).length
+        can_decide_bookings: canDecide,
+        current_device_status: ctx.isOwner ? 'active' : (currentDevice?.status || 'not_registered'),
+        current_device_label: ctx.isOwner ? 'Owner Phone' : (currentDevice?.device_label || ''),
+        notification_device_count: activeDevices.length,
+        max_notification_devices: 5
       }
     };
   }
@@ -467,6 +598,11 @@ async function handle(req: Request, body: any) {
     const status = String(body.status || '');
     const id = String(body.id || '');
     if (!allowed.has(status) || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid booking update.');
+    const canDecide = await canDecideBookings(ctx);
+    if (!canDecide) throw new Error('This device can receive booking alerts but cannot accept or reject bookings. Ask the Owner to authorise the Manager Laptop.');
+    if (!ctx.isOwner && !['confirmed', 'rejected'].includes(status)) {
+      throw new Error('The Manager Laptop can only Accept or Reject pending bookings. Other booking changes require the Owner.');
+    }
 
     // The database function locks the booking row, enforces allowed status transitions,
     // attributes the actor, and inserts the corresponding per-device notification event
