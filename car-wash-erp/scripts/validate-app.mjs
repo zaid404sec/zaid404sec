@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.13.6') throw new Error('The package version must be 2.13.6.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v26') {
-  throw new Error('The 2.13.6 APK must use the v26 application ID for side-by-side installation; the original signing key was not supplied.');
+if (packageJson.version !== '2.13.7') throw new Error('The package version must be 2.13.7.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v27') {
+  throw new Error('The 2.13.7 APK must use the v27 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.13.6 uses the v26 side-by-side application ID; original v24 app is preserved.');
+console.log('PASS: Android 2.13.7 uses the v27 side-by-side application ID; original v24 app is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -65,6 +65,7 @@ if (!existsSync(new URL('../src/bookings.js', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119090408_booking_notification_realtime_20261119.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119190447_booking_create_atomic_notification_events_20261120.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261120130000_workspace_members_auto_booking_alerts.sql', import.meta.url)) ||
+    !existsSync(new URL('../supabase/migrations/20261120190000_preserve_owner_role_on_workspace_pairing.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/migrations/20261119160000_google_vault_setup_wizard.sql', import.meta.url)) ||
     !existsSync(new URL('../supabase/functions/public-reviews/index.ts', import.meta.url)) ||
     !existsSync(new URL('../src/google-reviews.js', import.meta.url))) {
@@ -213,6 +214,7 @@ for (const token of ['for update;', "m.role = 'member'", 'd.status = \'active\''
   if (!staffLimitMigration.includes(token)) throw new Error('Staff device limit must count active Member devices only: '+token);
 }
 console.log('PASS: permanent PAC Owner Code, direct booking-only pairing, Owner-only business sync and Owner-managed device removal');
+console.log('PASS: new Owner installations restore all business modules through registered Owner email/password sign-in; staff PAC pairing remains Bookings-only');
 
 const notificationPollStart = html.indexOf('async function pollBookingNotifications(){');
 const notificationPollEnd = html.indexOf('async function loadBookingCenter(', notificationPollStart);
@@ -634,8 +636,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v26') throw new Error('Android 2.13.6 application ID v26 was not set.');
-console.log('PASS: app manifest uses the new v26 Android package ID.');
+if (appId !== 'com.washdesk.carwash.v27') throw new Error('Android 2.13.7 application ID v27 was not set.');
+console.log('PASS: app manifest uses the new v27 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -987,11 +989,23 @@ if (cloudSource.includes('localhost:3000') || html.includes('localhost:3000') ||
     html.includes('Send secure sign-in link') || html.includes('Six-digit email sign-in code')) {
   throw new Error('The cloud flow still contains an email-link / localhost redirect dependency.');
 }
-if (!html.includes('Enable Anonymous Sign-Ins') ||
-    !html.includes('Connect / Pair this device') ||
-    !html.includes('No four-device cap is built into the app') ||
-    !html.includes('every authorised phone or computer')) {
-  throw new Error('Cloud settings do not explain the shared device-pairing workflow.');
+if (!html.includes('id="owner-cloud-login-form"') ||
+    !html.includes('Sign in as Owner &amp; restore full business app') ||
+    !html.includes('Owner account password') ||
+    !html.includes('Additional staff phones or laptops') ||
+    !html.includes('Do not use the old 64-character workspace pairing key on the Owner phone') ||
+    !cloudSource.includes('async function signInOwner') ||
+    !cloudSource.includes('signInWithPassword') ||
+    !cloudSource.includes("serverWorkspace.role !== 'owner'") ||
+    !cloudSource.includes('Owner account verified. Your full Prime Auto Care business app')) {
+  throw new Error('Fresh-install Owner restore must authenticate an existing Owner account and retain the full business app.');
+}
+const ownerPairMigration = await readFile(new URL('../supabase/migrations/20261120190000_preserve_owner_role_on_workspace_pairing.sql', import.meta.url), 'utf8');
+const cloudSetupSql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
+for (const token of ["v_existing_role = 'owner'", "v_owner_user = v_auth_user or v_existing_role = 'owner'", "m.role = 'owner'"]) {
+  if (!ownerPairMigration.includes(token) && !cloudSetupSql.includes(token)) {
+    throw new Error('Legacy workspace pairing must preserve an Owner membership and restrict business snapshot reads to Owners: '+token);
+  }
 }
 if (!cloudSource.includes('workspace = readWorkspace();') ||
     !cloudSource.includes('automatic sync will resume when internet returns') ||
