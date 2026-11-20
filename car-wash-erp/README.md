@@ -1,14 +1,20 @@
-# WashDesk 2.13.1 — Prime Auto Care
+# WashDesk 2.13.2 — Prime Auto Care
 
 ## Current public endpoints
-- Business website: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-site/
-- Customer booking: https://jkjudmkqaebrgllemris.supabase.co/functions/v1/prime-auto-care-booking
-- Legacy website endpoint redirects to the canonical Supabase website. GitHub Pages auto-deployment is disabled.
+- Business website: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/
+- Customer booking: https://prime-auto-care-mz03200786-2785s-projects.vercel.app/booking/
+- Legacy Supabase website and booking URLs redirect to Vercel. Static HTML is hosted on Vercel; Supabase is the API/database backend.
 
 ## Current operational notes
-- Booking creation and accept/reject/cancel events are atomic in PostgreSQL; paired phones receive Supabase Realtime alerts and independent receipts.
-- The 2.13.1 CI APK is debug-signed with a runner-generated key and is not an in-place update for the existing v24 installation. See the Android signing status in the repository handover.
-- Google Basic API Access, original-owner OAuth and Pub/Sub/OIDC setup are owner-led prerequisites. Automatic replies remain disabled until review sync and moderation checks are verified.
+- Both Vercel pages were verified with HTTP 200 and `text/html; charset=utf-8`.
+- Production `booking-api` is v11 and `public-reviews` is v4. The booking API allows the Vercel origin and returns a specific client error for invalid/expired/already-used pairing codes.
+- The active business phone identity is now the Workspace Owner. The previous anonymous Owner identity was kept as a Member; no booking, invoice or business data was reset. Close/reopen the app to refresh the Owner permission and show the **Generate phone pairing code** button.
+- Pairing codes are Owner-generated, 8 digits, single-use and expire after 10 minutes. Do not type a random number.
+- Vercel's production static deployment has been created, but GitHub auto-linking still requires a GitHub Login Connection in Vercel.
+- The CI APK is debug-signed with a runner-generated key. The original production keystore was not found, and the signature differs from the installed v24 app. Do not uninstall or overwrite the working app. See `../AI_HANDOVER/PROJECT_INDEX.md`.
+- Google Basic API Access, original business-owner OAuth consent and Pub/Sub/OIDC setup remain external prerequisites. Automatic replies remain disabled by default.
+
+Full system map, file locations, authentication model, endpoints, deployment notes and safe-change rules: `../AI_HANDOVER/PROJECT_INDEX.md`.
 
 ---
 
