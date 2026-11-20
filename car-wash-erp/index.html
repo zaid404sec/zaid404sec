@@ -386,7 +386,7 @@ html[data-theme="light"] body{background:var(--bg)!important}
     try{
       const value=JSON.parse(localStorage.getItem(DEVICE_REMINDER_KEY)||'null');
       return value&&typeof value==='object'
-        ? {enabled:value.enabled!==false,time:/^(\\d{2}):(\\d{2})$/.test(value.time||'')?value.time:'07:50'}
+        ? {enabled:value.enabled!==false,time:/^(\d{2}):(\d{2})$/.test(value.time||'')?value.time:'07:50'}
         : {enabled:true,time:'07:50'};
     }catch{return {enabled:true,time:'07:50'}}
   }
@@ -922,7 +922,7 @@ html[data-theme="light"] body{background:var(--bg)!important}
     <div class="notice" style="margin-top:14px">Important: this is an operational management report, not a double-entry Tally ledger, audited Profit & Loss, Balance Sheet, GST return or tax filing report.</div>`
   }
   function toggleWhatsAppConsent(cid){const c=db.customers.find(x=>x.id===cid);if(!c)return;c.waOptIn=!c.waOptIn;c.updatedAt=Date.now();if(!save())return;render();notify(c.waOptIn?'WhatsApp offer permission enabled.':'WhatsApp offer permission removed.')}
-  function offerPhone(phone){let p=String(phone||'').replace(/\\D/g,'');if(p.length===10)p='91'+p;else if(p.length===11&&p.startsWith('0'))p='91'+p.slice(1);return p}
+  function offerPhone(phone){let p=String(phone||'').replace(/\D/g,'');if(p.length===10)p='91'+p;else if(p.length===11&&p.startsWith('0'))p='91'+p.slice(1);return p}
   function offers(){
     const b=db.business||{};
     const groupReady=!!String(b.whatsappGroupInviteLink||'').trim();
@@ -1424,7 +1424,7 @@ html[data-theme="light"] body{background:var(--bg)!important}
     const code=String(document.getElementById('pac-owner-code-new')?.value||'').trim();
     const confirmCode=String(document.getElementById('pac-owner-code-confirm')?.value||'').trim();
     const status=document.getElementById('pac-owner-code-status');
-    if(!/^\\d{8,12}$/.test(code)){if(status)status.textContent='Enter 8 to 12 digits.';return;}
+    if(!/^\d{8,12}$/.test(code)){if(status)status.textContent='Enter 8 to 12 digits.';return;}
     if(code!==confirmCode){if(status)status.textContent='The two code entries do not match.';return;}
     try{
       await window.PrimeAutoCareBookings.setPermanentOwnerCode(code);
@@ -1448,8 +1448,8 @@ html[data-theme="light"] body{background:var(--bg)!important}
     const deviceLabel=String(document.getElementById('booking-device-label')?.value||'');
     if(deviceLabel==='Owner Phone'){if(resultBox)resultBox.textContent='Owner Phone cannot be registered as a Member device. Sign in with the Owner account instead.';return;}
     const kind=document.getElementById('booking-device-kind')?.value==='laptop'?'desktop':'phone';
-    const code=String(document.getElementById('booking-pair-code')?.value||'').replace(/\\D/g,'');
-    if(!/^\\d{8,12}$/.test(code)){if(resultBox)resultBox.textContent='Enter the permanent 8–12 digit PAC Owner Code.';return;}
+    const code=String(document.getElementById('booking-pair-code')?.value||'').replace(/\D/g,'');
+    if(!/^\d{8,12}$/.test(code)){if(resultBox)resultBox.textContent='Enter the permanent 8–12 digit PAC Owner Code.';return;}
     try{
       const connected=await window.PrimeAutoCareBookings.pairWithOwnerCode(code,deviceLabel,kind);
       if(resultBox)resultBox.textContent='Code accepted. This device is connected for booking Accept / Reject only.';
@@ -1876,7 +1876,7 @@ async function loadBookingCenter(force=false){
   }
   async function googleReviewSaveProjectNumber(){
     const value=String(document.getElementById('google-cloud-project-number')?.value||'').trim();
-    if(!/^\\d{6,24}$/.test(value)){notify('Enter the numeric Google Cloud Project Number, not its name or Project ID.');return}
+    if(!/^\d{6,24}$/.test(value)){notify('Enter the numeric Google Cloud Project Number, not its name or Project ID.');return}
     try{
       await window.PrimeAutoCareGoogleReviews.saveGoogleProjectNumber(value);
       notify('Google Cloud Project Number saved.');
