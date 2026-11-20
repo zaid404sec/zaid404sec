@@ -131,6 +131,41 @@ if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
   throw new Error('Native and desktop booking notification support is missing from the app polling flow.');
 }
 console.log('PASS: Android local and desktop browser booking notifications have explicit permission controls');
+
+const bookingClientSource = await readFile(new URL('../src/bookings.js', import.meta.url), 'utf8');
+const bookingApiSource = await readFile(new URL('../supabase/functions/booking-api/index.ts', import.meta.url), 'utf8');
+const bookingDeviceMigration = await readFile(new URL('../supabase/migrations/20261120150000_owner_managed_five_device_booking_access.sql', import.meta.url), 'utf8');
+for (const token of ['requestDeviceAccess','reviewDeviceAccess','revokeDeviceAccess']) {
+  if (!bookingClientSource.includes(token)) throw new Error('Booking device client API is missing: '+token);
+}
+for (const token of [
+  'request-booking-device-access','review-booking-device-access','revoke-booking-device-access',
+  'canDecideBookings(ctx)','device_kind === \'desktop\'',
+  '!ctx.isOwner && ![\'confirmed\', \'rejected\'].includes(status)',
+  'five authorised-device limit','notification_device_count','max_notification_devices: 5'
+]) {
+  if (!bookingApiSource.includes(token)) throw new Error('Booking device access enforcement is missing: '+token);
+}
+for (const token of [
+  'create table if not exists public.pac_booking_devices',
+  'can_decide_bookings boolean not null default false',
+  "check (status in ('pending', 'active', 'rejected', 'revoked'))",
+  "'Owner Phone'"
+]) {
+  if (!bookingDeviceMigration.includes(token)) throw new Error('Five-device migration is missing: '+token);
+}
+for (const token of [
+  'data-action="booking-device-request"',
+  'data-action="booking-device-review"',
+  'data-action="booking-device-revoke"',
+  'state.permissions?.can_decide_bookings===true',
+  'Approve + Accept / Reject',
+  'Waiting for Owner approval'
+]) {
+  if (!html.includes(token)) throw new Error('Owner-managed device UI is missing: '+token);
+}
+console.log('PASS: five-device registration, Owner approvals, one Manager Laptop decision role and server-enforced Accept/Reject permissions');
+
 const notificationPollStart = html.indexOf('async function pollBookingNotifications(){');
 const notificationPollEnd = html.indexOf('async function loadBookingCenter(', notificationPollStart);
 if (notificationPollStart < 0 || notificationPollEnd < 0) throw new Error('Booking notification poller could not be inspected.');
