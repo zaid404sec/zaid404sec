@@ -558,7 +558,7 @@ async function handle(req: Request, body: any) {
       .from('pac_booking_devices')
       .select('auth_user_id,device_label,device_kind,status,can_decide_bookings,requested_at,approved_at')
       .eq('workspace_id', ctx.workspace.id)
-      .in('status', ctx.isOwner ? ['active', 'pending'] : ['active']);
+      .in('status', ['active', 'pending']);
     if (deviceError) throw new Error('Authorised device access could not be verified.');
     const currentDevice = (registeredDevices || []).find((device: any) => device.auth_user_id === ctx.user.id) || null;
     const activeDevices = (registeredDevices || []).filter((device: any) => device.status === 'active');
