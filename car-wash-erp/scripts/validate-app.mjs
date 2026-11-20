@@ -162,16 +162,24 @@ for (const token of [
   if (!bookingDeviceMigration.includes(token)) throw new Error('Five-device migration is missing: '+token);
 }
 for (const token of [
-  'data-action="booking-device-request"',
-  'data-action="booking-device-review"',
-  'data-action="booking-device-revoke"',
-  'state.permissions?.can_decide_bookings===true',
-  'Approve + Accept / Reject',
-  'Waiting for Owner approval'
+  'id="booking-device-role"',
+  'Owner Phone',
+  'Dad Phone — alerts only',
+  'value="owner-account">Owner',
+  'value="member">Member',
+  'value="not-sure">Not sure',
+  'id="booking-pair-code"',
+  'data-action="booking-pair-code-verify"',
+  'data-action="booking-pair-code-generate"',
+  'create-notification-pair-code',
+  'redeem-notification-pair-code',
+  'expires in 10 minutes',
+  'Pairing grants booking alerts only',
+  'A pairing code cannot convert a Member into an Owner'
 ]) {
-  if (!html.includes(token)) throw new Error('Owner-managed device UI is missing: '+token);
+  if (!html.includes(token)) throw new Error('Simple one-time device pairing UI is missing: '+token);
 }
-console.log('PASS: five-device registration, Owner approvals, one Manager Laptop decision role and server-enforced Accept/Reject permissions');
+console.log('PASS: simple role selector, Owner-generated one-time code, verification UI and Owner-only booking decisions');
 
 const notificationPollStart = html.indexOf('async function pollBookingNotifications(){');
 const notificationPollEnd = html.indexOf('async function loadBookingCenter(', notificationPollStart);
