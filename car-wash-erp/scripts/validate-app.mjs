@@ -123,7 +123,7 @@ for (const token of ['pac_auto_enrol_workspace_member_for_booking_alerts','after
 if (!bookingApiSource.includes('notification_device_count') || !bookingApiSource.includes('notifications_enabled')) {
   throw new Error('Booking API must report per-device notification enrolment status.');
 }
-console.log('PASS: workspace members are automatically enrolled for booking alerts; no separate 8-digit code is required');
+console.log('PASS: existing workspace alert enrollment is retained; the optional one-time code pairing flow is available for additional accounts');
 const localNotificationsSource = await readFile(new URL('../src/local-notifications.js', import.meta.url), 'utf8');
 if (!localNotificationsSource.includes('sendBookingAlertNotification') ||
     !localNotificationsSource.includes('requestBookingAlertPermission') ||
@@ -171,13 +171,14 @@ for (const token of [
   'id="booking-pair-code"',
   'data-action="booking-pair-code-verify"',
   'data-action="booking-pair-code-generate"',
-  'create-notification-pair-code',
-  'redeem-notification-pair-code',
   'expires in 10 minutes',
   'Pairing grants booking alerts only',
   'A pairing code cannot convert a Member into an Owner'
 ]) {
   if (!html.includes(token)) throw new Error('Simple one-time device pairing UI is missing: '+token);
+}
+for (const token of ['createPairCode','redeemPairCode','create-notification-pair-code','redeem-notification-pair-code']) {
+  if (!bookingClientSource.includes(token)) throw new Error('Pairing code client API is missing: '+token);
 }
 console.log('PASS: simple role selector, Owner-generated one-time code, verification UI and Owner-only booking decisions');
 
