@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 const CONFIG_KEY = 'prime-auto-care-cloud-config-v2';
 const WORKSPACE_KEY = 'prime-auto-care-workspace-v2';
+const OWNER_RECOVERY_REDIRECT = 'primeautocare28://auth-callback';
+const REGISTERED_OWNER_EMAILS = new Set(['bmumz3909@gmail.com', 'mz03200786@gmail.com']);
 const DEFAULT_PROJECT_CONFIG = {
   url: 'https://jkjudmkqaebrgllemris.supabase.co',
   anonKey: 'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw'
@@ -23,6 +27,11 @@ let retryDelay = 1500;
 let schemaBlocked = false;
 let stockLedgerSchemaReady = false;
 let pollingTimer = null;
+let authEventSubscription = null;
+let authEventClient = null;
+let appUrlListenerPromise = null;
+let appStateListenerPromise = null;
+let recoveryUiPending = false;
 
 function readConfig() {
   try {
@@ -58,17 +67,105 @@ function stableStringify(value) {
 }
 function initialize(config) {
   const fingerprint = config.url + '|' + config.anonKey;
-  if (supabase && activeConfigFingerprint === fingerprint) return;
+  if (supabase && activeConfigFingerprint === fingerprint) {
+    installAuthListeners();
+    return;
+  }
   if (channel && supabase) void supabase.removeChannel(channel);
+  authEventSubscription?.unsubscribe?.();
+  authEventSubscription = null;
+  authEventClient = null;
   activeConfigFingerprint = fingerprint;
   supabase = createClient(config.url, config.anonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: false
+      detectSessionInUrl: false,
+      flowType: 'pkce'
     },
     realtime: { params: { eventsPerSecond: 20 } }
   });
+  installAuthListeners();
+}
+function signalOwnerPasswordRecovery(sessionUser) {
+  if (recoveryUiPending) return;
+  recoveryUiPending = true;
+  setStatus('Password recovery verified · choose a new Owner password');
+  window.dispatchEvent(new CustomEvent('washdesk-owner-password-recovery', {
+    detail: { email: String(sessionUser?.email || '') }
+  }));
+}
+async function handleOwnerAuthCallback(rawUrl) {
+  const callback = new URL(String(rawUrl || ''));
+  if (callback.protocol !== 'primeautocare28:' || callback.hostname !== 'auth-callback') return false;
+  if (!supabase) initialize(readConfig());
+  const code = callback.searchParams.get('code');
+  const tokenHash = callback.searchParams.get('token_hash');
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+  } else if (tokenHash) {
+    const type = callback.searchParams.get('type') || 'recovery';
+    if (type !== 'recovery') throw new Error('This is not an Owner password recovery link.');
+    const { error } = await supabase.auth.verifyOtp({ type: 'recovery', token_hash: tokenHash });
+    if (error) throw error;
+  } else {
+    const fragment = new URLSearchParams(callback.hash.replace(/^#/, ''));
+    const accessToken = fragment.get('access_token');
+    const refreshToken = fragment.get('refresh_token');
+    if (!accessToken || !refreshToken) throw new Error('The recovery link is incomplete or expired. Request a new one from the same phone.');
+    const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    if (error) throw error;
+  }
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data?.session?.user) throw error || new Error('The recovery link did not create a secure session.');
+  user = data.session.user;
+  signalOwnerPasswordRecovery(user);
+  return true;
+}
+function installAuthListeners() {
+  if (!supabase) return;
+  if (authEventClient !== supabase) {
+    authEventSubscription?.unsubscribe?.();
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') signalOwnerPasswordRecovery(session?.user);
+    });
+    authEventSubscription = data?.subscription || null;
+    authEventClient = supabase;
+  }
+  if (!Capacitor.isNativePlatform()) return;
+  if (!appUrlListenerPromise) {
+    appUrlListenerPromise = (async () => {
+      await App.addListener('appUrlOpen', ({ url }) => {
+        void handleOwnerAuthCallback(url).catch(error => {
+          const message = String(error?.message || 'The Owner password recovery link could not be opened.');
+          setStatus('Owner password recovery failed · request a fresh email link');
+          window.dispatchEvent(new CustomEvent('washdesk-owner-password-recovery-error', { detail: message }));
+        });
+      });
+      const launch = await App.getLaunchUrl();
+      if (launch?.url) {
+        await handleOwnerAuthCallback(launch.url).catch(error => {
+          const message = String(error?.message || 'The Owner password recovery link could not be opened.');
+          setStatus('Owner password recovery failed · request a fresh email link');
+          window.dispatchEvent(new CustomEvent('washdesk-owner-password-recovery-error', { detail: message }));
+        });
+      }
+    })().catch(error => {
+      appUrlListenerPromise = null;
+      console.warn('Prime Auto Care auth deep-link listener:', error);
+    });
+  }
+  if (!appStateListenerPromise) {
+    appStateListenerPromise = App.addListener('appStateChange', state => {
+      if (state?.isActive && user && workspace?.role === 'owner' && navigator.onLine) {
+        void initialSync().catch(error => console.warn('Prime Auto Care foreground sync:', error));
+      }
+    }).catch(error => {
+      appStateListenerPromise = null;
+      console.warn('Prime Auto Care foreground listener:', error);
+    });
+  }
 }
 function saveConfig({ url, anonKey }) {
   if (!/^https:\/\//i.test(url || '') || !anonKey) {
@@ -241,6 +338,67 @@ async function signInOwner({ url, anonKey, email, password, getLocal, onRemote }
   }
 }
 
+async function requestOwnerPasswordRecovery({ email }) {
+  initialize(readConfig());
+  if (!Capacitor.isNativePlatform()) {
+    throw new Error('Open Prime Auto Care on the Android phone that will receive the recovery link.');
+  }
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!REGISTERED_OWNER_EMAILS.has(cleanEmail)) {
+    throw new Error('Select one of the two registered Prime Auto Care Owner email accounts.');
+  }
+  recoveryUiPending = false;
+  setStatus('Requesting a secure Owner password reset email…');
+  const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+    redirectTo: OWNER_RECOVERY_REDIRECT
+  });
+  if (error) {
+    const message = String(error.message || error);
+    if (/redirect_to|redirect url|not allowed/i.test(message)) {
+      throw new Error('One-time setup is required: in Supabase Authentication → URL Configuration → Redirect URLs, add exactly ' + OWNER_RECOVERY_REDIRECT + ' and save. Then request the recovery email again.');
+    }
+    throw error;
+  }
+  setStatus('Owner password recovery email requested · open the link on this same phone');
+  return { sent: true, email: cleanEmail };
+}
+async function completeOwnerPasswordRecovery({ password, getLocal, onRemote }) {
+  if (!supabase) initialize(readConfig());
+  const cleanPassword = String(password || '');
+  if (cleanPassword.length < 8) throw new Error('Choose a password with at least 8 characters.');
+  localProvider = getLocal;
+  remoteHandler = onRemote;
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData?.session?.user) {
+    throw sessionError || new Error('The recovery session expired. Request a new password-reset email from this phone.');
+  }
+  user = sessionData.session.user;
+  const serverWorkspace = await getWorkspaceFromServer();
+  if (!serverWorkspace || serverWorkspace.role !== 'owner') {
+    throw new Error('This recovery session is not linked to a registered Prime Auto Care Owner account. No password was changed.');
+  }
+  const { data, error } = await supabase.auth.updateUser({ password: cleanPassword });
+  if (error) throw error;
+  user = data?.user || user;
+  workspace = serverWorkspace;
+  localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace));
+  clearTimeout(pushTimer);
+  clearInterval(pollingTimer);
+  if (channel && supabase) await supabase.removeChannel(channel);
+  channel = null;
+  queuedPayload = null;
+  lastPayloadString = '';
+  schemaBlocked = false;
+  stockLedgerSchemaReady = false;
+  recoveryUiPending = false;
+  await initialSync();
+  return {
+    connected: true,
+    role: 'owner',
+    workspace: workspace.business_name,
+    message: 'Owner password updated. Your full Prime Auto Care business app and shared cloud data are restored.'
+  };
+}
 async function pairDevice({ url, anonKey, pairingCode, getLocal, onRemote }) {
   const config = saveConfig({ url, anonKey });
   const code = String(pairingCode || '').replace(/\s/g, '').toUpperCase();
@@ -609,6 +767,8 @@ async function getApiContext() {
 window.WashDeskCloud = {
   getApiContext,
   signInOwner,
+  requestOwnerPasswordRecovery,
+  completeOwnerPasswordRecovery,
   pairDevice,
   pairBookingDevice,
   resume,
@@ -624,12 +784,12 @@ window.WashDeskCloud = {
 window.addEventListener('online', () => {
   retryDelay = 1500;
   if (user && workspace && localProvider && workspace.role === 'owner') {
-    schedulePush(localProvider());
-    if (!channel) void initialSync().catch(error => console.warn('Prime Auto Care cloud reconnect:', error));
+    // Pull and merge the canonical snapshot first; never push a stale offline
+    // snapshot before another Owner's newer records have been fetched.
+    void initialSync().catch(error => console.warn('Prime Auto Care cloud reconnect:', error));
   } else if (user && workspace && workspace.role === 'member') {
     setStatus('Connected as booking staff · Bookings only · business sync is Owner-only');
   } else if (localProvider && remoteHandler) {
-    // Retry session and workspace restoration when the app was opened offline.
     void resume({ getLocal: localProvider, onRemote: remoteHandler }).catch(error => console.warn('Prime Auto Care saved device reconnect:', error));
   }
 });
