@@ -968,13 +968,14 @@ const remoteReceiveStart = html.indexOf('function receiveCloudData(');
 const remoteReceiveEnd = html.indexOf('async function connectCloud', remoteReceiveStart);
 if (remoteReceiveStart < 0 || remoteReceiveEnd < 0) throw new Error('Remote sync handler not found.');
 const remoteReceive = html.slice(remoteReceiveStart, remoteReceiveEnd);
-if (!remoteReceive.includes('pendingRemotePayload=remote;') ||
+if (!remoteReceive.includes('if(!canRenderRemoteUpdate())') ||
+    !remoteReceive.includes('pendingRemotePayload=remote;') ||
     !remoteReceive.includes('remoteRenderPending=true;') ||
     !remoteReceive.includes('return {__cloudSyncDeferred:true}') ||
-    remoteReceive.includes('db=mergeWashDeskData') ||
-    remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db))') ||
-    remoteReceive.includes('render()')) {
-  throw new Error('Realtime snapshots must be queued without changing local data or rerendering the active screen.');
+    !remoteReceive.includes('db=mergeWashDeskData') ||
+    !remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db))') ||
+    !remoteReceive.includes('render()')) {
+  throw new Error('Realtime snapshots must update immediately when safe and defer only while the Owner is editing.');
 }
 if (!html.includes('let pendingRemotePayload=null;') ||
     !html.includes('function applyPendingRemoteData()') ||
