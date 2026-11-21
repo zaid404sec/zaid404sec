@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.14.1') throw new Error('The package version must be 2.14.1.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v30') {
-  throw new Error('The 2.14.1 APK must use the v30 application ID for side-by-side installation; the original signing key was not supplied.');
+if (packageJson.version !== '2.14.2') throw new Error('The package version must be 2.14.2.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v31') {
+  throw new Error('The 2.14.2 APK must use the v31 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.14.1 uses the v30 side-by-side application ID; prior app data is preserved.');
+console.log('PASS: Android 2.14.2 uses the v31 side-by-side application ID; prior app data is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -230,14 +230,14 @@ if (!cloudSource.includes('signInWithPassword') ||
     html.includes('id="owner-cloud-forgot-password"') ||
     !html.includes('id="owner-cloud-login-status"') ||
     !html.includes('bmumz3909@gmail.com') ||
-    !html.includes('mz03200786@gmail.com')) {
-  throw new Error('Simple two-account Owner username/password login or registered Owner guard is missing.');
+    html.includes('mz03200786@gmail.com')) {
+  throw new Error('Single permanent Owner username/password login or registered Owner guard is missing.');
 }
 const ownerPasswordInput = html.match(/<input name="password" type="password"[^>]*>/)?.[0] || '';
 if (cloudSource.includes('ZAID') || cloudSource.includes('IMRAN') || !ownerPasswordInput || /\bvalue\s*=/.test(ownerPasswordInput)) {
   throw new Error('Owner passwords must never be embedded in client source or prefilled into the login field.');
 }
-console.log('PASS: simple Owner username/password login; no hard-coded passwords or visible reset/pairing UI');
+console.log('PASS: single Owner username/password login; no hard-coded passwords or visible reset/pairing UI');
 if (!html.includes('Supabase did not accept the password for') ||
     !html.includes('Update the password for this existing user in Supabase Authentication') ||
     !html.includes("submit.textContent='Connect & open Prime Auto Care'") ||
@@ -698,8 +698,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v30') throw new Error('Android 2.14.1 application ID v30 was not set.');
-console.log('PASS: app manifest uses the new v30 Android package ID.');
+if (appId !== 'com.washdesk.carwash.v31') throw new Error('Android 2.14.2 application ID v31 was not set.');
+console.log('PASS: app manifest uses the new v31 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -1056,13 +1056,14 @@ if (!html.includes('id="owner-cloud-login-form"') ||
     !html.includes('Connect &amp; open Prime Auto Care') ||
     !html.includes('name="email"') ||
     !html.includes('name="password"') ||
-    !html.includes('Primary Owner · bmumz3909@gmail.com') ||
-    !html.includes('Second Owner · mz03200786@gmail.com') ||
+    !html.includes('Owner email') ||
+    !html.includes('value="bmumz3909@gmail.com" readonly') ||
+    html.includes('mz03200786@gmail.com') ||
     !cloudSource.includes('async function signInOwner') ||
     !cloudSource.includes('signInWithPassword') ||
     !cloudSource.includes("serverWorkspace.role !== 'owner'") ||
     !cloudSource.includes('Owner account verified. Your full Prime Auto Care business app')) {
-  throw new Error('Fresh-install Owner restore must authenticate one of the two registered Owner accounts and retain the full business app.');
+  throw new Error('Fresh-install Owner restore must authenticate the single registered Owner account and retain the full business app.');
 }
 const ownerPairMigration = await readFile(new URL('../supabase/migrations/20261120190000_preserve_owner_role_on_workspace_pairing.sql', import.meta.url), 'utf8');
 const cloudSetupSql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
