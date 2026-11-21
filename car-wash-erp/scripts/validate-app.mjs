@@ -421,7 +421,7 @@ if (!html.includes("if(page!=='dashboard')return true;") ||
 if (html.includes('location.reload(') || html.includes('window.location.reload(')) {
   throw new Error('The app must not force-reload the active business screen.');
 }
-console.log('PASS: cloud snapshots defer outside the passive dashboard; navigation applies them safely and preserves scroll');
+console.log('PASS: cloud snapshots merge safely and preserve scroll; active edits defer changes until the screen can refresh');
 const saveFunctionStart=html.indexOf('function save(){');
 const saveFunctionEnd=html.indexOf('function notify(',saveFunctionStart);
 const saveFunction=html.slice(saveFunctionStart,saveFunctionEnd);
@@ -650,8 +650,8 @@ for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bu
   console.log('PASS: bundled asset ' + asset);
 }
 const serviceWorkerSource = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!serviceWorkerSource.includes('prime-auto-care-shell-v33') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v33 and precache the booking bundle.');
-console.log('PASS: offline shell cache version and booking bundle precache');
+if (!serviceWorkerSource.includes('prime-auto-care-shell-v34') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v34 and precache the booking bundle.');
+console.log('PASS: v34 offline shell cache invalidation and booking bundle precache');
 const pdfFontsBundle = await readFile(new URL('../pdfmake-vfs.js', import.meta.url), 'utf8');
 if (!pdfFontsBundle.includes('__primeAutoCarePdfFontsReady') || !pdfFontsBundle.includes('addVirtualFileSystem(vfs)')) {
   throw new Error('PDFMake font bundle does not register the virtual font system.');
