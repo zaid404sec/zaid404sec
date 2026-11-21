@@ -1018,7 +1018,7 @@ if (!html.includes("window.addEventListener('washdesk-booking-notification'") ||
     !html.includes('void pollBookingNotifications()')) {
   throw new Error('Live booking events must immediately trigger the per-device notification poller.');
 }
-for (const obsolete of ['requestEmailOtp', 'verifyEmailOtp', 'emailRedirectTo', 'AUTH_REDIRECT_URL', 'exchangeCodeForSession']) {
+for (const obsolete of ['requestEmailOtp', 'verifyEmailOtp', 'emailRedirectTo', 'AUTH_REDIRECT_URL']) {
   if (cloudSource.includes(obsolete)) throw new Error('Legacy email-link authentication remains in the cloud module: ' + obsolete);
 }
 if (cloudSource.includes('localhost:3000') || html.includes('localhost:3000') ||
@@ -1049,7 +1049,8 @@ if (!cloudSource.includes('workspace = readWorkspace();') ||
   throw new Error('Saved device pairing does not recover automatically after an offline app restart.');
 }
 console.log('PASS: offline app restart restores pairing and retries sync after internet returns');
-console.log('PASS: email-link auth removed; anonymous authenticated devices join one shared workspace');
+if (!cloudSource.includes('exchangeCodeForSession') || !cloudSource.includes("flowType: 'pkce'")) throw new Error('Secure PKCE exchange for the app-bound Owner recovery link is missing.');
+console.log('PASS: legacy email OTP login removed; secure app-bound PKCE password recovery retained; anonymous authenticated devices join one shared workspace');
 
 
 // Invoice totals are computed from item quantities, rates, line discounts and tax rates.
