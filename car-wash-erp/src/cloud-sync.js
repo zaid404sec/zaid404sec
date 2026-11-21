@@ -5,7 +5,8 @@ import { App } from '@capacitor/app';
 const CONFIG_KEY = 'prime-auto-care-cloud-config-v2';
 const WORKSPACE_KEY = 'prime-auto-care-workspace-v2';
 const OWNER_RECOVERY_REDIRECT = 'primeautocare28://auth-callback';
-const REGISTERED_OWNER_EMAILS = new Set(['bmumz3909@gmail.com', 'mz03200786@gmail.com']);
+const REGISTERED_OWNER_EMAIL = 'bmumz3909@gmail.com';
+const REGISTERED_OWNER_EMAILS = new Set([REGISTERED_OWNER_EMAIL]);
 const DEFAULT_PROJECT_CONFIG = {
   url: 'https://jkjudmkqaebrgllemris.supabase.co',
   anonKey: 'sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw'
@@ -281,7 +282,7 @@ async function signInOwner({ url, anonKey, email, password, getLocal, onRemote }
   const config = saveConfig({ url, anonKey });
   const cleanEmail = String(email || '').trim().toLowerCase();
   const cleanPassword = String(password || '');
-  if (!REGISTERED_OWNER_EMAILS.has(cleanEmail)) throw new Error('Use one of the two registered Prime Auto Care Owner email accounts.');
+  if (!REGISTERED_OWNER_EMAILS.has(cleanEmail)) throw new Error('Use the single registered Prime Auto Care Owner email shown on this screen.');
   if (!cleanPassword) throw new Error('Enter the password for the selected Owner email.');
   localProvider = getLocal;
   remoteHandler = onRemote;
@@ -346,7 +347,7 @@ async function requestOwnerPasswordRecovery({ email }) {
   }
   const cleanEmail = String(email || '').trim().toLowerCase();
   if (!REGISTERED_OWNER_EMAILS.has(cleanEmail)) {
-    throw new Error('Select one of the two registered Prime Auto Care Owner email accounts.');
+    throw new Error('Use the single registered Prime Auto Care Owner email shown on this screen.');
   }
   recoveryUiPending = false;
   setStatus('Requesting a secure Owner password reset email…');
