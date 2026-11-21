@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.13.8') throw new Error('The package version must be 2.13.8.');
+if (packageJson.version !== '2.13.9') throw new Error('The package version must be 2.13.9.');
 if (capacitorConfig.appId !== 'com.washdesk.carwash.v28') {
-  throw new Error('The 2.13.8 APK must use the v28 application ID for side-by-side installation; the original signing key was not supplied.');
+  throw new Error('The 2.13.9 APK must use the v28 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.13.8 uses the v28 side-by-side application ID; prior app data is preserved.');
+console.log('PASS: Android 2.13.9 uses the v28 side-by-side application ID; prior app data is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -224,6 +224,23 @@ if (!cloudSource.includes('Owner sign-in failed · check the selected email and 
   throw new Error('Owner sign-in failure feedback, correct account labels or credential guidance are missing.');
 }
 console.log('PASS: Owner sign-in errors clear the busy status and distinguish Supabase passwords from staff pairing codes');
+const authDeepLinkSource = await readFile(new URL('./configure-android-auth-deeplink.mjs', import.meta.url), 'utf8');
+if (!cloudSource.includes('resetPasswordForEmail') ||
+    !cloudSource.includes('completeOwnerPasswordRecovery') ||
+    !cloudSource.includes('exchangeCodeForSession') ||
+    !cloudSource.includes('appStateChange') ||
+    !html.includes('id="owner-cloud-forgot-password"') ||
+    !html.includes('owner-recovery-password-form') ||
+    !html.includes('function receiveCloudData(remote)') ||
+    !html.includes('if(!canRenderRemoteUpdate())') ||
+    !authDeepLinkSource.includes('primeautocare28')) {
+  throw new Error('Owner recovery deep-link flow or immediate safe cloud update UI is missing.');
+}
+console.log('PASS: secure Owner recovery, native deep link, foreground refresh and immediate safe cross-device update rendering');
+if (!cloudSource.includes("and m.role = 'owner'")) {
+  throw new Error('Client source must document the Owner-only database-write guard migration.');
+}
+
 
 const notificationPollStart = html.indexOf('async function pollBookingNotifications(){');
 const notificationPollEnd = html.indexOf('async function loadBookingCenter(', notificationPollStart);
@@ -645,7 +662,7 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v28') throw new Error('Android 2.13.8 application ID v28 was not set.');
+if (appId !== 'com.washdesk.carwash.v28') throw new Error('Android 2.13.9 application ID v28 was not set.');
 console.log('PASS: app manifest uses the new v28 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
