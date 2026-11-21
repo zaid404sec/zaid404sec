@@ -1046,15 +1046,16 @@ if (cloudSource.includes('localhost:3000') || html.includes('localhost:3000') ||
   throw new Error('The cloud flow still contains an email-link / localhost redirect dependency.');
 }
 if (!html.includes('id="owner-cloud-login-form"') ||
-    !html.includes('Sign in as Owner &amp; restore full business app') ||
-    !html.includes('Owner account password') ||
-    !html.includes('Additional staff phones or laptops') ||
-    !html.includes('Do not use the old 64-character workspace pairing key on the Owner phone') ||
+    !html.includes('Connect &amp; open Prime Auto Care') ||
+    !html.includes('name="email"') ||
+    !html.includes('name="password"') ||
+    !html.includes('Primary Owner · bmumz3909@gmail.com') ||
+    !html.includes('Second Owner · mz03200786@gmail.com') ||
     !cloudSource.includes('async function signInOwner') ||
     !cloudSource.includes('signInWithPassword') ||
     !cloudSource.includes("serverWorkspace.role !== 'owner'") ||
     !cloudSource.includes('Owner account verified. Your full Prime Auto Care business app')) {
-  throw new Error('Fresh-install Owner restore must authenticate an existing Owner account and retain the full business app.');
+  throw new Error('Fresh-install Owner restore must authenticate one of the two registered Owner accounts and retain the full business app.');
 }
 const ownerPairMigration = await readFile(new URL('../supabase/migrations/20261120190000_preserve_owner_role_on_workspace_pairing.sql', import.meta.url), 'utf8');
 const cloudSetupSql = await readFile(new URL('../cloud-sync-setup.sql', import.meta.url), 'utf8');
