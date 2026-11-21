@@ -237,8 +237,9 @@ if (!cloudSource.includes('resetPasswordForEmail') ||
   throw new Error('Owner recovery deep-link flow or immediate safe cloud update UI is missing.');
 }
 console.log('PASS: secure Owner recovery, native deep link, foreground refresh and immediate safe cross-device update rendering');
-if (!cloudSource.includes("and m.role = 'owner'")) {
-  throw new Error('Client source must document the Owner-only database-write guard migration.');
+const ownerWriteMigration = await readFile(new URL('../supabase/migrations/20261121100000_owner_only_cloud_writes.sql', import.meta.url), 'utf8');
+if ((ownerWriteMigration.match(/and m\.role = ''owner''/g) || []).length < 2) {
+  throw new Error('Both shared sync writes and invoice numbering must require the Owner role on the database server.');
 }
 
 
