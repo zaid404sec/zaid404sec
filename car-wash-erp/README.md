@@ -69,7 +69,7 @@
 # Prime Auto Care Manager — Release 2.13.6
 
 ## Permanent PAC Owner Code and booking-only staff access
-- Owner Settings is available in **Business Settings** on any device with a verified Owner workspace session. Both registered Owner accounts, `bmumz3909@gmail.com` and `mz03200786@gmail.com`, have the Owner role. The existing Owner phone can create the code; no second Owner approval or another phone is needed.
+- Owner Settings is available in **Business Settings** on any device with a verified Owner workspace session. The registered Owner login is `primeautoconsult@gmail.com`; staff and former accounts remain non-Owner. The existing Owner phone can create the code; no second Owner approval or another phone is needed.
 - The Owner manually chooses an 8–12 digit numeric **PAC Owner Code** in Business Settings, enters it twice and saves it. Only a secure hash is stored on the server. The code remains active until the Owner changes it.
 - Staff select a device label (Dad Phone, Zaid Phone, Jack Phone or Manager Phone), choose Mobile or Laptop, select Member, enter the code in Bookings and connect immediately. No pending approval workflow is used.
 - The permanent code grants booking-only staff access: read bookings, receive/acknowledge alerts, and Accept or Reject. It never promotes a Member to Owner.
