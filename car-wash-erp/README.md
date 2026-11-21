@@ -1,3 +1,12 @@
+## 2.14.1 — Owner authentication error clarity (2026-11-21)
+
+- Keeps the simple two-account Owner username/password login from 2.14.0.
+- After a failed Supabase password attempt, the login button now returns to **Connect & open Prime Auto Care** (not the old 2.13.x label).
+- The error now explains that Supabase rejected the password for the selected existing Auth account. It no longer mixes in PAC Owner Code or legacy workspace pairing instructions.
+- Does not bypass Supabase Auth, alter passwords, embed credentials, recreate users or modify workspace data. The password actually stored on the selected Supabase Auth user must match.
+- All 2.14.0 invoice date, Cash / UPI payment editing, payment edit/delete and audited invoice cancellation features remain included.
+- Android package ID is `com.washdesk.carwash.v30`. This debug CI package installs side-by-side because the production signing keystore was not supplied; retain v29 until cloud login has been verified.
+
 ## 2.14.0 — simplified Owner login and invoice corrections (2026-11-21)
 
 - Simplifies Business Settings to a direct Owner username selector (the two existing registered email accounts) plus password. Supabase Project URL and publishable key remain preconfigured and hidden from the normal login layout.
