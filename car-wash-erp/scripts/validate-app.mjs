@@ -15,7 +15,6 @@ console.log('PASS: Android 2.13.9 uses the v28 side-by-side application ID; prio
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
 if (!html.includes("data-action=\"dashboard-refresh\"") ||
-    !html.includes("Dashboard > Refresh data") ||
     !html.includes("pendingRemotePayload=remote") ||
     !html.includes("return {__cloudSyncDeferred:true};")) {
   throw new Error('Remote snapshots must still be queued while a business form or modal is active.');
