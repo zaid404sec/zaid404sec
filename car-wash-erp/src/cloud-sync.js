@@ -5,7 +5,7 @@ import { App } from '@capacitor/app';
 const CONFIG_KEY = 'prime-auto-care-cloud-config-v2';
 const WORKSPACE_KEY = 'prime-auto-care-workspace-v2';
 const OWNER_RECOVERY_REDIRECT = 'primeautocare28://auth-callback';
-const REGISTERED_OWNER_EMAIL = 'bmumz3909@gmail.com';
+const REGISTERED_OWNER_EMAIL = 'primeautoconsult@gmail.com';
 const REGISTERED_OWNER_EMAILS = new Set([REGISTERED_OWNER_EMAIL]);
 const DEFAULT_PROJECT_CONFIG = {
   url: 'https://jkjudmkqaebrgllemris.supabase.co',
