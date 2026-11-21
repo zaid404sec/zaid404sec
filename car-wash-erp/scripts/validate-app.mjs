@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.14.2') throw new Error('The package version must be 2.14.2.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v31') {
-  throw new Error('The 2.14.2 APK must use the v31 application ID for side-by-side installation; the original signing key was not supplied.');
+if (packageJson.version !== '2.14.3') throw new Error('The package version must be 2.14.3.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v32') {
+  throw new Error('The 2.14.3 APK must use the v32 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.14.2 uses the v31 side-by-side application ID; prior app data is preserved.');
+console.log('PASS: Android 2.14.3 uses the v32 side-by-side application ID; prior app data is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -229,7 +229,7 @@ if (!cloudSource.includes('signInWithPassword') ||
     !html.includes('Connect &amp; open Prime Auto Care') ||
     html.includes('id="owner-cloud-forgot-password"') ||
     !html.includes('id="owner-cloud-login-status"') ||
-    !html.includes('bmumz3909@gmail.com') ||
+    !html.includes('primeautoconsult@gmail.com') ||
     html.includes('mz03200786@gmail.com')) {
   throw new Error('Single permanent Owner username/password login or registered Owner guard is missing.');
 }
@@ -698,8 +698,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v31') throw new Error('Android 2.14.2 application ID v31 was not set.');
-console.log('PASS: app manifest uses the new v31 Android package ID.');
+if (appId !== 'com.washdesk.carwash.v32') throw new Error('Android 2.14.3 application ID v32 was not set.');
+console.log('PASS: app manifest uses the new v32 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -1057,7 +1057,7 @@ if (!html.includes('id="owner-cloud-login-form"') ||
     !html.includes('name="email"') ||
     !html.includes('name="password"') ||
     !html.includes('Owner email') ||
-    !html.includes('value="bmumz3909@gmail.com" readonly') ||
+    !html.includes('value="primeautoconsult@gmail.com" readonly') ||
     html.includes('mz03200786@gmail.com') ||
     !cloudSource.includes('async function signInOwner') ||
     !cloudSource.includes('signInWithPassword') ||
