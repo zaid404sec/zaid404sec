@@ -281,7 +281,8 @@ async function signInOwner({ url, anonKey, email, password, getLocal, onRemote }
   const config = saveConfig({ url, anonKey });
   const cleanEmail = String(email || '').trim().toLowerCase();
   const cleanPassword = String(password || '');
-  if (!cleanEmail || !cleanPassword) throw new Error('Enter your registered Owner email and password.');
+  if (!REGISTERED_OWNER_EMAILS.has(cleanEmail)) throw new Error('Use one of the two registered Prime Auto Care Owner email accounts.');
+  if (!cleanPassword) throw new Error('Enter the password for the selected Owner email.');
   localProvider = getLocal;
   remoteHandler = onRemote;
   initialize(config);

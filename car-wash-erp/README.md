@@ -1,3 +1,16 @@
+## 2.14.0 — simplified Owner login and invoice corrections (2026-11-21)
+
+- Simplifies Business Settings to a direct Owner username selector (the two existing registered email accounts) plus password. Supabase Project URL and publishable key remain preconfigured and hidden from the normal login layout.
+- Removes the in-app Forgot / Reset Password button from the normal login screen. Authentication still uses Supabase Auth `signInWithPassword`; no Owner passwords or bypasses are embedded in the app.
+- Restricts the visible Owner login selector to the two registered Owner emails. Both accounts retain the Owner role and full business permissions; other staff sessions remain Bookings-only with Accept / Reject.
+- Adds an editable invoice date to new bill creation; existing invoice dates remain editable.
+- Adds editable payment method in Edit Invoice and separate recorded-payment editing for amount, date and Cash / UPI method. Payment deletion uses a sync tombstone and recalculates the invoice balance.
+- Keeps posted bills in the audit trail. Delete / cancel voids the invoice, excludes it from sales totals and reverses stock; it does not physically erase a posted tax/billing record.
+- Retains the canonical shared snapshot ID, both Owner memberships, Realtime sync, foreground refresh and 30-second reconciliation. No new Cloud SQL setup is needed for these UI changes.
+- Android package ID is `com.washdesk.carwash.v29`. The debug CI APK installs alongside v28 because the production signing keystore was not supplied. Keep the old app until the new one is verified.
+
+**Credential safety:** passwords are entered at login and are never stored in source or APK assets. Any passwords pasted into chats or tickets should be changed to unique strong values before release.
+
 ## 2.13.9 Owner recovery and two-phone cloud reliability (2026-11-21)
 
 - Adds an in-app **Forgot Owner password?** flow for the two registered email Owners, using Supabase Auth password recovery and a v28 Android app link `primeautocare28://auth-callback`.
