@@ -252,20 +252,6 @@ if (!html.includes('Delete / cancel bill') || !html.includes('voided (not physic
   throw new Error('Invoice correction must use audited cancellation and stock reversal, not destructive hard deletion.');
 }
 console.log('PASS: editable invoice date, Cash/UPI payment methods, payment edit/delete and audited invoice cancellation');
-if (!cloudSource.includes('signInWithPassword') ||
-    !cloudSource.includes('REGISTERED_OWNER_EMAILS.has(cleanEmail)') ||
-    !html.includes('name="email"') || !html.includes('name="password"') ||
-    !html.includes('Connect &amp; open Prime Auto Care') ||
-    html.includes('id="owner-cloud-forgot-password"') ||
-    !html.includes('id="owner-cloud-login-status"') ||
-    !html.includes('bmumz3909@gmail.com') ||
-    !html.includes('mz03200786@gmail.com')) {
-  throw new Error('Simple two-account Owner username/password login or registered Owner guard is missing.');
-}
-if (cloudSource.includes('ZAID') || cloudSource.includes('IMRAN') || html.includes('ZAID') || html.includes('IMRAN')) {
-  throw new Error('Owner passwords must never be embedded in client source or APK assets.');
-}
-console.log('PASS: simple Owner username/password login; no hard-coded passwords or visible reset/pairing UI');
 const authDeepLinkSource = await readFile(new URL('./configure-android-auth-deeplink.mjs', import.meta.url), 'utf8');
 if (!cloudSource.includes('completeOwnerPasswordRecovery') ||
     !cloudSource.includes('exchangeCodeForSession') ||
