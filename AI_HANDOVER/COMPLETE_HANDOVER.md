@@ -1,3 +1,21 @@
+## Current verified state — 21 November 2026
+
+Prime Auto Care 2.14.2 is the single-Owner-login release candidate.
+
+- Application version: 2.14.2; Android package ID `com.washdesk.carwash.v31`.
+- Only the primary registered Owner email `bmumz3909@gmail.com` is accepted by the app login screen.
+- One password is required. The same credentials provide full Owner permissions on each installation; there is no additional Owner device approval.
+- The former second email has been demoted to Member and its booking-notification admin permission revoked.
+- The legacy anonymous Owner identity has been demoted and its old Owner booking-device permission revoked. Its canonical snapshot UUID is intentionally preserved as the storage key.
+- Both additive live Supabase migrations are recorded: `20261121102050_prime_auto_care_single_owner_login_20261121` and `20261121102515_disable_legacy_anonymous_owner_login_20261121`.
+- No customer, vehicle, invoice, payment, stock, purchase, expense, staff, attendance, payroll, booking, website or booking-portal records were reset or deleted.
+- New Supabase Auth password: pending update to the existing primary user; verify a real Auth password grant before reporting login success.
+- Source: feature branch `fix/prime-auto-care-2.14.2-single-owner-login`; CI and release artifacts are pending.
+- Android builds are debug-signed and side-by-side. Do not overwrite/uninstall the existing app until the new build is tested and a backup is verified.
+- Public website and customer booking URLs are unchanged.
+
+---
+
 ## Latest release candidate — Prime Auto Care 2.13.4
 
 _Last updated: 20 November 2026 (Asia/Kolkata)_
