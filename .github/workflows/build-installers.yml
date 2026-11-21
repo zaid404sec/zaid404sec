@@ -239,24 +239,24 @@ jobs:
       - name: Package application source (exclude credentials and generated builds)
         run: |
           cd car-wash-erp
-          zip -r ../WashDesk-Prime-Auto-Care-2.14.0-Project-Source.zip . \
+          zip -r ../WashDesk-Prime-Auto-Care-2.14.1-Project-Source.zip . \
             -x 'node_modules/*' 'android/.gradle/*' 'android/app/build/*' 'release/*' 'www/*' '.env*' '**/.env*'
           cd ..
-          sha256sum WashDesk-Prime-Auto-Care-2.14.0-Project-Source.zip
+          sha256sum WashDesk-Prime-Auto-Care-2.14.1-Project-Source.zip
       - uses: actions/upload-artifact@v4
         with:
           name: WashDesk-Project-Source
-          path: WashDesk-Prime-Auto-Care-2.14.0-Project-Source.zip
+          path: WashDesk-Prime-Auto-Care-2.14.1-Project-Source.zip
           if-no-files-found: error
       - name: Package the complete repository and AI handover (exclude secrets and generated files)
         run: |
-          zip -r WashDesk-Prime-Auto-Care-2.14.0-Complete-Handover.zip . \
+          zip -r WashDesk-Prime-Auto-Care-2.14.1-Complete-Handover.zip . \
             -x '.git/*' '**/.git/*' '**/node_modules/*' '**/.env*' '**/release/*' '**/www/*' '**/android/.gradle/*' '**/android/app/build/*' '**/dist/*' '**/build/*'
-          sha256sum WashDesk-Prime-Auto-Care-2.14.0-Complete-Handover.zip
+          sha256sum WashDesk-Prime-Auto-Care-2.14.1-Complete-Handover.zip
       - uses: actions/upload-artifact@v4
         with:
           name: WashDesk-Complete-Project-Handover
-          path: WashDesk-Prime-Auto-Care-2.14.0-Complete-Handover.zip
+          path: WashDesk-Prime-Auto-Care-2.14.1-Complete-Handover.zip
           if-no-files-found: error
       - name: Download verified Android APK from this workflow run
         uses: actions/download-artifact@v4
@@ -275,27 +275,27 @@ jobs:
           test -n "$apk" || { echo 'Android APK artifact was not found.'; exit 1; }
           test -n "$exe" || { echo 'Windows EXE artifact was not found.'; exit 1; }
           mkdir -p release-package/Android release-package/Windows release-package/Source
-          cp "$apk" release-package/Android/Prime-Auto-Care-2.14.0.apk
-          cp "$exe" release-package/Windows/Prime-Auto-Care-Setup-2.14.0-x64.exe
-          cp WashDesk-Prime-Auto-Care-2.14.0-Project-Source.zip release-package/Source/
-          cp WashDesk-Prime-Auto-Care-2.14.0-Complete-Handover.zip release-package/Source/
+          cp "$apk" release-package/Android/Prime-Auto-Care-2.14.1.apk
+          cp "$exe" release-package/Windows/Prime-Auto-Care-Setup-2.14.1-x64.exe
+          cp WashDesk-Prime-Auto-Care-2.14.1-Project-Source.zip release-package/Source/
+          cp WashDesk-Prime-Auto-Care-2.14.1-Complete-Handover.zip release-package/Source/
           cat > release-package/START-HERE.txt <<EOF
-          PRIME AUTO CARE / WASHDESK — VERSION 2.14.0
-          Android: Android/Prime-Auto-Care-2.14.0.apk
-          Windows: Windows/Prime-Auto-Care-Setup-2.14.0-x64.exe
-          App source: Source/WashDesk-Prime-Auto-Care-2.14.0-Project-Source.zip
-          Complete repository + AI handover: Source/WashDesk-Prime-Auto-Care-2.14.0-Complete-Handover.zip
-          Android package ID: com.washdesk.carwash.v29
+          PRIME AUTO CARE / WASHDESK — VERSION 2.14.1
+          Android: Android/Prime-Auto-Care-2.14.1.apk
+          Windows: Windows/Prime-Auto-Care-Setup-2.14.1-x64.exe
+          App source: Source/WashDesk-Prime-Auto-Care-2.14.1-Project-Source.zip
+          Complete repository + AI handover: Source/WashDesk-Prime-Auto-Care-2.14.1-Complete-Handover.zip
+          Android package ID: com.washdesk.carwash.v30
           GitHub commit: $GITHUB_SHA
           Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-          IMPORTANT: this CI APK uses the new Android package ID com.washdesk.carwash.v29. It installs alongside the previous Prime Auto Care 2.13.7 app (package ID v27); it does not overwrite or update that installation. Keep the old app installed. On the new 2.14.0 app, open Business Settings and sign in with one of the existing registered Owner email accounts to restore the full business app and shared records. Verify invoices, customers, expenses, staff and inventory before uninstalling the old app. The CI APK is debug-signed; future in-place upgrades require the original production signing keystore to be configured securely in the build environment. Never commit the keystore or its passwords.
+          IMPORTANT: this CI APK uses the new Android package ID com.washdesk.carwash.v30. It installs alongside the previous Prime Auto Care 2.13.7 app (package ID v27); it does not overwrite or update that installation. Keep the old app installed. On the new 2.14.1 app, open Business Settings and sign in with one of the existing registered Owner email accounts to restore the full business app and shared records. Verify invoices, customers, expenses, staff and inventory before uninstalling the old app. The CI APK is debug-signed; future in-place upgrades require the original production signing keystore to be configured securely in the build environment. Never commit the keystore or its passwords.
           This package excludes passwords, API tokens, OAuth secrets, private SSH keys and workspace pairing codes.
           EOF
           (cd release-package && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
-          zip -r WashDesk-Prime-Auto-Care-2.14.0-Full-Release-Package.zip release-package
-          sha256sum WashDesk-Prime-Auto-Care-2.14.0-Full-Release-Package.zip
+          zip -r WashDesk-Prime-Auto-Care-2.14.1-Full-Release-Package.zip release-package
+          sha256sum WashDesk-Prime-Auto-Care-2.14.1-Full-Release-Package.zip
       - uses: actions/upload-artifact@v4
         with:
           name: WashDesk-Full-Release-Package
-          path: WashDesk-Prime-Auto-Care-2.14.0-Full-Release-Package.zip
+          path: WashDesk-Prime-Auto-Care-2.14.1-Full-Release-Package.zip
           if-no-files-found: error
