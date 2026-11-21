@@ -2846,11 +2846,11 @@ async function loadBookingCenter(force=false){
       const message=String(error?.message||'Owner sign-in failed. Check the selected Owner account and password.');
       const invalidCredentials=/invalid login credentials|invalid email or password/i.test(message);
       const userMessage=invalidCredentials
-        ? `Supabase rejected the login for ${selectedEmail}. Confirm that this is the Owner email whose password you are entering. The PAC Owner Code and 64-character workspace pairing key are not login passwords. This failed sign-in did not delete local business records.`
+        ? `Supabase did not accept the password for ${selectedEmail}. The current password stored for this existing Supabase Auth account is different from the one entered. Update the password for this existing user in Supabase Authentication, then enter that password here. No pairing code or database reset is needed. Your cloud business records were not changed.`
         : message;
       if(statusBox){statusBox.hidden=false;statusBox.textContent=userMessage;}
       notify(userMessage);
-      if(submit){submit.disabled=false;submit.textContent='Sign in as Owner & restore full business app';}
+      if(submit){submit.disabled=false;submit.textContent='Connect & open Prime Auto Care';}
     }
   }
 
