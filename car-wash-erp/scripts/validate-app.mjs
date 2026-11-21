@@ -6,26 +6,34 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.13.7') throw new Error('The package version must be 2.13.7.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v27') {
-  throw new Error('The 2.13.7 APK must use the v27 application ID for side-by-side installation; the original signing key was not supplied.');
+if (packageJson.version !== '2.13.9') throw new Error('The package version must be 2.13.9.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v28') {
+  throw new Error('The 2.13.9 APK must use the v28 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.13.7 uses the v27 side-by-side application ID; original v24 app is preserved.');
+console.log('PASS: Android 2.13.9 uses the v28 side-by-side application ID; prior app data is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
 if (!html.includes("data-action=\"dashboard-refresh\"") ||
-    !html.includes("Dashboard > Refresh data") ||
     !html.includes("pendingRemotePayload=remote") ||
     !html.includes("return {__cloudSyncDeferred:true};")) {
-  throw new Error('Dashboard must queue realtime snapshots and refresh only on user request.');
+  throw new Error('Remote snapshots must still be queued while a business form or modal is active.');
 }
 const receiveStart=html.indexOf('function receiveCloudData(remote){');
 const receiveEnd=html.indexOf('async function connectCloud(e){',receiveStart);
-if(receiveStart<0||receiveEnd<0||html.slice(receiveStart,receiveEnd).includes('render()')) {
-  throw new Error('Realtime cloud updates must not trigger a full screen render.');
+const receiveBlock=html.slice(receiveStart,receiveEnd);
+const safeRenderStart=html.indexOf('function canRenderRemoteUpdate(){');
+const safeRenderEnd=html.indexOf('function shouldDeferRemoteUpdate(){',safeRenderStart);
+const safeRenderGuard=html.slice(safeRenderStart,safeRenderEnd);
+if(receiveStart<0||receiveEnd<0||!receiveBlock.includes('canRenderRemoteUpdate()')||
+   !receiveBlock.includes('render()')||safeRenderStart<0||
+   !safeRenderGuard.includes("page==='billing'")||
+   !safeRenderGuard.includes("modal-backdrop")||
+   !safeRenderGuard.includes("active.matches('input,textarea,select,[contenteditable=\"true\"]')")||
+   !html.includes("if(page!=='billing'&&applyPendingRemoteData())render()")) {
+  throw new Error('Realtime updates must render immediately when safe and defer while the Owner is editing or a modal is open.');
 }
-console.log('PASS: realtime snapshots do not reload the screen; dashboard refresh is user-controlled');
+console.log('PASS: cross-device realtime updates render immediately when safe; active billing/forms/modals are protected until close');
 if (!html.includes('color-scheme:dark') || !html.includes('backdrop-filter:blur(24px)') ||
     !html.includes('deep liquid-glass')) {
   throw new Error('Deep liquid-glass app theme is missing.');
@@ -215,6 +223,33 @@ for (const token of ['for update;', "m.role = 'member'", 'd.status = \'active\''
 }
 console.log('PASS: permanent PAC Owner Code, direct booking-only pairing, Owner-only business sync and Owner-managed device removal');
 console.log('PASS: new Owner installations restore all business modules through registered Owner email/password sign-in; staff PAC pairing remains Bookings-only');
+if (!cloudSource.includes('Owner sign-in failed · check the selected email and Supabase password') ||
+    !cloudSource.includes('ownerSignInFailureStatus') ||
+    !html.includes('id="owner-cloud-login-status"') ||
+    !html.includes('The PAC Owner Code and 64-character workspace pairing key are not login passwords.') ||
+    !html.includes('Owner 1 · bmumz3909@gmail.com') ||
+    !html.includes('Owner 2 · mz03200786@gmail.com')) {
+  throw new Error('Owner sign-in failure feedback, correct account labels or credential guidance are missing.');
+}
+console.log('PASS: Owner sign-in errors clear the busy status and distinguish Supabase passwords from staff pairing codes');
+const authDeepLinkSource = await readFile(new URL('./configure-android-auth-deeplink.mjs', import.meta.url), 'utf8');
+if (!cloudSource.includes('resetPasswordForEmail') ||
+    !cloudSource.includes('completeOwnerPasswordRecovery') ||
+    !cloudSource.includes('exchangeCodeForSession') ||
+    !cloudSource.includes('appStateChange') ||
+    !html.includes('id="owner-cloud-forgot-password"') ||
+    !html.includes('owner-recovery-password-form') ||
+    !html.includes('function receiveCloudData(remote)') ||
+    !html.includes('if(!canRenderRemoteUpdate())') ||
+    !authDeepLinkSource.includes('primeautocare28')) {
+  throw new Error('Owner recovery deep-link flow or immediate safe cloud update UI is missing.');
+}
+console.log('PASS: secure Owner recovery, native deep link, foreground refresh and immediate safe cross-device update rendering');
+const ownerWriteMigration = await readFile(new URL('../supabase/migrations/20261121100000_owner_only_cloud_writes.sql', import.meta.url), 'utf8');
+if ((ownerWriteMigration.match(/and m\.role = ''owner''/g) || []).length < 2) {
+  throw new Error('Both shared sync writes and invoice numbering must require the Owner role on the database server.');
+}
+
 
 const notificationPollStart = html.indexOf('async function pollBookingNotifications(){');
 const notificationPollEnd = html.indexOf('async function loadBookingCenter(', notificationPollStart);
@@ -386,7 +421,7 @@ if (!html.includes("if(page!=='dashboard')return true;") ||
 if (html.includes('location.reload(') || html.includes('window.location.reload(')) {
   throw new Error('The app must not force-reload the active business screen.');
 }
-console.log('PASS: cloud snapshots defer outside the passive dashboard; navigation applies them safely and preserves scroll');
+console.log('PASS: cloud snapshots merge safely and preserve scroll; active edits defer changes until the screen can refresh');
 const saveFunctionStart=html.indexOf('function save(){');
 const saveFunctionEnd=html.indexOf('function notify(',saveFunctionStart);
 const saveFunction=html.slice(saveFunctionStart,saveFunctionEnd);
@@ -615,8 +650,8 @@ for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bu
   console.log('PASS: bundled asset ' + asset);
 }
 const serviceWorkerSource = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!serviceWorkerSource.includes('prime-auto-care-shell-v33') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v33 and precache the booking bundle.');
-console.log('PASS: offline shell cache version and booking bundle precache');
+if (!serviceWorkerSource.includes('prime-auto-care-shell-v34') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v34 and precache the booking bundle.');
+console.log('PASS: v34 offline shell cache invalidation and booking bundle precache');
 const pdfFontsBundle = await readFile(new URL('../pdfmake-vfs.js', import.meta.url), 'utf8');
 if (!pdfFontsBundle.includes('__primeAutoCarePdfFontsReady') || !pdfFontsBundle.includes('addVirtualFileSystem(vfs)')) {
   throw new Error('PDFMake font bundle does not register the virtual font system.');
@@ -636,8 +671,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v27') throw new Error('Android 2.13.7 application ID v27 was not set.');
-console.log('PASS: app manifest uses the new v27 Android package ID.');
+if (appId !== 'com.washdesk.carwash.v28') throw new Error('Android 2.13.9 application ID v28 was not set.');
+console.log('PASS: app manifest uses the new v28 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -933,13 +968,14 @@ const remoteReceiveStart = html.indexOf('function receiveCloudData(');
 const remoteReceiveEnd = html.indexOf('async function connectCloud', remoteReceiveStart);
 if (remoteReceiveStart < 0 || remoteReceiveEnd < 0) throw new Error('Remote sync handler not found.');
 const remoteReceive = html.slice(remoteReceiveStart, remoteReceiveEnd);
-if (!remoteReceive.includes('pendingRemotePayload=remote;') ||
+if (!remoteReceive.includes('if(!canRenderRemoteUpdate())') ||
+    !remoteReceive.includes('pendingRemotePayload=remote;') ||
     !remoteReceive.includes('remoteRenderPending=true;') ||
     !remoteReceive.includes('return {__cloudSyncDeferred:true}') ||
-    remoteReceive.includes('db=mergeWashDeskData') ||
-    remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db))') ||
-    remoteReceive.includes('render()')) {
-  throw new Error('Realtime snapshots must be queued without changing local data or rerendering the active screen.');
+    !remoteReceive.includes('db=mergeWashDeskData') ||
+    !remoteReceive.includes('localStorage.setItem(STORE,JSON.stringify(db))') ||
+    !remoteReceive.includes('render()')) {
+  throw new Error('Realtime snapshots must update immediately when safe and defer only while the Owner is editing.');
 }
 if (!html.includes('let pendingRemotePayload=null;') ||
     !html.includes('function applyPendingRemoteData()') ||
@@ -982,7 +1018,7 @@ if (!html.includes("window.addEventListener('washdesk-booking-notification'") ||
     !html.includes('void pollBookingNotifications()')) {
   throw new Error('Live booking events must immediately trigger the per-device notification poller.');
 }
-for (const obsolete of ['requestEmailOtp', 'verifyEmailOtp', 'emailRedirectTo', 'AUTH_REDIRECT_URL', 'exchangeCodeForSession']) {
+for (const obsolete of ['requestEmailOtp', 'verifyEmailOtp', 'emailRedirectTo', 'AUTH_REDIRECT_URL']) {
   if (cloudSource.includes(obsolete)) throw new Error('Legacy email-link authentication remains in the cloud module: ' + obsolete);
 }
 if (cloudSource.includes('localhost:3000') || html.includes('localhost:3000') ||
@@ -1013,7 +1049,8 @@ if (!cloudSource.includes('workspace = readWorkspace();') ||
   throw new Error('Saved device pairing does not recover automatically after an offline app restart.');
 }
 console.log('PASS: offline app restart restores pairing and retries sync after internet returns');
-console.log('PASS: email-link auth removed; anonymous authenticated devices join one shared workspace');
+if (!cloudSource.includes('exchangeCodeForSession') || !cloudSource.includes("flowType: 'pkce'")) throw new Error('Secure PKCE exchange for the app-bound Owner recovery link is missing.');
+console.log('PASS: legacy email OTP login removed; secure app-bound PKCE password recovery retained; anonymous authenticated devices join one shared workspace');
 
 
 // Invoice totals are computed from item quantities, rates, line discounts and tax rates.
@@ -1099,8 +1136,8 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v33')) {
-  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v32 cache version.');
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v34')) {
+  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v34 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 

@@ -1964,17 +1964,19 @@ async function loadBookingCenter(force=false){
       <div class="field-grid">
         <div class="field full"><label>Supabase Project URL</label><input name="url" type="url" required value="${esc(cfg.url||'')}" placeholder="https://your-project.supabase.co" /></div>
         <div class="field full"><label>Supabase publishable key</label><input name="anonKey" required value="${esc(cfg.anonKey||'')}" placeholder="sb_publishable_…" /></div>
-        <div class="field full"><label>Registered Owner account</label><select name="email" required><option value="bmumz3909@gmail.com">Owner account 1</option><option value="mz03200786@gmail.com">Owner account 2</option></select></div>
-        <div class="field full"><label>Owner account password</label><input name="password" type="password" required autocomplete="current-password" placeholder="Enter the password for the selected Owner account" /></div>
+        <div class="field full"><label>Registered Owner account</label><select name="email" required><option value="bmumz3909@gmail.com">Owner 1 · bmumz3909@gmail.com</option><option value="mz03200786@gmail.com">Owner 2 · mz03200786@gmail.com</option></select></div>
+        <div class="field full"><label>Owner account password</label><input name="password" type="password" required autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Enter the Supabase Auth password for the selected email" /><p class="help">Use the password for the selected Owner email. Do not enter the PAC Owner Code or the old 64-character workspace pairing key here.</p></div>
       </div>
       <div class="actions" style="margin-top:12px"><button class="btn primary" type="submit">Sign in as Owner &amp; restore full business app</button><button type="button" class="btn" data-action="cloud-sync-now">Sync now</button></div>
-      <p class="help" style="margin-top:10px">The app verifies the Owner role from Supabase. It does not promote a staff account. No approval from another Owner is required.</p>
+      <div class="actions" style="margin-top:8px"><button type="button" class="btn" id="owner-cloud-forgot-password">Forgot Owner password? Send recovery email</button></div>
+      <p class="help" style="margin-top:10px">Both registered Owner accounts use their own Supabase password and share the same business data. Updates are merged from the shared cloud; open the app on both phones and keep internet enabled.</p>
     </form>
+    <div id="owner-cloud-login-status" class="notice" role="status" aria-live="polite" hidden style="margin-top:10px"></div>
     <div class="success-note" style="margin-top:14px"><b>Additional staff phones or laptops</b><br/>Do not use the old 64-character workspace pairing key on the Owner phone. Staff should open Bookings, select their device and Member, enter the permanent PAC Owner Code, and tap Verify Code &amp; Connect. Staff get Bookings plus Accept / Reject only; the Owner keeps the full business app.</div>
-    <p style="font-size:12px"><a href="./cloud-sync-setup.sql" download>Download Shared Cloud SQL setup</a> · <a href="https://supabase.com/dashboard/project/jkjudmkqaebrgllemris/sql/new" target="_blank" rel="noopener">Open SQL Editor</a> · <a href="https://supabase.com/dashboard/project/jkjudmkqaebrgllemris/auth/providers" target="_blank" rel="noopener">Enable Anonymous Sign-Ins for staff devices</a></p>
+    <p style="font-size:12px"><a href="./cloud-sync-setup.sql" download>Download Shared Cloud SQL setup · v2.13.8</a> · <a href="https://supabase.com/dashboard/project/jkjudmkqaebrgllemris/sql/new" target="_blank" rel="noopener">Open SQL Editor</a> · <a href="https://supabase.com/dashboard/project/jkjudmkqaebrgllemris/auth/providers" target="_blank" rel="noopener">Enable Anonymous Sign-Ins for staff devices</a></p>
   </div><div class="card"><div class="card-head"><h3>System status</h3></div><div class="stock-alert"><span>Local storage</span><b>Active</b></div><div class="stock-alert"><span>Offline install</span><b id="pwa-status">Checking…</b></div><div class="stock-alert"><span>WhatsApp offers</span><b>Manual send / opt-in</b></div><div class="stock-alert"><span>Cloud status</span><b>${esc(cloudStatus)}</b></div><div class="notice" style="margin-top:10px">Version 2.5.2 or later is required for the latest Cloud Sync SQL update and the same app version on every paired device before shared inventory and invoice numbering are enabled.</div><div class="help" style="margin-top:10px">Cloud data is protected by row-level security. All devices use the same Supabase project and workspace pairing code, but each installation has its own secure device session. Workspace membership, not a shared email login, connects the devices.</div></div></div>`}
   function wirePage(){document.getElementById('offer-message')?.addEventListener('input',e=>{offerDraft=e.target.value});document.querySelectorAll('[data-consent-customer]').forEach(input=>input.addEventListener('change',e=>changeCommunicationConsent(e.target.dataset.consentCustomer,e.target.dataset.consentField,e.target.checked)));document.querySelectorAll('[data-offer-customer]').forEach(input=>input.addEventListener('change',e=>{const id=e.target.dataset.offerCustomer;if(e.target.checked){if(!offerSelectedCustomerIds.includes(id))offerSelectedCustomerIds.push(id)}else offerSelectedCustomerIds=offerSelectedCustomerIds.filter(x=>x!==id);const count=document.querySelector('.success-note b');if(count)count.textContent=String(offerSelectedCustomerIds.length)}));document.querySelectorAll('[data-nav]').forEach(b=>b.addEventListener('click',()=>setPage(b.dataset.nav)));if(page==='billing'){document.getElementById('add-line')?.addEventListener('click',addLine);document.getElementById('bill-discount')?.addEventListener('input',updateBillSummary);document.getElementById('bill-paid')?.addEventListener('input',updateBillSummary);document.getElementById('bill-complimentary')?.addEventListener('change',setBillComplimentaryMode);document.getElementById('bill-customer-search')?.addEventListener('input',e=>{document.getElementById('bill-customer').value='';renderBillCustomerMatches(e.target.value);document.getElementById('bill-customer-status').textContent='Choose a matching customer or add a new customer.';updateBillVehicleOptions()});document.getElementById('bill-number')?.addEventListener('input',updateBillVehicleDuplicateHint);document.getElementById('bill-vehicle')?.addEventListener('change',e=>{const v=db.vehicles.find(x=>x.id===e.target.value);if(v){selectBillCustomer(v.customerId,v.id);document.getElementById('bill-number').value=v.number;document.getElementById('bill-type').value=v.type||'Private Car';}updateBillVehicleDuplicateHint()});}if(page==='staff'){document.getElementById('attendance-date')?.addEventListener('change',()=>render());document.getElementById('payroll-month')?.addEventListener('change',()=>render());document.getElementById('advance-staff-filter')?.addEventListener('change',()=>render());document.getElementById('advance-month-filter')?.addEventListener('change',()=>render());document.getElementById('attendance-form')?.addEventListener('submit',saveStaffAttendance)}if(page==='dashboard'){document.getElementById('dashboard-date')?.addEventListener('change',()=>render());document.getElementById('sales-chart-week')?.addEventListener('change',()=>render())}if(page==='reports')document.getElementById('report-date')?.addEventListener('change',()=>render());if(page==='invoices'){document.getElementById('invoice-search')?.addEventListener('input',filterInvoices);document.getElementById('invoice-month')?.addEventListener('change',()=>{const day=document.getElementById('invoice-day');if(day)day.value='';filterInvoices()});document.getElementById('invoice-day')?.addEventListener('change',()=>{const day=document.getElementById('invoice-day')?.value||'',month=document.getElementById('invoice-month');if(day&&month)month.value=day.slice(0,7);filterInvoices()})}if(page==='customers')document.getElementById('customer-search')?.addEventListener('input',filterCustomers);if(page==='inventory')document.getElementById('stock-search')?.addEventListener('input',filterStock);if(page==='reports')document.getElementById('report-month')?.addEventListener('change',()=>render());document.getElementById('business-form')?.addEventListener('submit',saveBusiness);document.getElementById('invoice-template-selector')?.addEventListener('change',e=>{db.settings=db.settings||{};db.settings.invoiceTemplate=String(e.target.value||'classic');if(!save())return;notify('Default invoice PDF design saved.')});const themeSelect=document.getElementById('theme-selector');if(themeSelect)themeSelect.value=document.documentElement.dataset.theme||'dark';themeSelect?.addEventListener('change',e=>{const theme=e.target.value==='light'?'light':'dark';localStorage.setItem('prime-auto-care-theme',theme);document.documentElement.dataset.theme=theme;notify(theme==='light'?'Light mode enabled.':'Dark mode enabled.')});if(page==='bookings'){document.getElementById('booking-quick-form')?.addEventListener('submit',submitBookingQuickForm);document.getElementById('booking-settings-form')?.addEventListener('submit',saveBookingSettingsForm);document.getElementById('booking-filter-form')?.addEventListener('submit',submitBookingFilterForm);if(!bookingState.loading&&!bookingState.attempted)void loadBookingCenter();}
-    if(page==='google-reviews'&&!googleReviewState.loading&&!googleReviewState.loaded)void loadGoogleReviewCenter();if(page==='settings'){void updateReminderStatusUI();void loadPacOwnerCodeSettings();}document.getElementById('google-review-form')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.target),link=String(f.get('googleReviewLink')||'').trim();try{const u=new URL(link);if(u.protocol!=='https:'||!['g.page','maps.app.goo.gl','google.com','www.google.com','share.google'].includes(u.hostname)){notify('Enter a valid HTTPS Google review link.');return}}catch{notify('Enter a valid HTTPS Google review link.');return}db.business.googleReviewLink=link;if(!save())return;notify('Google review link saved.')});document.getElementById('tax-form')?.addEventListener('submit',saveTax);document.getElementById('owner-cloud-login-form')?.addEventListener('submit',connectOwnerCloud);document.getElementById('communication-settings-form')?.addEventListener('submit',saveCommunicationSettings);if(page==='offers'){document.getElementById('group-message-draft')?.addEventListener('input',e=>{groupMessageDraft=e.target.value});document.getElementById('message-recipient-filter')?.addEventListener('change',e=>{messageRecipientFilter=e.target.value;render()});void refreshMessagingStatus()}document.getElementById('pwa-status')&&(document.getElementById('pwa-status').textContent=('serviceWorker' in navigator)?'Supported':'Not supported')}
+    if(page==='google-reviews'&&!googleReviewState.loading&&!googleReviewState.loaded)void loadGoogleReviewCenter();if(page==='settings'){void updateReminderStatusUI();void loadPacOwnerCodeSettings();}document.getElementById('google-review-form')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.target),link=String(f.get('googleReviewLink')||'').trim();try{const u=new URL(link);if(u.protocol!=='https:'||!['g.page','maps.app.goo.gl','google.com','www.google.com','share.google'].includes(u.hostname)){notify('Enter a valid HTTPS Google review link.');return}}catch{notify('Enter a valid HTTPS Google review link.');return}db.business.googleReviewLink=link;if(!save())return;notify('Google review link saved.')});document.getElementById('tax-form')?.addEventListener('submit',saveTax);document.getElementById('owner-cloud-login-form')?.addEventListener('submit',connectOwnerCloud);document.getElementById('owner-cloud-forgot-password')?.addEventListener('click',requestOwnerRecoveryFromForm);document.getElementById('communication-settings-form')?.addEventListener('submit',saveCommunicationSettings);if(page==='offers'){document.getElementById('group-message-draft')?.addEventListener('input',e=>{groupMessageDraft=e.target.value});document.getElementById('message-recipient-filter')?.addEventListener('change',e=>{messageRecipientFilter=e.target.value;render()});void refreshMessagingStatus()}document.getElementById('pwa-status')&&(document.getElementById('pwa-status').textContent=('serviceWorker' in navigator)?'Supported':'Not supported')}
   function addLine(){const val=document.getElementById('line-item').value;const qty=Number(document.getElementById('line-qty').value);const disc=Number(document.getElementById('line-discount').value||0);if(!val||qty<=0||disc<0){notify('Choose an item and enter valid quantity and discount.');return}let l;if(val.startsWith('product:')){const p=db.products.find(x=>x.id===val.slice(8));if(!p)return;if(qty>Number(p.qty)){notify(`Only ${p.qty} ${p.unit||'units'} available.`);return}l={kind:'product',refId:p.id,name:p.name,qty,rate:Number(p.sellPrice||0),taxRate:db.business.registered?Number(p.taxRate||0):0,sac:p.hsn||'',discount:disc,unit:p.unit||'unit',cost:Number(p.cost||0)}}else{const svc=db.services.find(x=>x.id===val);if(!svc)return;const vtype=document.getElementById('bill-type')?.value||'Private Car';const key=({'Private Car':'private','Taxi':'taxi','Commercial Vehicle':'commercial','SUV':'suv'})[vtype]||'private';const custom=svc.prices?.[key];const rate=custom!==undefined&&custom!==null&&custom!==''?Number(custom):Number(svc.price||0);l={kind:'service',refId:svc.id,name:svc.name,qty,rate,taxRate:db.business.registered?Number(svc.taxRate||0):0,sac:svc.sac||'',discount:disc,unit:'service',consumption:svc.consumption||[]}}if(disc>qty*l.rate){notify('Line discount cannot exceed that line amount.');return}l.amount=Math.max(0,l.qty*l.rate-l.discount);billLines.push(l);document.getElementById('bill-lines').innerHTML=billLineTable();document.querySelector('[data-action="save-bill"]').disabled=false;document.getElementById('line-item').value='';document.getElementById('line-qty').value='1';document.getElementById('line-discount').value='0';updateBillSummary()}  function updateBillSummary(){document.getElementById('bill-summary').innerHTML=billSummary()}
   async function saveBill(){
     if(billSaving){notify('This bill is already being saved.');return}
@@ -2060,7 +2062,7 @@ async function loadBookingCenter(force=false){
   function filterCustomers(){const q=document.getElementById('customer-search').value.toLowerCase();document.getElementById('customer-table').innerHTML=customerTable(db.customers.filter(c=>[c.name,c.phone,c.city,...db.vehicles.filter(v=>v.customerId===c.id).map(v=>v.number)].join(' ').toLowerCase().includes(q)))}
   function filterStock(){const q=document.getElementById('stock-search').value.toLowerCase();document.getElementById('stock-table').innerHTML=stockTable(db.products.filter(p=>[p.name,p.sku,p.category].join(' ').toLowerCase().includes(q)))}
   function openModal(title,html){document.getElementById('modal-title').textContent=title;document.getElementById('modal-body').innerHTML=html;document.getElementById('modal-backdrop').classList.add('show')}
-  function closeModal(){document.getElementById('modal-backdrop').classList.remove('show');if(page!=='billing')applyPendingRemoteData()}
+  function closeModal(){document.getElementById('modal-backdrop').classList.remove('show');if(page!=='billing'&&applyPendingRemoteData())render()}
   function openInvoice(invId){const i=db.invoices.find(x=>x.id===invId);if(!i)return;const cust=db.customers.find(c=>c.id===i.customerId);openModal(`${esc(i.number)} · ${esc(invoiceCustomerName(i))}`,`${invoiceHTML(i)}<div class='actions' style='margin-top:15px'>${i.cancelled?'<b>CANCELLED — kept in invoice history</b>':`<button class='btn' data-edit-invoice='${i.id}'>✎ Edit invoice</button><button class='btn danger' data-cancel-invoice='${i.id}'>Cancel bill</button>`}<button class='btn' data-save-pdf='${i.id}'>⬇ Save PDF</button><button class='btn primary' data-open-whatsapp-invoice='${i.id}' ${cust?.phone?'':'disabled'}>Open customer WhatsApp</button><button class='btn' data-share='${i.id}'>Share PDF / WhatsApp</button><button class='btn' data-invoice-sms='${i.id}' ${cust?.smsServiceOptIn?'':'disabled'}>Send invoice SMS</button><button class='btn' data-print='${i.id}'>Print</button>${!i.cancelled&&invoiceDue(i)>0?`<button class='btn' data-payment='${i.id}'>Add payment</button>`:''}</div>`)}function cancelInvoice(invId){const i=db.invoices.find(x=>x.id===invId);if(!i||i.cancelled)return;const received=paid(i);const warning=received>0?' This invoice has '+INR(received)+' recorded as received. Cancelling will not issue or record a refund; handle any refund separately.':'';if(!confirm('Cancel invoice '+i.number+' for '+INR(i.grandTotal)+'?'+warning+' The invoice stays in history as CANCELLED, is excluded from sales totals, and its inventory usage will be returned. This cannot be undone from the invoice screen.'))return;const dbBefore=snapshotDatabase(),used=invoiceStockUsage(i.lines);for(const [productId,qty] of Object.entries(used))recordStockMovement(productId,qty,'invoice-cancellation',i.id,'stock_cancel_'+i.id+'_'+productId);i.cancelled=true;i.cancelledAt=Date.now();i.cancelledReason='Cancelled from invoice register';i.updatedAt=Date.now();if(!save()){restoreDatabase(dbBefore);notify('Cancellation was not saved. The invoice and stock were restored to their previous state.');return}closeModal();render();notify('Invoice cancelled. Stock restored and sales totals updated.')}
   function invoiceEditLineRows(){return editingLines.map((l,n)=>`<tr data-edit-line="${n}"><td><input name="lineName" value="${esc(l.name)}" style="width:100%;min-width:135px" required /></td><td><input name="lineQty" type="number" min=".01" step=".01" value="${Number(l.qty)||1}" style="width:76px" required /></td><td><input name="lineRate" type="number" min="0" step=".01" value="${Number(l.rate)||0}" style="width:92px" required /></td><td><input name="lineDiscount" type="number" min="0" step=".01" value="${Number(l.discount)||0}" style="width:86px" /></td><td><input name="lineTax" type="number" min="0" max="100" step=".01" value="${Number(l.taxRate)||0}" style="width:70px" /></td><td><button type="button" class="btn small danger" data-remove-edit-line="${n}">×</button></td></tr>`).join('')}
   function readInvoiceEditLines(){return [...document.querySelectorAll('#edit-invoice-lines tr[data-edit-line]')].map(tr=>{const old=editingLines[Number(tr.dataset.editLine)]||{};const val=name=>tr.querySelector(`[name="${name}"]`)?.value;const qty=Number(val('lineQty')),rate=Number(val('lineRate')),discount=Number(val('lineDiscount')||0);return {...old,name:String(val('lineName')||'').trim(),qty,rate,discount,taxRate:Number(val('lineTax')||0),amount:Math.max(0,qty*rate-discount)}})}
@@ -2757,12 +2759,18 @@ async function loadBookingCenter(force=false){
   }
   function mergeWashDeskData(local,remote){const base=Object.assign(blank(),local||{},remote||{}),deleted={...(local?._deletedIds||{})};Object.entries(remote?._deletedIds||{}).forEach(([id,t])=>deleted[id]=Math.max(Number(deleted[id])||0,Number(t)||0));const collections=['customers','vehicles','services','invoices','products','stockMovements','purchases','expenses','staff','staffAdvances','attendance','payments','messageRecipients'];collections.forEach(key=>{const map=new Map();[...(local?.[key]||[]),...(remote?.[key]||[])].forEach(record=>{if(!record?.id)return;const old=map.get(record.id),stamp=x=>Number(x?.updatedAt||x?.editedAt||x?.createdAt||0);if(!old||stamp(record)>=stamp(old))map.set(record.id,record)});base[key]=[...map.values()].filter(record=>(Number(deleted[record.id])||0)<=(Number(record.updatedAt||record.editedAt||record.createdAt||0)))});base._deletedIds=deleted;const stamp=x=>Number(x?.updatedAt||0);base.business=stamp(local?.business)>=stamp(remote?.business)?(local?.business||base.business):(remote?.business||base.business);base.settings=stamp(local?.settings)>=stamp(remote?.settings)?(local?.settings||base.settings):(remote?.settings||base.settings);base.meta={...(local?.meta||{}),...(remote?.meta||{}),stockLedgerVersion:1};const remoteProducts=new Map((remote?.products||[]).map(p=>[p.id,p]));base.products.forEach(p=>{const server=remoteProducts.get(p.id);if(server&&server.stockOpeningQty!==undefined&&server.stockOpeningQty!==null)p.stockOpeningQty=Number(server.stockOpeningQty)||0});return reconcileStockLedger(base)}
   function receiveCloudData(remote){
-    // Realtime can deliver snapshots in the background, but it must never
-    // rebuild the current screen. Apply the newest snapshot only when the user
-    // changes page or explicitly taps Dashboard > Refresh data.
-    pendingRemotePayload=remote;
-    remoteRenderPending=true;
-    return {__cloudSyncDeferred:true};
+    if(!remote||typeof remote!=='object')return null;
+    if(!canRenderRemoteUpdate()){
+      pendingRemotePayload=remote;
+      remoteRenderPending=true;
+      return {__cloudSyncDeferred:true};
+    }
+    db=mergeWashDeskData(db,remote);
+    pendingRemotePayload=null;
+    localStorage.setItem(STORE,JSON.stringify(db));
+    remoteRenderPending=false;
+    render();
+    return db;
   }
   async function connectCloud(e){
     e.preventDefault();
@@ -2792,23 +2800,96 @@ async function loadBookingCenter(force=false){
     if(!window.WashDeskCloud?.signInOwner){notify('Owner restore is not available in this app build. Update Prime Auto Care.');return;}
     const form=e.currentTarget, f=new FormData(form);
     const submit=form.querySelector('button[type="submit"]');
+    const statusBox=document.getElementById('owner-cloud-login-status');
+    const selectedEmail=String(f.get('email')||'').trim().toLowerCase();
+    if(statusBox){statusBox.hidden=true;statusBox.textContent='';}
     if(submit){submit.disabled=true;submit.textContent='Signing in & restoring business data…';}
     try{
       const result=await window.WashDeskCloud.signInOwner({
         url:String(f.get('url')||''),
         anonKey:String(f.get('anonKey')||''),
-        email:String(f.get('email')||''),
+        email:selectedEmail,
         password:String(f.get('password')||''),
         getLocal:()=>db,
         onRemote:receiveCloudData
       });
+      if(statusBox){statusBox.hidden=false;statusBox.textContent=result.message||'Owner access restored.';}
       notify(result.message||'Owner access restored. Full business app is available.');
       render();
     }catch(error){
-      notify(error?.message||'Owner sign-in failed. Check the selected Owner account and password.');
+      const message=String(error?.message||'Owner sign-in failed. Check the selected Owner account and password.');
+      const invalidCredentials=/invalid login credentials|invalid email or password/i.test(message);
+      const userMessage=invalidCredentials
+        ? `Supabase rejected the login for ${selectedEmail}. Confirm that this is the Owner email whose password you are entering. The PAC Owner Code and 64-character workspace pairing key are not login passwords. This failed sign-in did not delete local business records.`
+        : message;
+      if(statusBox){statusBox.hidden=false;statusBox.textContent=userMessage;}
+      notify(userMessage);
       if(submit){submit.disabled=false;submit.textContent='Sign in as Owner & restore full business app';}
     }
   }
+  async function requestOwnerRecoveryFromForm(){
+    const form=document.getElementById('owner-cloud-login-form');
+    const statusBox=document.getElementById('owner-cloud-login-status');
+    const email=String(new FormData(form||document.createElement('form')).get('email')||'').trim().toLowerCase();
+    const button=document.getElementById('owner-cloud-forgot-password');
+    if(!window.WashDeskCloud?.requestOwnerPasswordRecovery){
+      notify('Password recovery is not available in this app build. Update Prime Auto Care.');
+      return;
+    }
+    if(button){button.disabled=true;button.textContent='Requesting recovery email…';}
+    try{
+      const result=await window.WashDeskCloud.requestOwnerPasswordRecovery({email});
+      const message='Password recovery email requested for '+result.email+'. Open the email on this same phone and tap its secure recovery link.';
+      if(statusBox){statusBox.hidden=false;statusBox.textContent=message;}
+      notify(message);
+    }catch(error){
+      const message=String(error?.message||'Could not request Owner password recovery.');
+      if(statusBox){statusBox.hidden=false;statusBox.textContent=message;}
+      notify(message);
+    }finally{
+      if(button){button.disabled=false;button.textContent='Forgot Owner password? Send recovery email';}
+    }
+  }
+  function openOwnerRecoveryPasswordDialog(email){
+    openModal('Set a new Owner password',`<p class="help">Recovery verified for ${esc(email||'your registered Owner account')}. Choose a new password. This will not delete or reset any business records.</p>
+      <form id="owner-recovery-password-form" style="margin-top:14px">
+        <div class="field-grid">
+          <div class="field full"><label>New password</label><input name="password" type="password" minlength="8" required autocomplete="new-password" /></div>
+          <div class="field full"><label>Confirm new password</label><input name="confirmPassword" type="password" minlength="8" required autocomplete="new-password" /></div>
+        </div>
+        <div class="form-actions"><button type="button" class="btn" id="owner-recovery-cancel">Cancel</button><button type="submit" class="btn primary">Save password &amp; restore business data</button></div>
+      </form>`);
+    document.getElementById('owner-recovery-cancel')?.addEventListener('click',closeModal);
+    document.getElementById('owner-recovery-password-form')?.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const form=event.currentTarget,values=new FormData(form);
+      const password=String(values.get('password')||''),confirmation=String(values.get('confirmPassword')||'');
+      if(password.length<8){notify('Choose a password with at least 8 characters.');return;}
+      if(password!==confirmation){notify('The passwords do not match.');return;}
+      const submit=form.querySelector('button[type="submit"]');
+      if(submit){submit.disabled=true;submit.textContent='Saving password & restoring…';}
+      try{
+        const result=await window.WashDeskCloud.completeOwnerPasswordRecovery({
+          password,getLocal:()=>db,onRemote:receiveCloudData
+        });
+        closeModal();
+        const statusBox=document.getElementById('owner-cloud-login-status');
+        if(statusBox){statusBox.hidden=false;statusBox.textContent=result.message;}
+        notify(result.message);
+        render();
+      }catch(error){
+        const message=String(error?.message||'Could not update the Owner password.');
+        notify(message);
+        if(submit){submit.disabled=false;submit.textContent='Save password & restore business data';}
+      }
+    });
+  }
+  window.addEventListener('washdesk-owner-password-recovery',event=>{
+    openOwnerRecoveryPasswordDialog(event.detail?.email||'');
+  });
+  window.addEventListener('washdesk-owner-password-recovery-error',event=>{
+    notify(String(event.detail||'The password recovery link could not be opened.'));
+  });
   async function refreshCloudSession(){
     try{
       await window.WashDeskCloud?.resume?.({getLocal:()=>db,onRemote:receiveCloudData});

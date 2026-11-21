@@ -23,17 +23,17 @@ const filter = `
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="primeautocare" android:host="auth-callback" />
+                <data android:scheme="primeautocare28" android:host="auth-callback" />
             </intent-filter>`;
-if (!activity.includes('android:scheme="primeautocare"')) {
+if (!activity.includes('android:scheme="primeautocare28"')) {
   activity = activity.replace('</activity>', filter + '\n        </activity>');
 }
 xml = xml.replace(activityMatch[0], activity);
 await writeFile(manifestPath, xml, 'utf8');
 
-if (!xml.includes('android:scheme="primeautocare"') ||
+if (!xml.includes('android:scheme="primeautocare28"') ||
     !xml.includes('android:host="auth-callback"') ||
     !activity.includes('android:launchMode="singleTask"')) {
   throw new Error('Prime Auto Care email-link deep-link route was not installed correctly.');
 }
-console.log('PASS: Android MainActivity handles primeautocare://auth-callback email links');
+console.log('PASS: Android MainActivity handles primeautocare28://auth-callback email links');

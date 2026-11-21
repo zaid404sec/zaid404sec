@@ -1,4 +1,8 @@
--- Prime Auto Care: one shared database for all phones and the Windows laptop.
+-- Prime Auto Care Shared Cloud SQL — compatibility release 2.13.9 (core Cloud Sync schema v1).
+-- Installs/updates workspace membership, shared snapshot, stock-ledger and invoice-numbering SQL.
+-- This SQL does not create, reset or change Supabase Auth email/password credentials.
+-- A Supabase "Invalid login credentials" response must be fixed by using the correct registered Owner email/password.
+
 -- Run this complete file ONCE in Supabase Dashboard -> SQL Editor.
 -- The final SELECT returns a private 64-character device pairing code.
 -- Enter that SAME code once on every Prime Auto Care device.
@@ -660,5 +664,40 @@ values (true, 1)
 on conflict (singleton) do update
   set stock_ledger_version = greatest(public.washdesk_schema_version.stock_ledger_version, excluded.stock_ledger_version),
       updated_at = now();
+
+do $migration$
+declare
+  v_definition text;
+  v_original text;
+begin
+  v_definition := pg_get_functiondef('public.washdesk_merge_sync(jsonb)'::regprocedure);
+  v_original := v_definition;
+  if position('and m.role = ''owner''' in lower(v_definition)) = 0 then
+    v_definition := replace(
+      v_definition,
+      'where m.auth_user_id = v_auth_user',
+      'where m.auth_user_id = v_auth_user' || E'\n    and m.role = ''owner'''
+    );
+    if v_definition = v_original then
+      raise exception 'Could not safely apply Owner-only guard to washdesk_merge_sync(jsonb)';
+    end if;
+    execute v_definition;
+  end if;
+
+  v_definition := pg_get_functiondef('public.washdesk_next_invoice_number(text,date,integer)'::regprocedure);
+  v_original := v_definition;
+  if position('and m.role = ''owner''' in lower(v_definition)) = 0 then
+    v_definition := replace(
+      v_definition,
+      'where m.auth_user_id = v_auth_user',
+      'where m.auth_user_id = v_auth_user' || E'\n    and m.role = ''owner'''
+    );
+    if v_definition = v_original then
+      raise exception 'Could not safely apply Owner-only guard to washdesk_next_invoice_number(text,date,integer)';
+    end if;
+    execute v_definition;
+  end if;
+end
+$migration$;
 
 select public.washdesk_create_pairing_code() as "Prime Auto Care device pairing code";

@@ -1,3 +1,23 @@
+## 2.13.9 Owner recovery and two-phone cloud reliability (2026-11-21)
+
+- Adds an in-app **Forgot Owner password?** flow for the two registered email Owners, using Supabase Auth password recovery and a v28 Android app link `primeautocare28://auth-callback`.
+- Adds a one-time redirect URL allow-list requirement in Supabase Authentication → URL Configuration before requesting the recovery email.
+- Both registered email Owners remain members of the same workspace. The original canonical snapshot owner ID is retained; the workspace pointer is not changed to an email account.
+- Owner business writes and shared invoice-number generation now enforce `role = 'owner'` in the database functions as well as in the app.
+- Realtime updates now refresh the visible screen immediately when it is safe to do so. Incoming changes are deferred during active forms/modals to protect in-progress edits. A 30-second reconciliation and Android foreground refresh recover missed events after sleep or network loss.
+- Offline reconnect pulls the latest canonical snapshot before reconciling local edits; it no longer blindly pushes a possibly stale offline snapshot first.
+- Cache version is bumped to v34. Android app remains package ID `com.washdesk.carwash.v28` for side-by-side installation.
+- Keep the existing 2.13.7 installation and export a backup before validating the new build. The production signing keystore is not included, so the CI debug APK is a separate installation, not an in-place signed upgrade.
+
+## 2.13.8 Owner sign-in failure-state hotfix (2026-11-21)
+
+- Fixed the lingering **Signing in to the registered Prime Auto Care Owner account…** status after Supabase rejects an Owner login.
+- The Owner account selector now displays both registered email addresses instead of ambiguous “Owner account 1/2” labels.
+- The password field now explains that it requires the selected user's Supabase Auth password, not the PAC Owner Code or the legacy 64-character workspace pairing key.
+- An inline error explains what to verify when Supabase returns **Invalid login credentials**. This happens before the app asks the database for the Owner workspace role; rerunning Cloud SQL does not reset passwords.
+- The Cloud Sync SQL download is version-labelled 2.13.8 and explicitly documents that it does not manage Supabase Auth passwords.
+- Android package ID is `com.washdesk.carwash.v28`. The CI APK installs alongside 2.13.7 because the production signing keystore was not included in the handover.
+
 ## 2.13.7 Owner business-app restore and staff booking access (2026-11-20)
 
 ### What was fixed
