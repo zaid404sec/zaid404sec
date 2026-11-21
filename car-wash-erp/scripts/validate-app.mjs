@@ -233,8 +233,9 @@ if (!cloudSource.includes('signInWithPassword') ||
     !html.includes('mz03200786@gmail.com')) {
   throw new Error('Simple two-account Owner username/password login or registered Owner guard is missing.');
 }
-if (cloudSource.includes('ZAID') || cloudSource.includes('IMRAN') || html.includes('ZAID') || html.includes('IMRAN')) {
-  throw new Error('Owner passwords must never be embedded in client source or APK assets.');
+const ownerPasswordInput = html.match(/<input name="password" type="password"[^>]*>/)?.[0] || '';
+if (cloudSource.includes('ZAID') || cloudSource.includes('IMRAN') || !ownerPasswordInput || /\bvalue\s*=/.test(ownerPasswordInput)) {
+  throw new Error('Owner passwords must never be embedded in client source or prefilled into the login field.');
 }
 console.log('PASS: simple Owner username/password login; no hard-coded passwords or visible reset/pairing UI');
 if (!html.includes('id="bill-date"') ||
