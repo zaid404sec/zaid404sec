@@ -677,7 +677,7 @@ for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bu
   console.log('PASS: bundled asset ' + asset);
 }
 const serviceWorkerSource = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!serviceWorkerSource.includes('prime-auto-care-shell-v36') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v36 and precache the booking bundle.');
+if (!serviceWorkerSource.includes('prime-auto-care-shell-v37') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v37 and precache the booking bundle.');
 console.log('PASS: v36 offline shell cache invalidation and booking bundle precache');
 const pdfFontsBundle = await readFile(new URL('../pdfmake-vfs.js', import.meta.url), 'utf8');
 if (!pdfFontsBundle.includes('__primeAutoCarePdfFontsReady') || !pdfFontsBundle.includes('addVirtualFileSystem(vfs)')) {
@@ -1165,7 +1165,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v36')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v37')) {
   throw new Error('The offline app cache is missing the original Prime Auto Care branding or v36 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
