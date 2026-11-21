@@ -1,3 +1,15 @@
+## Latest live status — 21 November 2026
+
+- Current release candidate: Prime Auto Care 2.14.2, Android package `com.washdesk.carwash.v31`.
+- One Owner login only: `bmumz3909@gmail.com`; the app displays a fixed email and one password field.
+- Supabase role migration: the former secondary Owner is now Member; the old anonymous canonical snapshot identity remains the storage key but is no longer Owner or an active booking-decision device.
+- Business data, canonical snapshot pointer and existing workspace records are preserved.
+- The new Owner password still needs to be applied to the existing Supabase Auth user; do not claim successful sign-in until tested with Supabase Auth.
+- Install 2.14.2 alongside the previous app because the CI APK uses a new debug signing certificate/package ID. Keep the old APK until cloud restore and backup are verified.
+- Website and booking URLs remain unchanged.
+
+### Historical status (20 November 2026)
+
 ## Latest live status — 20 November 2026
 
 Use these current details before making any further changes:
