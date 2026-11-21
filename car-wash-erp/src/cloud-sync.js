@@ -373,6 +373,9 @@ async function completeOwnerPasswordRecovery({ password, getLocal, onRemote }) {
     throw sessionError || new Error('The recovery session expired. Request a new password-reset email from this phone.');
   }
   user = sessionData.session.user;
+  if (!REGISTERED_OWNER_EMAILS.has(String(user.email || '').trim().toLowerCase())) {
+    throw new Error('This recovery link does not belong to one of the two registered email Owner accounts.');
+  }
   const serverWorkspace = await getWorkspaceFromServer();
   if (!serverWorkspace || serverWorkspace.role !== 'owner') {
     throw new Error('This recovery session is not linked to a registered Prime Auto Care Owner account. No password was changed.');
@@ -568,15 +571,15 @@ function listenForChanges() {
       const incoming = event.new?.payload;
       if (!incoming || !remoteHandler) return;
       try {
-        // The app can defer this event while a billing form is active. Do not
-        // stringify/clone the full business payload on that keystroke-sensitive path.
+        const incomingText = stableStringify(incoming);
+        if (incomingText === lastPayloadString) return;
+        // Keep the current form stable while still applying updates immediately
+        // on screens where there is no active edit or modal.
         const merged = applyRemote(incoming);
         if (!merged) {
           setStatus('Connected · update queued until you leave the current screen');
           return;
         }
-        const incomingText = stableStringify(incoming);
-        if (incomingText === lastPayloadString) return;
         if (stableStringify(merged) !== incomingText) schedulePush(merged);
         else setStatus('Connected · live update received');
       } catch (error) {
@@ -641,10 +644,10 @@ function startSafetyRefresh() {
         .maybeSingle();
       if (error || !data?.payload) return;
       if (!remoteHandler) return;
-      const merged = applyRemote(data.payload);
-      if (!merged) return;
       const incomingText = stableStringify(data.payload);
       if (incomingText === lastPayloadString) return;
+      const merged = applyRemote(data.payload);
+      if (!merged) return;
       if (stableStringify(merged) !== incomingText) await publishPayload(merged);
       else {
         lastPayloadString = incomingText;
