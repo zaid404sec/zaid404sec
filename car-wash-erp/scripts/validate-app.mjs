@@ -18,14 +18,23 @@ if (!html.includes("data-action=\"dashboard-refresh\"") ||
     !html.includes("Dashboard > Refresh data") ||
     !html.includes("pendingRemotePayload=remote") ||
     !html.includes("return {__cloudSyncDeferred:true};")) {
-  throw new Error('Dashboard must queue realtime snapshots and refresh only on user request.');
+  throw new Error('Remote snapshots must still be queued while a business form or modal is active.');
 }
 const receiveStart=html.indexOf('function receiveCloudData(remote){');
 const receiveEnd=html.indexOf('async function connectCloud(e){',receiveStart);
-if(receiveStart<0||receiveEnd<0||html.slice(receiveStart,receiveEnd).includes('render()')) {
-  throw new Error('Realtime cloud updates must not trigger a full screen render.');
+const receiveBlock=html.slice(receiveStart,receiveEnd);
+const safeRenderStart=html.indexOf('function canRenderRemoteUpdate(){');
+const safeRenderEnd=html.indexOf('function shouldDeferRemoteUpdate(){',safeRenderStart);
+const safeRenderGuard=html.slice(safeRenderStart,safeRenderEnd);
+if(receiveStart<0||receiveEnd<0||!receiveBlock.includes('canRenderRemoteUpdate()')||
+   !receiveBlock.includes('render()')||safeRenderStart<0||
+   !safeRenderGuard.includes("page==='billing'")||
+   !safeRenderGuard.includes("modal-backdrop")||
+   !safeRenderGuard.includes("active.matches('input,textarea,select,[contenteditable=\"true\"]')")||
+   !html.includes("if(page!=='billing'&&applyPendingRemoteData())render()")) {
+  throw new Error('Realtime updates must render immediately when safe and defer while the Owner is editing or a modal is open.');
 }
-console.log('PASS: realtime snapshots do not reload the screen; dashboard refresh is user-controlled');
+console.log('PASS: cross-device realtime updates render immediately when safe; active billing/forms/modals are protected until close');
 if (!html.includes('color-scheme:dark') || !html.includes('backdrop-filter:blur(24px)') ||
     !html.includes('deep liquid-glass')) {
   throw new Error('Deep liquid-glass app theme is missing.');
