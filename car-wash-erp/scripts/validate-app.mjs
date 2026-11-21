@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.13.9') throw new Error('The package version must be 2.13.9.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v28') {
-  throw new Error('The 2.13.9 APK must use the v28 application ID for side-by-side installation; the original signing key was not supplied.');
+if (packageJson.version !== '2.14.0') throw new Error('The package version must be 2.14.0.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v29') {
+  throw new Error('The 2.14.0 APK must use the v29 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.13.9 uses the v28 side-by-side application ID; prior app data is preserved.');
+console.log('PASS: Android 2.14.0 uses the v29 side-by-side application ID; prior app data is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -223,26 +223,59 @@ for (const token of ['for update;', "m.role = 'member'", 'd.status = \'active\''
 }
 console.log('PASS: permanent PAC Owner Code, direct booking-only pairing, Owner-only business sync and Owner-managed device removal');
 console.log('PASS: new Owner installations restore all business modules through registered Owner email/password sign-in; staff PAC pairing remains Bookings-only');
-if (!cloudSource.includes('Owner sign-in failed · check the selected email and Supabase password') ||
-    !cloudSource.includes('ownerSignInFailureStatus') ||
+if (!cloudSource.includes('signInWithPassword') ||
+    !cloudSource.includes('REGISTERED_OWNER_EMAILS.has(cleanEmail)') ||
+    !html.includes('name="email"') || !html.includes('name="password"') ||
+    !html.includes('Connect &amp; open Prime Auto Care') ||
+    html.includes('id="owner-cloud-forgot-password"') ||
     !html.includes('id="owner-cloud-login-status"') ||
-    !html.includes('The PAC Owner Code and 64-character workspace pairing key are not login passwords.') ||
-    !html.includes('Owner 1 · bmumz3909@gmail.com') ||
-    !html.includes('Owner 2 · mz03200786@gmail.com')) {
-  throw new Error('Owner sign-in failure feedback, correct account labels or credential guidance are missing.');
+    !html.includes('bmumz3909@gmail.com') ||
+    !html.includes('mz03200786@gmail.com')) {
+  throw new Error('Simple two-account Owner username/password login or registered Owner guard is missing.');
 }
-console.log('PASS: Owner sign-in errors clear the busy status and distinguish Supabase passwords from staff pairing codes');
+if (cloudSource.includes('ZAID') || cloudSource.includes('IMRAN') || html.includes('ZAID') || html.includes('IMRAN')) {
+  throw new Error('Owner passwords must never be embedded in client source or APK assets.');
+}
+console.log('PASS: simple Owner username/password login; no hard-coded passwords or visible reset/pairing UI');
+if (!html.includes('id="bill-date"') ||
+    !html.includes("document.getElementById('bill-date')") ||
+    !html.includes('name="paymentMode"') ||
+    !html.includes('function invoicePaymentHistory(i)') ||
+    !html.includes('function editInvoicePayment(paymentId)') ||
+    !html.includes('function deleteInvoicePayment(paymentId)') ||
+    !html.includes('data-edit-payment=') ||
+    !html.includes('data-delete-payment=') ||
+    !html.includes('db._deletedIds[paymentId]')) {
+  throw new Error('Invoice date, Cash/UPI payment methods, payment edit/delete or synced payment deletion is missing.');
+}
+if (!html.includes('Delete / cancel bill') || !html.includes('voided (not physically erased)')) {
+  throw new Error('Invoice correction must use audited cancellation and stock reversal, not destructive hard deletion.');
+}
+console.log('PASS: editable invoice date, Cash/UPI payment methods, payment edit/delete and audited invoice cancellation');
+if (!cloudSource.includes('signInWithPassword') ||
+    !cloudSource.includes('REGISTERED_OWNER_EMAILS.has(cleanEmail)') ||
+    !html.includes('name="email"') || !html.includes('name="password"') ||
+    !html.includes('Connect &amp; open Prime Auto Care') ||
+    html.includes('id="owner-cloud-forgot-password"') ||
+    !html.includes('id="owner-cloud-login-status"') ||
+    !html.includes('bmumz3909@gmail.com') ||
+    !html.includes('mz03200786@gmail.com')) {
+  throw new Error('Simple two-account Owner username/password login or registered Owner guard is missing.');
+}
+if (cloudSource.includes('ZAID') || cloudSource.includes('IMRAN') || html.includes('ZAID') || html.includes('IMRAN')) {
+  throw new Error('Owner passwords must never be embedded in client source or APK assets.');
+}
+console.log('PASS: simple Owner username/password login; no hard-coded passwords or visible reset/pairing UI');
 const authDeepLinkSource = await readFile(new URL('./configure-android-auth-deeplink.mjs', import.meta.url), 'utf8');
-if (!cloudSource.includes('resetPasswordForEmail') ||
-    !cloudSource.includes('completeOwnerPasswordRecovery') ||
+if (!cloudSource.includes('completeOwnerPasswordRecovery') ||
     !cloudSource.includes('exchangeCodeForSession') ||
     !cloudSource.includes('appStateChange') ||
-    !html.includes('id="owner-cloud-forgot-password"') ||
+    html.includes('id="owner-cloud-forgot-password"') ||
     !html.includes('owner-recovery-password-form') ||
     !html.includes('function receiveCloudData(remote)') ||
     !html.includes('if(!canRenderRemoteUpdate())') ||
     !authDeepLinkSource.includes('primeautocare28')) {
-  throw new Error('Owner recovery deep-link flow or immediate safe cloud update UI is missing.');
+  throw new Error('Legacy secure recovery callback or immediate safe cloud update UI is missing.');
 }
 console.log('PASS: secure Owner recovery, native deep link, foreground refresh and immediate safe cross-device update rendering');
 const ownerWriteMigration = await readFile(new URL('../supabase/migrations/20261121100000_owner_only_cloud_writes.sql', import.meta.url), 'utf8');
@@ -650,8 +683,8 @@ for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bu
   console.log('PASS: bundled asset ' + asset);
 }
 const serviceWorkerSource = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!serviceWorkerSource.includes('prime-auto-care-shell-v34') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v34 and precache the booking bundle.');
-console.log('PASS: v34 offline shell cache invalidation and booking bundle precache');
+if (!serviceWorkerSource.includes('prime-auto-care-shell-v35') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v35 and precache the booking bundle.');
+console.log('PASS: v35 offline shell cache invalidation and booking bundle precache');
 const pdfFontsBundle = await readFile(new URL('../pdfmake-vfs.js', import.meta.url), 'utf8');
 if (!pdfFontsBundle.includes('__primeAutoCarePdfFontsReady') || !pdfFontsBundle.includes('addVirtualFileSystem(vfs)')) {
   throw new Error('PDFMake font bundle does not register the virtual font system.');
@@ -671,8 +704,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v28') throw new Error('Android 2.13.9 application ID v28 was not set.');
-console.log('PASS: app manifest uses the new v28 Android package ID.');
+if (appId !== 'com.washdesk.carwash.v29') throw new Error('Android 2.14.0 application ID v29 was not set.');
+console.log('PASS: app manifest uses the new v29 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -1136,8 +1169,8 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v34')) {
-  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v34 cache version.');
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v35')) {
+  throw new Error('The offline app cache is missing the original Prime Auto Care branding or v35 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
 
