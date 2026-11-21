@@ -376,7 +376,7 @@ async function completeOwnerPasswordRecovery({ password, getLocal, onRemote }) {
   }
   user = sessionData.session.user;
   if (!REGISTERED_OWNER_EMAILS.has(String(user.email || '').trim().toLowerCase())) {
-    throw new Error('This recovery link does not belong to one of the two registered email Owner accounts.');
+    throw new Error('This recovery link does not belong to the registered Prime Auto Care Owner account.');
   }
   const serverWorkspace = await getWorkspaceFromServer();
   if (!serverWorkspace || serverWorkspace.role !== 'owner') {
