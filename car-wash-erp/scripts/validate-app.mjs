@@ -4,13 +4,14 @@ import vm from 'node:vm';
 import { transform } from 'esbuild';
 
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const publicBookingHtml = await readFile(new URL('../website/booking/index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.14.3') throw new Error('The package version must be 2.14.3.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v32') {
-  throw new Error('The 2.14.3 APK must use the v32 application ID for side-by-side installation; the original signing key was not supplied.');
+if (packageJson.version !== '2.15.0') throw new Error('The package version must be 2.15.0.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v33') {
+  throw new Error('The 2.15.0 APK must use the v33 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.14.3 uses the v32 side-by-side application ID; prior app data is preserved.');
+console.log('PASS: Android 2.15.0 uses the v33 side-by-side application ID; prior app data is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -238,6 +239,42 @@ if (cloudSource.includes('ZAID') || cloudSource.includes('IMRAN') || !ownerPassw
   throw new Error('Owner passwords must never be embedded in client source or prefilled into the login field.');
 }
 console.log('PASS: single Owner username/password login; no hard-coded passwords or visible reset/pairing UI');
+
+if (!html.includes('id="bill-vehicle-name"') || !html.includes('data-staff-assignment="bill-staff"') ||
+    !html.includes('function staffChecklistHtml') || !html.includes('function getInvoiceStaffNames')) {
+  throw new Error('Invoice vehicle model and multi-staff assignment are missing.');
+}
+if (!html.includes('id="invoice-status-filter"') || !html.includes('Today · Paid') ||
+    !html.includes('Today · Pending') || !html.includes("status==='partial'")) {
+  throw new Error('Invoice payment-status filters and today Paid/Pending totals are missing.');
+}
+if (!html.includes('4+1 offer:') || !html.includes('freeServiceEnabled') ||
+    !html.includes('loyaltyFreeService') || !html.includes('loyaltyVisitNumber')) {
+  throw new Error('Per-vehicle 4+1 loyalty tracking and switch are missing.');
+}
+if (!html.includes('function completeBookingToInvoice') || !html.includes('bookingId:booking.id') ||
+    !html.includes('function saveBookingDecisionPdf') || !html.includes('function openBookingWhatsApp')) {
+  throw new Error('Booking completion-to-invoice, decision PDF or customer WhatsApp handoff is missing.');
+}
+if (!html.includes('name="in_') || !html.includes('name="lunch_start_') ||
+    !html.includes('name="lunch_end_') || !html.includes('name="out_') ||
+    !html.includes('name="bonus_') || !html.includes('Overtime hours')) {
+  throw new Error('Staff check-in/out, lunch, overtime or extra-work bonus fields are missing.');
+}
+if (!publicBookingHtml.includes('REQUEST SENT · PENDING CONFIRMATION') ||
+    !publicBookingHtml.includes('booking-success-overlay') ||
+    !publicBookingHtml.includes('pac-booking-last-success') ||
+    !publicBookingHtml.includes('formSubmitting')) {
+  throw new Error('Large pending booking receipt modal or duplicate submit prevention is missing.');
+}
+if (!cloudSource.includes('setInterval(reconcile, 120000)') ||
+    !cloudSource.includes("select('updated_at')") ||
+    !cloudSource.includes('payloadText === lastPayloadString') ||
+    !cloudSource.includes('lastRemoteUpdatedAt')) {
+  throw new Error('Cloud sync stability guard, metadata-only check or unchanged-payload suppression is missing.');
+}
+console.log('PASS: 2.15.0 invoice teams, status totals, vehicle loyalty, booking conversion, staff timekeeping and payload guard');
+
 if (!html.includes('Supabase did not accept the password for') ||
     !html.includes('Update the password for this existing user in Supabase Authentication') ||
     !html.includes("submit.textContent='Connect & open Prime Auto Care'") ||
@@ -698,8 +735,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v32') throw new Error('Android 2.14.3 application ID v32 was not set.');
-console.log('PASS: app manifest uses the new v32 Android package ID.');
+if (appId !== 'com.washdesk.carwash.v33') throw new Error('Android 2.15.0 application ID v33 was not set.');
+console.log('PASS: app manifest uses the new v33 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -987,7 +1024,9 @@ for (const conflictToken of ['DUPLICATE_CUSTOMER_MOBILE','DUPLICATE_VEHICLE_REGI
 console.log('PASS: Prime Auto Care Supabase project URL and publishable key are preconfigured');
 if (!cloudSource.includes('queuedPayload = payload;') ||
     cloudSource.includes('queuedPayload = clone(payload)') ||
-    !cloudSource.includes('}, 30000);')) {
+    !cloudSource.includes('setInterval(reconcile, 120000)') ||
+    !cloudSource.includes('if (payloadText === lastPayloadString)') ||
+    !cloudSource.includes("select('updated_at')")) {
   throw new Error('Cloud save path still performs repeated full-database copies or excessive safety polling.');
 }
 console.log('PASS: cloud save scheduling coalesces the latest DB snapshot without cloning on every save; Realtime remains primary');
