@@ -240,7 +240,7 @@ if (cloudSource.includes('ZAID') || cloudSource.includes('IMRAN') || !ownerPassw
 }
 console.log('PASS: single Owner username/password login; no hard-coded passwords or visible reset/pairing UI');
 
-if (!html.includes('id="bill-vehicle-name"') || !html.includes('data-staff-assignment="bill-staff"') ||
+if (!html.includes('id="bill-vehicle-name"') || !html.includes("staffChecklistHtml([],'bill-staff')") || !html.includes('data-staff-assignment=') || !html.includes("'bill-staff'") ||
     !html.includes('function staffChecklistHtml') || !html.includes('function getInvoiceStaffNames')) {
   throw new Error('Invoice vehicle model and multi-staff assignment are missing.');
 }
