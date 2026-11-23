@@ -248,6 +248,7 @@ async function pairBookingDevice({ code, deviceLabel, deviceKind }) {
     stockLedgerSchemaReady = false;
     schemaBlocked = false;
     lastPayloadString = '';
+    lastRemoteUpdatedAt = '';
     setStatus('Connected as booking staff · Bookings only · Accept / Reject enabled');
   }
   return { connected: true, role: workspace.role, workspace: workspace.business_name, device_label: data.device_label || deviceLabel };
@@ -325,6 +326,7 @@ async function signInOwner({ url, anonKey, email, password, getLocal, onRemote }
     stockLedgerSchemaReady = false;
     schemaBlocked = false;
     lastPayloadString = '';
+    lastRemoteUpdatedAt = '';
     await initialSync();
     return {
       connected: true,
@@ -394,6 +396,7 @@ async function completeOwnerPasswordRecovery({ password, getLocal, onRemote }) {
   channel = null;
   queuedPayload = null;
   lastPayloadString = '';
+  lastRemoteUpdatedAt = '';
   schemaBlocked = false;
   stockLedgerSchemaReady = false;
   recoveryUiPending = false;
@@ -440,6 +443,7 @@ async function pairDevice({ url, anonKey, pairingCode, getLocal, onRemote }) {
     stockLedgerSchemaReady = false;
     schemaBlocked = false;
     lastPayloadString = '';
+    lastRemoteUpdatedAt = '';
     setStatus('Connected as booking staff · Bookings only · Accept / Reject enabled');
   }
   return {
@@ -724,6 +728,7 @@ async function resume({ getLocal, onRemote }) {
       stockLedgerSchemaReady = false;
       schemaBlocked = false;
       lastPayloadString = '';
+      lastRemoteUpdatedAt = '';
       setStatus('Connected as booking staff · Bookings only · Accept / Reject enabled');
     }
     return true;
@@ -774,6 +779,7 @@ async function disconnect() {
   user = null;
   workspace = null;
   lastPayloadString = '';
+  lastRemoteUpdatedAt = '';
   queuedPayload = null;
   schemaBlocked = false;
   stockLedgerSchemaReady = false;
