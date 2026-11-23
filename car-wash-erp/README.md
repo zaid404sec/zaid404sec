@@ -506,3 +506,7 @@ Release notes and the full source map are in [docs/RELEASE_2.15.0_STABILITY_FEAT
 Highlights: reduced full-payload sync churn; multi-staff invoice assignment; vehicle model field; paid/pending invoice filters and today's totals; vehicle-level 4+1 loyalty; public booking receipt modal and duplicate-pending guard; booking-to-invoice completion; staff check-in/lunch/check-out/overtime/bonus and advanced PDF statements.
 
 **External setup still required:** guaranteed notifications while the app is fully closed require Firebase Cloud Messaging and credentials. WhatsApp actions currently prepare a message for the Owner to review and send; they do not silently send or auto-attach the booking PDF. See the release note before describing these external functions as production-ready.
+
+## Prime Auto Care 2.15.1 hotfix
+
+Fixes the Owner-login cloud-sync startup exception `visibilityReconcileListener is not defined` by declaring the listener reference at module scope. The existing Realtime-first sync and metadata-only reconciliation are unchanged. See [the 2.15.1 hotfix note](docs/RELEASE_2.15.1_VISIBILITY_LISTENER_HOTFIX.md).

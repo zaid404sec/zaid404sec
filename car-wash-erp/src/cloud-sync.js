@@ -29,6 +29,8 @@ let retryDelay = 1500;
 let schemaBlocked = false;
 let stockLedgerSchemaReady = false;
 let pollingTimer = null;
+// Keep the visibility listener reference so safety refresh can replace it safely.
+let visibilityReconcileListener = null;
 let authEventSubscription = null;
 let authEventClient = null;
 let appUrlListenerPromise = null;
