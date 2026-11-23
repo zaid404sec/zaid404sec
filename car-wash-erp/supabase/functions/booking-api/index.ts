@@ -229,6 +229,20 @@ async function createBooking(admin: any, settings: any, input: any, source: 'pub
   const bookingCode = 'PAC-' + bookingDate.replace(/-/g, '') + '-' +
     Array.from(crypto.getRandomValues(new Uint8Array(3))).map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
   const phoneHash = await hashPhone(phone);
+  // Reuse an identical recent pending request; this prevents repeated public form
+  // taps/refreshes from generating duplicate bookings and owner notifications.
+  if (source === 'public') {
+    const duplicateSince = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: duplicate, error: duplicateError } = await admin.from('pac_bookings')
+      .select('*').eq('workspace_id', settings.workspace_id)
+      .eq('customer_phone_hash', phoneHash).eq('vehicle_number', vehicle)
+      .eq('booking_date', bookingDate).eq('start_time', startTime)
+      .eq('status', 'pending').eq('source', 'public')
+      .gte('created_at', duplicateSince).order('created_at', { ascending: false })
+      .limit(1).maybeSingle();
+    if (duplicateError) throw new Error('Could not check for a recent duplicate request. Please retry once.');
+    if (duplicate) return duplicate;
+  }
   const { data, error } = await admin.rpc('pac_create_booking_with_urgency', {
     p_workspace_id: settings.workspace_id,
     p_booking_code: bookingCode,

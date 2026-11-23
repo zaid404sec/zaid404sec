@@ -22,6 +22,9 @@ let remoteHandler = null;
 let pushTimer = null;
 let queuedPayload = null;
 let lastPayloadString = '';
+let lastRemoteUpdatedAt = '';
+let reconcileInFlight = false;
+let visibilitySyncListenerInstalled = false;
 let statusText = 'Not connected';
 let syncing = false;
 let retryDelay = 1500;
@@ -160,7 +163,7 @@ function installAuthListeners() {
   if (!appStateListenerPromise) {
     appStateListenerPromise = App.addListener('appStateChange', state => {
       if (state?.isActive && user && workspace?.role === 'owner' && navigator.onLine) {
-        void initialSync().catch(error => console.warn('Prime Auto Care foreground sync:', error));
+        void reconcileRemoteRevision().catch(error => console.warn('Prime Auto Care foreground sync:', error));
       }
     }).catch(error => {
       appStateListenerPromise = null;
@@ -482,7 +485,9 @@ async function publishPayload(payload) {
   }
   if (syncing) { queuedPayload = payload; return false; }
   syncing = true;
-  const body = clone(payload);
+  const bodyText = stableStringify(payload);
+  if (bodyText === lastPayloadString) { queuedPayload = null; return true; }
+  const body = JSON.parse(bodyText);
   setStatus(navigator.onLine ? 'Syncing changes…' : 'Offline · saved on this device');
   try {
     const { data, error } = await supabase.rpc('washdesk_merge_sync', { p_payload: body });
@@ -497,6 +502,11 @@ async function publishPayload(payload) {
     stockLedgerSchemaReady = true;
     retryDelay = 1500;
     lastPayloadString = stableStringify(canonical);
+    try {
+      const { data: stamp } = await supabase.from('washdesk_sync').select('updated_at')
+        .eq('user_id', workspace.owner_user_id).maybeSingle();
+      if (stamp?.updated_at) lastRemoteUpdatedAt = stamp.updated_at;
+    } catch { /* metadata reconciled on next poll */ }
     const local = applyRemote(canonical);
     if (local && stableStringify(local) !== lastPayloadString) queuedPayload = local;
     setStatus('Connected · all devices synced');
@@ -558,49 +568,24 @@ function schedulePush(payload) {
   // Serializing/cloning the full business database in every save handler blocks
   // the WebView main thread and makes on-screen typing feel unstable.
   queuedPayload = payload;
-  queueQueuedPush(500);
+  queueQueuedPush(1200);
 }
 function listenForChanges() {
   if (!supabase || !user || !workspace) return;
   if (channel) void supabase.removeChannel(channel);
-  channel = supabase.channel('prime-auto-care-workspace-' + workspace.workspace_id)
+  // Do not subscribe to washdesk_sync row changes: Realtime would transmit the
+  // entire shared JSON payload for every save. Poll only updated_at below.
+  channel = supabase.channel('prime-auto-care-workspace-alerts-' + workspace.workspace_id)
     .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'washdesk_sync',
-      filter: 'user_id=eq.' + workspace.owner_user_id
-    }, event => {
-      const incoming = event.new?.payload;
-      if (!incoming || !remoteHandler) return;
-      try {
-        const incomingText = stableStringify(incoming);
-        if (incomingText === lastPayloadString) return;
-        // Keep the current form stable while still applying updates immediately
-        // on screens where there is no active edit or modal.
-        const merged = applyRemote(incoming);
-        if (!merged) {
-          setStatus('Connected · update queued until you leave the current screen');
-          return;
-        }
-        if (stableStringify(merged) !== incomingText) schedulePush(merged);
-        else setStatus('Connected · live update received');
-      } catch (error) {
-        console.error('Prime Auto Care live update merge failed:', error);
-        setStatus('Cloud update error · local data is safe');
-      }
-    })
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'pac_booking_notification_events',
+      event: 'INSERT', schema: 'public', table: 'pac_booking_notification_events',
       filter: 'workspace_id=eq.' + workspace.workspace_id
     }, event => {
       if (!event.new?.id) return;
       window.dispatchEvent(new CustomEvent('washdesk-booking-notification', { detail: event.new }));
     })
     .subscribe(state => {
-      if (state === 'SUBSCRIBED') setStatus('Connected · live sync active on all paired devices');
-      else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') setStatus('Reconnecting live sync…');
+      if (state === 'SUBSCRIBED') setStatus('Connected · booking alerts live; business sync checks lightweight revisions');
+      else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') setStatus('Reconnecting booking alerts…');
     });
 }
 async function initialSync() {
@@ -613,6 +598,7 @@ async function initialSync() {
     .eq('user_id', workspace.owner_user_id)
     .maybeSingle();
   if (error) throw error;
+  lastRemoteUpdatedAt = data?.updated_at || '';
   if (data?.payload) {
     if (Number(data.payload?.meta?.serverStockLedgerVersion) !== 1) {
       stockLedgerSchemaReady = false;
@@ -633,32 +619,39 @@ async function initialSync() {
   listenForChanges();
   startSafetyRefresh();
 }
+async function reconcileRemoteRevision() {
+  if (reconcileInFlight || !navigator.onLine || document.visibilityState === 'hidden' ||
+      !user || !workspace || !supabase || syncing || !remoteHandler) return;
+  reconcileInFlight = true;
+  try {
+    const { data: stamp, error: stampError } = await supabase.from('washdesk_sync')
+      .select('updated_at').eq('user_id', workspace.owner_user_id).maybeSingle();
+    if (stampError || !stamp?.updated_at || stamp.updated_at === lastRemoteUpdatedAt) return;
+    const { data, error } = await supabase.from('washdesk_sync')
+      .select('payload,updated_at').eq('user_id', workspace.owner_user_id).maybeSingle();
+    if (error || !data?.payload || !remoteHandler) return;
+    const incomingText = stableStringify(data.payload);
+    if (incomingText === lastPayloadString) { lastRemoteUpdatedAt = data.updated_at || stamp.updated_at; return; }
+    const merged = applyRemote(data.payload);
+    // The app retains a deferred snapshot while a form is being edited.
+    // Remember its revision now so the same large payload is not downloaded again.
+    lastRemoteUpdatedAt = data.updated_at || stamp.updated_at;
+    if (!merged) { setStatus('Connected · update queued until you leave the current screen'); return; }
+    if (stableStringify(merged) !== incomingText) await publishPayload(merged);
+    else { lastPayloadString = incomingText; setStatus('Connected · shared data is current'); }
+  } catch (error) { console.warn('Prime Auto Care sync reconciliation:', error); }
+  finally { reconcileInFlight = false; }
+}
 function startSafetyRefresh() {
   clearInterval(pollingTimer);
-  // Realtime is the primary path. A light 30-second reconciliation also recovers
-  // missed events after sleep, network changes, or a temporary socket disconnect.
-  pollingTimer = setInterval(async () => {
-    if (!navigator.onLine || !user || !workspace || !supabase || syncing) return;
-    try {
-      const { data, error } = await supabase.from('washdesk_sync')
-        .select('payload,updated_at')
-        .eq('user_id', workspace.owner_user_id)
-        .maybeSingle();
-      if (error || !data?.payload) return;
-      if (!remoteHandler) return;
-      const incomingText = stableStringify(data.payload);
-      if (incomingText === lastPayloadString) return;
-      const merged = applyRemote(data.payload);
-      if (!merged) return;
-      if (stableStringify(merged) !== incomingText) await publishPayload(merged);
-      else {
-        lastPayloadString = incomingText;
-        setStatus('Connected · live sync active on all paired devices');
-      }
-    } catch (error) {
-      console.warn('Prime Auto Care sync reconciliation:', error);
-    }
-  }, 30000);
+  if (!visibilitySyncListenerInstalled) {
+    visibilitySyncListenerInstalled = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') void reconcileRemoteRevision();
+    });
+  }
+  // Timestamp-only 15-second check; pause while hidden/offline.
+  pollingTimer = setInterval(() => { void reconcileRemoteRevision(); }, 15000);
 }
 async function resume({ getLocal, onRemote }) {
   const config = readConfig();

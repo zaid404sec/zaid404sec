@@ -374,3 +374,12 @@ This section records the verified state for continuing the Prime Auto Care WashD
 - The WashDesk Bookings page now includes the phone pairing panel. Generate a separate code on the Owner phone for each additional phone; each code expires after 10 minutes and can be redeemed once by an already-paired workspace member.
 - Last live access count: 34 workspace members, 1 authorised booking-notification device, 0 unused pairing codes, 0 per-device receipts. The other two phones still need to be paired by their signed-in users.
 - Latest complete CI run [#445954](https://github.com/zaid404sec/zaid404sec/actions/runs/44595450691) passed Android, Windows, Edge Function type-check and release packaging.
+
+
+---
+
+## Current release update — Prime Auto Care 2.15.0 (23 November 2026)
+
+Current application package is `2.15.0`, Android ID `com.washdesk.carwash.v33`. This release adds metadata-first cloud reconciliation, vehicle-model/multi-staff billing, invoice paid/pending/day summaries, public booking pending confirmation and duplicate guard, booking completion-to-invoice/payment flow, vehicle-specific fifth-visit reward controls, multi-stage staff attendance, overtime bonus payroll and advanced staff PDF. The canonical workspace data-owner key remains unchanged. See `AI_HANDOVER/RELEASE_2.15.0.md` for feature details, integration limitations and acceptance tests.
+
+**Known integration prerequisites:** true Android push while fully closed still needs Firebase Cloud Messaging project setup, device tokens and a server sender. Automatic WhatsApp API delivery still needs Meta WhatsApp Cloud API credentials and approved templates; current flows prepare a PDF/message for the user to review and send.

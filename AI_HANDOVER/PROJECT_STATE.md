@@ -246,3 +246,12 @@ Artifact archives expire under GitHub's retention policy; download and keep a lo
 Read `AI_HANDOVER/SAFE_CHANGE_RULES.md` before modifying anything. Work from current `main` on a feature branch, make a narrow diff, add regression coverage, pass PR validation, merge only after checks pass, then verify the main build and retrieve its actual artifacts. Update this document and the handover ZIP after each production release.
 
 Historical 2.8.4 and earlier release notes remain in the repository for traceability; they are not the current app version.
+
+
+---
+
+## Current release update — Prime Auto Care 2.15.0 (23 November 2026)
+
+Current application package is `2.15.0`, Android ID `com.washdesk.carwash.v33`. This release adds metadata-first cloud reconciliation, vehicle-model/multi-staff billing, invoice paid/pending/day summaries, public booking pending confirmation and duplicate guard, booking completion-to-invoice/payment flow, vehicle-specific fifth-visit reward controls, multi-stage staff attendance, overtime bonus payroll and advanced staff PDF. The canonical workspace data-owner key remains unchanged. See `AI_HANDOVER/RELEASE_2.15.0.md` for feature details, integration limitations and acceptance tests.
+
+**Known integration prerequisites:** true Android push while fully closed still needs Firebase Cloud Messaging project setup, device tokens and a server sender. Automatic WhatsApp API delivery still needs Meta WhatsApp Cloud API credentials and approved templates; current flows prepare a PDF/message for the user to review and send.
