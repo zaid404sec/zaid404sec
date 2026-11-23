@@ -1,3 +1,13 @@
+# Prime Auto Care 2.15.0 — November 23, 2026
+
+The current release is **2.15.0**. It improves cloud reconciliation, replaces the invoice odometer field with vehicle model, supports multiple invoice staff, adds today's paid/pending summaries, strengthens the public booking confirmation and duplicate-submit guard, adds booking-to-invoice completion, customer vehicle loyalty cycles, and detailed staff attendance/overtime exports.
+
+**Important integration limits:** closed-app Android push still needs Firebase Cloud Messaging project credentials and physical-device testing. Automatic WhatsApp API delivery still needs the customer's Meta WhatsApp Cloud API sender credentials and approved templates; current app flows prepare a PDF/message for the user to review and send through WhatsApp.
+
+See [`docs/RELEASE_2.15.0.md`](docs/RELEASE_2.15.0.md) for the release notes and verification checklist.
+
+---
+
 ## 2.14.1 — Owner authentication error clarity (2026-11-21)
 
 - Keeps the simple two-account Owner username/password login from 2.14.0.
@@ -69,7 +79,7 @@
 # Prime Auto Care Manager — Release 2.13.6
 
 ## Permanent PAC Owner Code and booking-only staff access
-- Owner Settings is available in **Business Settings** on any device with a verified Owner workspace session. The registered Owner login is `primeautoconsult@gmail.com`; staff and former accounts remain non-Owner. The existing Owner phone can create the code; no second Owner approval or another phone is needed.
+- Owner Settings is available in **Business Settings** on any device with a verified Owner workspace session. The single Owner login is `primeautoconsult@gmail.com`; former/secondary accounts are not the app login. The existing Owner phone can create the code; no second Owner approval or another phone is needed.
 - The Owner manually chooses an 8–12 digit numeric **PAC Owner Code** in Business Settings, enters it twice and saves it. Only a secure hash is stored on the server. The code remains active until the Owner changes it.
 - Staff select a device label (Dad Phone, Zaid Phone, Jack Phone or Manager Phone), choose Mobile or Laptop, select Member, enter the code in Bookings and connect immediately. No pending approval workflow is used.
 - The permanent code grants booking-only staff access: read bookings, receive/acknowledge alerts, and Accept or Reject. It never promotes a Member to Owner.
