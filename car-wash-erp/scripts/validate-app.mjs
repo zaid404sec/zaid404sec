@@ -1536,7 +1536,7 @@ if (!html.includes('id="bill-vehicle-name"') || !html.includes('id="bill-staff" 
 if (!html.includes('function completeBookingForm') || !html.includes('function saveCompletedBookingInvoice') || !html.includes('sourceBookingId')) throw new Error('Booking completion must create a customer/vehicle invoice and payment record.');
 if (!html.includes('vehiclePaidVisitCount') || !html.includes('loyaltyOfferEnabled') || !html.includes('loyaltyRewardApplied')) throw new Error('Per-vehicle fifth-visit free-service tracking is missing.');
 if (!html.includes('function exportStaffAdvancedSummaryPdf') || !html.includes('lunchStart') || !html.includes('lunchEnd') || !html.includes('overtimeBonus')) throw new Error('Advanced staff attendance, lunch, overtime or PDF export is missing.');
-if (!html.includes('booking-success-modal') || !html.includes('bookingSubmitInFlight')) throw new Error('Public booking pending confirmation modal or submit lock is missing.');
+if (!bookingWebsite.includes('booking-success-modal') || !bookingWebsite.includes('bookingSubmitInFlight') || !bookingWebsite.includes('duplicateKey')) throw new Error('Public booking pending confirmation modal or duplicate-submit lock is missing.');
 if (!cloudSource.includes('async function reconcileRemoteRevision') || cloudSource.includes("table: 'washdesk_sync'") || !cloudSource.includes("select('updated_at')") || !cloudSource.includes('setInterval(() => { void reconcileRemoteRevision(); }, 15000)')) throw new Error('Shared cloud sync must reconcile lightweight revisions, not broadcast or poll the full snapshot.');
 console.log('PASS: stability revision checks, multi-staff billing, vehicle loyalty, booking completion and advanced attendance PDF');
 console.log('Prime Auto Care validation complete.');
