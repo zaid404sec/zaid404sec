@@ -4,13 +4,14 @@ import vm from 'node:vm';
 import { transform } from 'esbuild';
 
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const publicBookingHtml = await readFile(new URL('../website/booking/index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.14.3') throw new Error('The package version must be 2.14.3.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v32') {
-  throw new Error('The 2.14.3 APK must use the v32 application ID for side-by-side installation; the original signing key was not supplied.');
+if (packageJson.version !== '2.15.0') throw new Error('The package version must be 2.15.0.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v33') {
+  throw new Error('The 2.15.0 APK must use the v33 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.14.3 uses the v32 side-by-side application ID; prior app data is preserved.');
+console.log('PASS: Android 2.15.0 uses the v33 side-by-side application ID; prior app data is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -238,6 +239,42 @@ if (cloudSource.includes('ZAID') || cloudSource.includes('IMRAN') || !ownerPassw
   throw new Error('Owner passwords must never be embedded in client source or prefilled into the login field.');
 }
 console.log('PASS: single Owner username/password login; no hard-coded passwords or visible reset/pairing UI');
+
+if (!html.includes('id="bill-vehicle-name"') || !html.includes("staffChecklistHtml([],'bill-staff')") || !html.includes('data-staff-assignment=') || !html.includes("'bill-staff'") ||
+    !html.includes('function staffChecklistHtml') || !html.includes('function getInvoiceStaffNames')) {
+  throw new Error('Invoice vehicle model and multi-staff assignment are missing.');
+}
+if (!html.includes('id="invoice-status-filter"') || !html.includes('Today · Paid') ||
+    !html.includes('Today · Pending') || !html.includes("status==='partial'")) {
+  throw new Error('Invoice payment-status filters and today Paid/Pending totals are missing.');
+}
+if (!html.includes('4+1 offer:') || !html.includes('freeServiceEnabled') ||
+    !html.includes('loyaltyFreeService') || !html.includes('loyaltyVisitNumber')) {
+  throw new Error('Per-vehicle 4+1 loyalty tracking and switch are missing.');
+}
+if (!html.includes('function completeBookingToInvoice') || !html.includes('bookingId:booking.id') ||
+    !html.includes('function saveBookingDecisionPdf') || !html.includes('function openBookingWhatsApp')) {
+  throw new Error('Booking completion-to-invoice, decision PDF or customer WhatsApp handoff is missing.');
+}
+if (!html.includes('name="in_') || !html.includes('name="lunch_start_') ||
+    !html.includes('name="lunch_end_') || !html.includes('name="out_') ||
+    !html.includes('name="bonus_') || !html.includes('Overtime hours')) {
+  throw new Error('Staff check-in/out, lunch, overtime or extra-work bonus fields are missing.');
+}
+if (!publicBookingHtml.includes('REQUEST SENT · PENDING CONFIRMATION') ||
+    !publicBookingHtml.includes('booking-success-overlay') ||
+    !publicBookingHtml.includes('pac-booking-last-success') ||
+    !publicBookingHtml.includes('formSubmitting')) {
+  throw new Error('Large pending booking receipt modal or duplicate submit prevention is missing.');
+}
+if (!cloudSource.includes('setInterval(reconcile, 120000)') ||
+    !cloudSource.includes("select('updated_at')") ||
+    !cloudSource.includes('payloadText === lastPayloadString') ||
+    !cloudSource.includes('lastRemoteUpdatedAt')) {
+  throw new Error('Cloud sync stability guard, metadata-only check or unchanged-payload suppression is missing.');
+}
+console.log('PASS: 2.15.0 invoice teams, status totals, vehicle loyalty, booking conversion, staff timekeeping and payload guard');
+
 if (!html.includes('Supabase did not accept the password for') ||
     !html.includes('Update the password for this existing user in Supabase Authentication') ||
     !html.includes("submit.textContent='Connect & open Prime Auto Care'") ||
@@ -537,7 +574,7 @@ if (!offerShareSource.includes('window.WashDeskFileSharer?.share') ||
 console.log('PASS: Android offers use native share sheet for text and attached promotional images; browser fallback remains available');
 
 
-if (!html.includes('function buildStaffStatement(') || !html.includes('function exportStaffStatementPdf(') || !html.includes('function exportStaffStatementExcel(') || !html.includes('data-staff-statement=') || !html.includes("hours_'+esc(st.id)")) throw new Error('Individual staff statements and daily working-hour capture are incomplete.');
+if (!html.includes('function buildStaffStatement(') || !html.includes('function exportStaffStatementPdf(') || !html.includes('function exportStaffStatementExcel(') || !html.includes('data-staff-statement=') || !html.includes('function staffAttendanceSummary(') || !html.includes('name="in_') || !html.includes('name="out_') || !html.includes('name="lunch_start_') || !html.includes('name="lunch_end_')) throw new Error('Individual staff statements and daily working-hour capture are incomplete.');
 const staffBalanceStart=html.indexOf('function calculateStaffStatementBalance('),staffBalanceEnd=html.indexOf('function buildStaffStatement(',staffBalanceStart);
 if(staffBalanceStart<0||staffBalanceEnd<0)throw new Error('Staff statement balance helper was not found.');
 const staffBalanceFn=html.slice(staffBalanceStart,staffBalanceEnd);
@@ -655,7 +692,7 @@ const mustContain = [
   'function staffSalaryPaid', 'function payStaffSalaryForm', 'function exportSalesExcel',
   'function mergeWashDeskData', 'function connectCloud', 'data-wa-toggle', 'function canRenderRemoteUpdate', 'remoteRenderPending', 
   'data-action="export-excel"', 'data-action="cloud-sync-now"', 'data-save-pdf',
-  'PRIME AUTO CARE', 'Service performed by:', 'Payment mode', 'Authorised Signatory',
+  'PRIME AUTO CARE', 'Staff team', 'Payment mode', 'Authorised Signatory',
   'pairDevice', 'pairingCode', 'Connect / Pair this device', 'Prime-Auto-Care-',
   'pdfMake.createPdf', '__primeAutoCarePdfFontsReady', 'premium-invoice-header{grid-template-columns:62px minmax(0,1fr)', 'Prime Auto Care Invoice ', 'TAX INVOICE / SERVICE BILL', 'BILL TO', 'VEHICLE & SERVICE', 'PAYMENT DETAILS', 'GRAND TOTAL', 'BALANCE DUE', 'AUTHORISED SIGNATURE', 'invoice-grand-total strong', 'invoice-summary-row b', 'staffAdvances:[]', 'function staffAdvancesOutstanding', 'function addStaffAdvanceForm', 'advanceAdjustment', 'dashboard-hero', 'prime-auto-care-logo.jpg', 'data-action="add-staff-advance"', 'attendance:[]', 'function saveStaffAttendance', 'function staffMonthDayCount', 'function staffAttendanceSummary', 'function staffPayrollBreakdown', 'Monthly payroll calculator', 'function staffAttendanceForDate', 'function setStaffAttendanceEntry', 'function removeStaffMember', 'function staffShiftEnd', 'function staffManagerPinDigest', 'function verifyStaffManagerPin', 'staff-attendance-row', 'Manager PIN', 'Daily staff attendance', 'Present', 'Absent', 'attendance-date', 'attendance-form', 'data-cancel-invoice', 'function cancelInvoice', 'CANCELLED · BILL VOID', 'Cancelled invoices cannot be edited', 'bill-customer-search', 'renderBillCustomerMatches', 'findCustomerByMobile', 'findVehicleByNumber', 'GOLD & BLACK CAR SERVICES', 'premium-car-mark', 'invoice-party-grid', 'invoice-payment-card', 'invoice-terms-card', 'Customer names may repeat', 'Vehicle registration numbers must be unique', 'carPhotoData', 'prime-auto-care-car-photo.jpg', 'Customer ID is generated automatically as the primary key'
 ];
@@ -698,8 +735,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v32') throw new Error('Android 2.14.3 application ID v32 was not set.');
-console.log('PASS: app manifest uses the new v32 Android package ID.');
+if (appId !== 'com.washdesk.carwash.v33') throw new Error('Android 2.15.0 application ID v33 was not set.');
+console.log('PASS: app manifest uses the new v33 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -776,6 +813,7 @@ const novemberPayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2026-11')",
   {
     db: {
+      staff: [{ id:'staff-1', shiftHours:11 }],
       staffAdvances: [{ staffId:'staff-1', amount:3000, recoveredAmount:0 }],
       attendance: [
         { staffId:'staff-1', date:'2026-11-02', status:'Absent', updatedAt:1 },
@@ -800,7 +838,7 @@ console.log('PASS: 30-day payroll deducts absence days and outstanding advances 
 const excessAdvancePayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:1000},'2026-11')",
   {
-    db: { staffAdvances:[{staffId:'staff-1',amount:2500,recoveredAmount:0}], attendance:[], expenses:[] },
+    db: { staff:[{id:'staff-1',shiftHours:11}], staffAdvances:[{staffId:'staff-1',amount:2500,recoveredAmount:0}], attendance:[], expenses:[] },
     today: () => '2026-11-30',
     monthKey: date => date ? String(date).slice(0,7) : '2026-11',
     sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
@@ -816,7 +854,7 @@ console.log('PASS: excess staff advances show a negative recovery balance withou
 const februaryPayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2027-02')",
   {
-    db: { staffAdvances:[], attendance:[{staffId:'staff-1',date:'2027-02-10',status:'Absent'}], expenses:[] },
+    db: { staff:[{id:'staff-1',shiftHours:11}], staffAdvances:[], attendance:[{staffId:'staff-1',date:'2027-02-10',status:'Absent'}], expenses:[] },
     today: () => '2027-02-28',
     monthKey: date => date ? String(date).slice(0,7) : '2027-02',
     sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
@@ -831,7 +869,7 @@ console.log('PASS: 28-day payroll uses the correct calendar-day rate');
 const halfDayPayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2026-11')",
   {
-    db: { staffAdvances:[], attendance:[
+    db: { staff:[{id:'staff-1',shiftHours:11}], staffAdvances:[], attendance:[
       {staffId:'staff-1',date:'2026-11-02',status:'Half Day',updatedAt:1},
       {staffId:'staff-1',date:'2026-11-03',status:'Absent',updatedAt:1},
       {staffId:'staff-1',date:'2026-11-04',status:'Present',updatedAt:1}
@@ -850,7 +888,7 @@ console.log('PASS: half-day attendance deducts exactly 50% of the daily salary r
 const negativePayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:10000},'2026-11')",
   {
-    db: { staffAdvances:[], attendance:[], expenses:[{category:'Salary',staffId:'staff-1',salaryMonth:'2026-11',amount:7000,advanceAdjustment:0},{category:'Salary',staffId:'staff-1',salaryMonth:'2026-11',amount:4000,advanceAdjustment:0}] },
+    db: { staff:[{id:'staff-1',shiftHours:11}], staffAdvances:[], attendance:[], expenses:[{category:'Salary',staffId:'staff-1',salaryMonth:'2026-11',amount:7000,advanceAdjustment:0},{category:'Salary',staffId:'staff-1',salaryMonth:'2026-11',amount:4000,advanceAdjustment:0}] },
     today: () => '2026-11-30',
     monthKey: date => date ? String(date).slice(0,7) : '2026-11',
     sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
@@ -866,7 +904,7 @@ if (!html.includes("vehicleCategory(i.vehicleType)==='Commercial'") || !html.inc
 console.log('PASS: taxi is classified under four-wheelers; commercial vehicles remain separate');
 if (!html.includes('class="bar-value">\'+(d.v?INR(d.v):\'—\')') || !html.includes('Weekly sales trend')) throw new Error('Weekly sales chart must show daily rupee amounts.');
 console.log('PASS: sales trend displays daily rupee amounts');
-const staffHelpersStart = html.indexOf('function staffAttendanceForDate(');
+const staffHelpersStart = html.indexOf('function staffTimeMinutes(');
 const staffHelpersEnd = html.indexOf('function staff(){', staffHelpersStart);
 if (staffHelpersStart < 0 || staffHelpersEnd < 0) throw new Error('Staff attendance and shift helper functions were not found.');
 const staffHelpers = html.slice(staffHelpersStart, staffHelpersEnd);
@@ -987,7 +1025,9 @@ for (const conflictToken of ['DUPLICATE_CUSTOMER_MOBILE','DUPLICATE_VEHICLE_REGI
 console.log('PASS: Prime Auto Care Supabase project URL and publishable key are preconfigured');
 if (!cloudSource.includes('queuedPayload = payload;') ||
     cloudSource.includes('queuedPayload = clone(payload)') ||
-    !cloudSource.includes('}, 30000);')) {
+    !cloudSource.includes('setInterval(reconcile, 120000)') ||
+    !cloudSource.includes('if (payloadText === lastPayloadString)') ||
+    !cloudSource.includes("select('updated_at')")) {
   throw new Error('Cloud save path still performs repeated full-database copies or excessive safety polling.');
 }
 console.log('PASS: cloud save scheduling coalesces the latest DB snapshot without cloning on every save; Realtime remains primary');
@@ -1119,6 +1159,7 @@ const invoiceMarkup = vm.runInNewContext(
   {
     sampleInvoice,
     db:{business:sampleInvoice.businessSnapshot,staff:[],customers:[],payments:[]},
+    getInvoiceStaffNames:i=>i.staffNameSnapshot||'Not recorded',
     sum:(rows,fn)=>rows.reduce((total,row)=>total+Number(fn?fn(row):row||0),0),
     esc:value=>String(value??''),
     INR:value=>'₹'+Number(value||0).toFixed(2),
@@ -1130,7 +1171,7 @@ const invoiceMarkup = vm.runInNewContext(
     fy:()=> '26-27'
   }
 );
-for (const field of ['GRAND TOTAL','₹100.00','Cash','₹25.00','Balance due','₹75.00','Service performed by:']) {
+for (const field of ['GRAND TOTAL','₹100.00','Cash','₹25.00','Balance due','₹75.00','Service team:']) {
   if (!invoiceMarkup.includes(field)) throw new Error('Invoice PDF is missing required field: ' + field);
 }
 console.log('PASS: invoice PDF HTML includes Grand Total, Paid, Balance Due and assigned staff');
@@ -1140,6 +1181,7 @@ const complimentaryMarkup = vm.runInNewContext(
   {
     sampleInvoice,
     db:{business:sampleInvoice.businessSnapshot,staff:[],customers:[],payments:[]},
+    getInvoiceStaffNames:i=>i.staffNameSnapshot||'Not recorded',
     sum:(rows,fn)=>rows.reduce((total,row)=>total+Number(fn?fn(row):row||0),0),
     esc:value=>String(value??''),
     INR:value=>'₹'+Number(value||0).toFixed(2),

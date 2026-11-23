@@ -90,7 +90,7 @@ async function authenticate(req: Request): Promise<Context> {
   const { data: workspace, error: workspaceError } = await service.from('washdesk_workspaces')
     .select('id,owner_auth_user_id,business_name').eq('id', member.workspace_id).single();
   if (workspaceError || !workspace?.owner_auth_user_id) throw new Error('The Prime Auto Care workspace owner could not be found.');
-  const isWorkspaceOwner = member.role === 'owner' && workspace.owner_auth_user_id === auth.user.id;
+  const isWorkspaceOwner = member.role === 'owner';
   let googleReviewAdmin = isWorkspaceOwner;
   if (!googleReviewAdmin) {
     const { data: grant, error: grantError } = await service.from('pac_google_review_admins')
@@ -111,8 +111,8 @@ function requireGoogleReviewAdmin(ctx: Context) {
   }
 }
 function requireOriginalWorkspaceOwner(ctx: Context) {
-  if (ctx.member.role !== 'owner' || ctx.workspace.owner_auth_user_id !== ctx.user.id) {
-    throw new Error('Only the original Prime Auto Care Workspace Owner can enable automatic Google replies.');
+  if (ctx.member.role !== 'owner') {
+    throw new Error('Only a current Prime Auto Care Workspace Owner can change workspace-wide Google Reviews settings.');
   }
 }
 async function saveGoogleOAuthConfig(ctx: Context, input: any) {
@@ -888,7 +888,7 @@ async function status(ctx: Context) {
     permissions: {
       google_reviews_admin: ctx.googleReviewAdmin,
       workspace_role: ctx.member.role,
-      workspace_owner: ctx.member.role === 'owner' && ctx.workspace.owner_auth_user_id === ctx.user.id,
+      workspace_owner: ctx.member.role === 'owner',
       workspace_owner_unchanged: true
     },
     settings: { google_cloud_project_number: settings.google_cloud_project_number || null, google_account_email: settings.google_account_email || null, google_business_profile_id: settings.google_business_profile_id || '13506481990772076097', google_business_profile_url: settings.google_business_profile_url || 'https://share.google/6g3f0aJqTezi6JH5T', website_url: settings.website_url || null, review_link: settings.review_link || null, pubsub_topic_name: settings.pubsub_topic_name || null, google_pubsub_audience: settings.google_pubsub_audience || null, pubsub_push_service_account: settings.pubsub_push_service_account || null, notifications_enabled: settings.notifications_enabled === true, notifications_last_event_at: settings.notifications_last_event_at || null, notifications_last_error: settings.notifications_last_error || null, auto_reply_enabled: settings.auto_reply_enabled === true, auto_reply_min_rating: Number(settings.auto_reply_min_rating || 5), auto_reply_last_error: settings.auto_reply_last_error || null, auto_reply_last_sent_at: settings.auto_reply_last_sent_at || null },

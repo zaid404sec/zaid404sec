@@ -67,7 +67,7 @@ Deno.serve(async req => {
     if (workspaceError || memberError || !workspace?.owner_auth_user_id || !initiatingMember) {
       return html('The initiating WashDesk device is no longer an active workspace member. Start again from an authorised device.', true);
     }
-    const isOwner = initiatingMember.role === 'owner' && workspace.owner_auth_user_id === oauthState.initiated_by;
+    const isOwner = initiatingMember.role === 'owner';
     if (!isOwner) {
       const { data: grant, error: grantError } = await service.from('pac_google_review_admins')
         .select('auth_user_id').eq('workspace_id', oauthState.workspace_id)

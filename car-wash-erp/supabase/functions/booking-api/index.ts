@@ -229,6 +229,26 @@ async function createBooking(admin: any, settings: any, input: any, source: 'pub
   const bookingCode = 'PAC-' + bookingDate.replace(/-/g, '') + '-' +
     Array.from(crypto.getRandomValues(new Uint8Array(3))).map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
   const phoneHash = await hashPhone(phone);
+  if (source === 'public') {
+    // Idempotency guard for a customer who taps Submit again because the
+    // pending receipt was not noticed. Reuse the existing pending request.
+    const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: recent, error: recentError } = await admin.from('pac_bookings')
+      .select('*')
+      .eq('workspace_id', settings.workspace_id)
+      .eq('customer_phone_hash', phoneHash)
+      .eq('vehicle_number', vehicle)
+      .eq('service_type', service)
+      .eq('booking_date', bookingDate)
+      .eq('start_time', startTime)
+      .eq('status', 'pending')
+      .gte('created_at', cutoff)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (recentError) throw new Error('Your earlier booking request could not be checked. Please contact Prime Auto Care before retrying.');
+    if (recent) return { ...recent, duplicate_submission: true };
+  }
   const { data, error } = await admin.rpc('pac_create_booking_with_urgency', {
     p_workspace_id: settings.workspace_id,
     p_booking_code: bookingCode,
