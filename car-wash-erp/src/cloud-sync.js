@@ -636,7 +636,7 @@ async function reconcileRemoteRevision() {
     // The app retains a deferred snapshot while a form is being edited.
     // Remember its revision now so the same large payload is not downloaded again.
     lastRemoteUpdatedAt = data.updated_at || stamp.updated_at;
-    if (!merged) { setStatus('Connected · newer shared data will apply after the current edit'); return; }
+    if (!merged) { setStatus('Connected · update queued until you leave the current screen'); return; }
     if (stableStringify(merged) !== incomingText) await publishPayload(merged);
     else { lastPayloadString = incomingText; setStatus('Connected · shared data is current'); }
   } catch (error) { console.warn('Prime Auto Care sync reconciliation:', error); }
