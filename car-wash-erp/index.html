@@ -1707,9 +1707,10 @@ async function loadBookingCenter(force=false){
       const line={id:id(),kind:'service',refId:service?.id||null,name:service?.name||serviceName,qty:1,rate:total,discount:0,taxRate:Number(service?.taxRate)||0,sac:service?.sac||'9987',unit:'service',...(service?.consumption?{consumption:JSON.parse(JSON.stringify(service.consumption))}:{})};
       const lineCalc=calcLines([line],0),assignedStaffIds=[...form.querySelectorAll('[data-staff-assignment="booking-completion-staff"]:checked')].map(x=>x.value),assignedStaffNames=assignedStaffIds.map(staffId=>db.staff.find(st=>st.id===staffId)?.name||'').filter(Boolean);
       const visitCount=vehicleVisitCount(vehicle.id,customer.id,vehicle.number),loyaltyFree=vehicle.freeServiceEnabled!==false&&visitCount>0&&visitCount%5===4,complimentary=loyaltyFree;
+      const invoiceCalc=complimentary?{...lineCalc,overall:Math.max(0,lineCalc.gross-lineCalc.lineDisc),taxable:0,tax:0,grand:0}:lineCalc;
       if(complimentary&&amountPaid>0)throw new Error('This is the complimentary 5th visit. Amount received must be zero.');
       const invoiceDate=today(),invoiceNumber=await reserveInvoiceNo(invoiceDate),invoiceId=id(),stockCost=service?.consumption?applyConsumption([line],invoiceId):0;
-      const inv={id:invoiceId,number:invoiceNumber,financialYear:fy(invoiceDate),date:invoiceDate,createdAt:Date.now(),bookingId:booking.id,bookingCode:booking.booking_code||'',businessSnapshot:JSON.parse(JSON.stringify(db.business)),gstRegistered:!!db.business.registered,businessState:db.business.state,customerId:customer.id,customerNameSnapshot:customer.name,customerState:customer.state||db.business.state,customerGstin:customer.gstin||'',customerAddress:customer.address||'',customerCity:customer.city||'',vehicleId:vehicle.id,vehicleNumber,vehicleType:vehicle.type,vehicleName:vehicle.vehicleName||'',staffIds:assignedStaffIds,staffNamesSnapshot:assignedStaffNames,staffId:assignedStaffIds[0]||null,staffNameSnapshot:assignedStaffNames.join(', '),loyaltyVisitNumber:visitCount+1,loyaltyFreeService:loyaltyFree,lines:[line],discount:lineCalc.overall,subtotal:lineCalc.gross,lineDiscount:lineCalc.lineDisc,taxable:lineCalc.taxable,tax:lineCalc.tax,grandTotal:lineCalc.grand,stockCost,complimentary,complimentaryReason:loyaltyFree?'Free 5th service after four completed visits.':'',notes:'Completed from online booking '+(booking.booking_code||booking.id),paymentMode:complimentary?'Complimentary':paymentMode};
+      const inv={id:invoiceId,number:invoiceNumber,financialYear:fy(invoiceDate),date:invoiceDate,createdAt:Date.now(),bookingId:booking.id,bookingCode:booking.booking_code||'',businessSnapshot:JSON.parse(JSON.stringify(db.business)),gstRegistered:!!db.business.registered,businessState:db.business.state,customerId:customer.id,customerNameSnapshot:customer.name,customerState:customer.state||db.business.state,customerGstin:customer.gstin||'',customerAddress:customer.address||'',customerCity:customer.city||'',vehicleId:vehicle.id,vehicleNumber,vehicleType:vehicle.type,vehicleName:vehicle.vehicleName||'',staffIds:assignedStaffIds,staffNamesSnapshot:assignedStaffNames,staffId:assignedStaffIds[0]||null,staffNameSnapshot:assignedStaffNames.join(', '),loyaltyVisitNumber:visitCount+1,loyaltyFreeService:loyaltyFree,lines:[line],discount:invoiceCalc.overall,subtotal:lineCalc.gross,lineDiscount:lineCalc.lineDisc,taxable:invoiceCalc.taxable,tax:invoiceCalc.tax,grandTotal:invoiceCalc.grand,stockCost,complimentary,complimentaryReason:loyaltyFree?'Free 5th service after four completed visits.':'',notes:'Completed from online booking '+(booking.booking_code||booking.id),paymentMode:complimentary?'Complimentary':paymentMode};
       db.invoices.push(inv);if(amountPaid>0)db.payments.push({id:id(),invoiceId:inv.id,date:invoiceDate,amount:amountPaid,mode:paymentMode,createdAt:Date.now()});
       if(!save()){restoreDatabase(dbBefore);throw new Error('The booking invoice could not be saved locally. The original records were restored; the booking has not been marked complete.');}
       try{await window.PrimeAutoCareBookings.updateStatus(booking.id,'completed','');}catch(statusError){closeModal();notify('Invoice '+invoiceNumber+' is saved. Booking status could not sync yet: '+(statusError?.message||'retry from Bookings'));await loadBookingCenter(true);return}
@@ -2104,6 +2105,7 @@ async function loadBookingCenter(force=false){
     const loyaltyEnabled=selectedVehicle?selectedVehicle.freeServiceEnabled!==false:true;
     const loyaltyFreeService=!!(selectedVehicle&&loyaltyEnabled&&visitsBefore>0&&visitsBefore%5===4);
     const complimentary=document.getElementById('bill-complimentary')?.checked===true||loyaltyFreeService;
+    const invoiceCalc=complimentary?{...calc,overall:Math.max(0,calc.gross-calc.lineDisc),taxable:0,tax:0,grand:0}:calc;
     const amountPaid=complimentary?0:Number(document.getElementById('bill-paid').value||0);
     if(discount<0||discount>calc.gross-calc.lineDisc+.009){notify('Overall discount cannot exceed the remaining item value.');return}
     if(amountPaid<0||amountPaid>calc.grand+.009){notify('Payment received cannot be more than the bill total.');return}
@@ -2141,8 +2143,8 @@ async function loadBookingCenter(force=false){
         staffIds:assignedStaffIds,staffNamesSnapshot:assignedStaffNames,
         staffId:assignedStaffIds[0]||null,staffNameSnapshot:assignedStaffNames.join(', '),
         loyaltyVisitNumber:visitsBefore+1,loyaltyFreeService,
-        lines:JSON.parse(JSON.stringify(billLines)),discount,subtotal:calc.gross,
-        lineDiscount:calc.lineDisc,taxable:calc.taxable,tax:calc.tax,grandTotal:calc.grand,
+        lines:JSON.parse(JSON.stringify(billLines)),discount:complimentary?invoiceCalc.overall:discount,subtotal:calc.gross,
+        lineDiscount:calc.lineDisc,taxable:invoiceCalc.taxable,tax:invoiceCalc.tax,grandTotal:invoiceCalc.grand,
         stockCost,complimentary,complimentaryReason:complimentary?String(document.getElementById('bill-notes').value||'').trim():'',notes:document.getElementById('bill-notes').value||'',
         paymentMode:complimentary?'Complimentary':document.getElementById('bill-mode').value
       };
