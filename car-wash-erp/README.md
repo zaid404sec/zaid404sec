@@ -498,3 +498,11 @@ Meta template approval, number/API onboarding, Exotel account activation, DLT re
 - Invoice PDFs rotate through four Prime Auto Care color themes.
 - Monthly Excel exports include sales, daily summary, purchases, operating expenses, personal/household expenses, personal account totals, staff salary and staff advances.
 - Android application ID remains `com.washdesk.carwash.v18` to support in-place updates.
+
+## Prime Auto Care 2.15.0 — stability and workflow release
+
+Release notes and the full source map are in [docs/RELEASE_2.15.0_STABILITY_FEATURES.md](docs/RELEASE_2.15.0_STABILITY_FEATURES.md).
+
+Highlights: reduced full-payload sync churn; multi-staff invoice assignment; vehicle model field; paid/pending invoice filters and today's totals; vehicle-level 4+1 loyalty; public booking receipt modal and duplicate-pending guard; booking-to-invoice completion; staff check-in/lunch/check-out/overtime/bonus and advanced PDF statements.
+
+**External setup still required:** guaranteed notifications while the app is fully closed require Firebase Cloud Messaging and credentials. WhatsApp actions currently prepare a message for the Owner to review and send; they do not silently send or auto-attach the booking PDF. See the release note before describing these external functions as production-ready.
