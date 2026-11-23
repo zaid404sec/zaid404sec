@@ -537,7 +537,7 @@ if (!offerShareSource.includes('window.WashDeskFileSharer?.share') ||
 console.log('PASS: Android offers use native share sheet for text and attached promotional images; browser fallback remains available');
 
 
-if (!html.includes('function buildStaffStatement(') || !html.includes('function exportStaffStatementPdf(') || !html.includes('function exportStaffStatementExcel(') || !html.includes('data-staff-statement=') || !html.includes("hours_'+esc(st.id)")) throw new Error('Individual staff statements and daily working-hour capture are incomplete.');
+if (!html.includes('function buildStaffStatement(') || !html.includes('function exportStaffStatementPdf(') || !html.includes('function exportStaffStatementExcel(') || !html.includes('data-staff-statement=') || !html.includes("timeIn_'+esc(st.id)") || !html.includes("timeOut_'+esc(st.id)") || !html.includes("lunchStart_'+esc(st.id)") || !html.includes("lunchEnd_'+esc(st.id)")) throw new Error('Individual staff statements and daily time/lunch capture are incomplete.');
 const staffBalanceStart=html.indexOf('function calculateStaffStatementBalance('),staffBalanceEnd=html.indexOf('function buildStaffStatement(',staffBalanceStart);
 if(staffBalanceStart<0||staffBalanceEnd<0)throw new Error('Staff statement balance helper was not found.');
 const staffBalanceFn=html.slice(staffBalanceStart,staffBalanceEnd);
