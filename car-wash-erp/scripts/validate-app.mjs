@@ -714,7 +714,7 @@ for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bu
   console.log('PASS: bundled asset ' + asset);
 }
 const serviceWorkerSource = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!serviceWorkerSource.includes('prime-auto-care-shell-v38') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v37 and precache the booking bundle.');
+if (!serviceWorkerSource.includes('prime-auto-care-shell-v38') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v38 and precache the booking bundle.');
 console.log('PASS: v36 offline shell cache invalidation and booking bundle precache');
 const pdfFontsBundle = await readFile(new URL('../pdfmake-vfs.js', import.meta.url), 'utf8');
 if (!pdfFontsBundle.includes('__primeAutoCarePdfFontsReady') || !pdfFontsBundle.includes('addVirtualFileSystem(vfs)')) {
@@ -1075,7 +1075,7 @@ for (const token of [
   'pairDevice', 'signInAnonymously()', 'washdesk_join_workspace',
   'washdesk_get_workspace', 'washdesk_merge_sync', 'washdesk_next_invoice_number',
   'postgres_changes', 'pac_booking_notification_events', 'washdesk-booking-notification',
-  'startSafetyRefresh', 'Offline'
+  'startSafetyRefresh', 'let visibilityReconcileListener = null;', 'Offline'
 ]) {
   if (!cloudSource.includes(token)) throw new Error('Shared device pairing / cloud sync hook is missing: ' + token);
 }
