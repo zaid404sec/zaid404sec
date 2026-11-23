@@ -32,8 +32,8 @@ The two Vercel routes were fetched and verified as HTTP 200 with `Content-Type: 
 ## 2. Current application and backend state
 
 - Product/application name: Prime Auto Care / WashDesk.
-- Application version in `car-wash-erp/package.json`: **2.13.3**.
-- Android application ID: `com.washdesk.carwash.v24`.
+- Application version in `car-wash-erp/package.json`: **2.15.0**.
+- Android application ID: `com.washdesk.carwash.v33`.
 - Supabase project ref: `jkjudmkqaebrgllemris`.
 - Supabase project status: `ACTIVE_HEALTHY`.
 - Supabase project region: `ap-northeast-2`.
@@ -42,7 +42,7 @@ The two Vercel routes were fetched and verified as HTTP 200 with `Content-Type: 
 - Legacy website redirects: `prime-auto-care-site` v4, `prime-auto-care-booking` v3, `prime-auto-care-website` v3.
 - Other deployed Google Review functions include `google-review-api`, `google-review-oauth-callback`, `google-review-worker` and `google-review-pubsub-webhook`. Re-check their live versions before future work.
 
-### Booking API v13 and device notification changes
+### Booking API v23 and device notification changes
 
 - CORS accepts the Vercel public website origin.
 - The list response includes `permissions.notifications_enabled` and `permissions.notification_device_count`.
@@ -53,16 +53,16 @@ The two Vercel routes were fetched and verified as HTTP 200 with `Content-Type: 
 
 ## 3. Workspace ownership, device enrolment and sign-in model
 
-**Important: the app's workspace sign-in is anonymous Supabase authentication, not email/password login.**
+**Current Owner sign-in:** the Prime Auto Care mobile/desktop Owner application uses the registered Supabase email/password login `primeautoconsult@gmail.com`. The production workspace role is `owner`. Booking-only staff devices continue to use separate member identities and PAC booking access; they do not receive business-record access.
 
 - The database does not contain an email address for anonymous phone identities. A GitHub or Vercel account email does not automatically become the WashDesk Workspace Owner.
-- The active business phone identity is now the canonical Prime Auto Care Workspace Owner. The Owner identity and role were rechecked after the notification redesign and remain intact.
+- The current registered Owner Auth identity is `primeautoconsult@gmail.com` (`970c1195-a7a2-4984-9293-aefccc105c05`) with the `owner` workspace role. The previous Owner login accounts remain as Members; do not delete them. The canonical business data-owner key remains `e836efd7-48cc-4c5f-87e9-78a1b87297e3` and must not be changed without a verified migration.
 - Older anonymous identities have been retained as workspace Members. The notification redesign did not delete identities, reset the workspace, or alter customer, invoice, booking, inventory or billing records.
 - The existing private 64-character workspace pairing credential is the one-time-in-practice join credential for a new device. Connect each phone/laptop once through Settings → Business Settings → Connect / Pair this device. Do not publish, commit or put the code into a handover file.
 - **There is no separate 8-digit booking-notification code in the normal UI.** Any authenticated workspace member is automatically enrolled for booking alerts. The Owner and device notification permission remain separate concepts.
 - The database migration `20261120130000_workspace_members_auto_booking_alerts.sql` backfilled existing workspace members into `pac_booking_notification_admins` and created an after-insert/update trigger for newly paired or re-paired devices.
 - Live database check: 36 workspace member identities and 36 active booking-alert permission rows. This is an identity count, not a count of physical phones/laptops; old anonymous installation identities may remain. Do not delete these identities without the Owner identifying the intended five devices.
-- If a phone has lost its local anonymous Supabase session, it must rejoin the existing workspace. Do not transfer ownership merely because a newly installed phone has a fresh anonymous identity.
+- If a booking-only staff phone has lost its member session, re-enrol it using the PAC booking workflow. Do not change the Owner membership or canonical data key merely because a phone has a fresh identity.
 - Do not clear the active Owner phone's app/WebView data or uninstall it without a verified Owner recovery path.
 
 ## 4. Booking page request flow
@@ -144,7 +144,7 @@ The Windows EXE can be rebuilt by CI. Keep a backup and verify its user-data pat
 - GitHub repository owner/login: `zaid404sec`. The connected GitHub integration has repository access.
 - Vercel hosts the static public pages. The current project is in the connected Vercel team; automatic Git linking still requires a GitHub Login Connection in Vercel.
 - Supabase hosts the production database and Edge Functions.
-- The WashDesk workspace identities are anonymous Supabase Auth identities. No email value is stored for the relevant anonymous users; do not invent or infer an owner email from GitHub/Vercel.
+- Existing staff/member device identities may still be anonymous Supabase Auth users. The Owner identity is the registered email/password account stated above; use the live Supabase user/membership records as authoritative.
 - The public customer booking page does not require customer sign-in or an email address.
 - The app's device/workspace pairing flow does not use SMTP/email magic links. Do not configure an email provider as a substitute for Owner identity recovery.
 - Google Business Profile API approval, original business-owner OAuth consent and Pub/Sub/OIDC configuration are external prerequisites for live Google review synchronization/automation. Check `AI_HANDOVER/GOOGLE_REVIEW_SETUP_GUIDE.md`.
