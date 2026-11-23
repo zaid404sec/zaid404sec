@@ -6,11 +6,11 @@ import { transform } from 'esbuild';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const capacitorConfig = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8'));
-if (packageJson.version !== '2.14.3') throw new Error('The package version must be 2.14.3.');
-if (capacitorConfig.appId !== 'com.washdesk.carwash.v32') {
-  throw new Error('The 2.14.3 APK must use the v32 application ID for side-by-side installation; the original signing key was not supplied.');
+if (packageJson.version !== '2.15.0') throw new Error('The package version must be 2.15.0.');
+if (capacitorConfig.appId !== 'com.washdesk.carwash.v33') {
+  throw new Error('The 2.15.0 APK must use the v33 application ID for side-by-side installation; the original signing key was not supplied.');
 }
-console.log('PASS: Android 2.14.3 uses the v32 side-by-side application ID; prior app data is preserved.');
+console.log('PASS: Android 2.15.0 uses the v33 side-by-side application ID; prior app data is preserved.');
 
 if (!html.includes('id="dashboard-date"') || !html.includes('advance-staff-filter') || !html.includes('advance-month-filter') || !html.includes('Advance grand total')) throw new Error('Historical dashboard and staff advance filters are missing.');
 console.log('PASS: historical dashboard and staff/month advance summary');
@@ -677,7 +677,7 @@ for (const asset of ['pdfmake.bundle.min.js','pdfmake-vfs.js','invoice-native.bu
   console.log('PASS: bundled asset ' + asset);
 }
 const serviceWorkerSource = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!serviceWorkerSource.includes('prime-auto-care-shell-v37') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v37 and precache the booking bundle.');
+if (!serviceWorkerSource.includes('prime-auto-care-shell-v38') || !serviceWorkerSource.includes("'./bookings.bundle.js'")) throw new Error('Offline cache must refresh to v37 and precache the booking bundle.');
 console.log('PASS: v36 offline shell cache invalidation and booking bundle precache');
 const pdfFontsBundle = await readFile(new URL('../pdfmake-vfs.js', import.meta.url), 'utf8');
 if (!pdfFontsBundle.includes('__primeAutoCarePdfFontsReady') || !pdfFontsBundle.includes('addVirtualFileSystem(vfs)')) {
@@ -698,8 +698,8 @@ if (carPhotoBytes.length < 1000 ||
 console.log('PASS: PDF car photograph is a complete, decodable JPEG asset');
 
 const appId = JSON.parse(await readFile(new URL('../capacitor.config.json', import.meta.url), 'utf8')).appId;
-if (appId !== 'com.washdesk.carwash.v32') throw new Error('Android 2.14.3 application ID v32 was not set.');
-console.log('PASS: app manifest uses the new v32 Android package ID.');
+if (appId !== 'com.washdesk.carwash.v33') throw new Error('Android 2.15.0 application ID v33 was not set.');
+console.log('PASS: app manifest uses the new v33 Android package ID.');
 
 // Test the actual daily counter and invoice total functions extracted from the app.
 const nextStart = html.indexOf('function nextInvoiceNo(');
@@ -1165,7 +1165,7 @@ if (!html.includes("exportWorkbook({filename,sales,daily,purchases,expenses,pers
   throw new Error('The app is not passing the Staff Advances register to the Excel exporter.');
 }
 const sw = await readFile(new URL('../sw.js', import.meta.url), 'utf8');
-if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v37')) {
+if (!sw.includes("'./prime-auto-care-logo.jpg'") || !sw.includes("'./prime-auto-care-car-photo.jpg'") || !sw.includes('prime-auto-care-shell-v38')) {
   throw new Error('The offline app cache is missing the original Prime Auto Care branding or v36 cache version.');
 }
 console.log('PASS: staff advances are included in Excel exports and the offline logo cache');
@@ -1527,4 +1527,12 @@ if (!html.includes('--bg:#f3efe6') || !html.includes('backdrop-filter:blur(22px)
 console.log('PASS: AI Growth Studio, daily workspace idempotency, privacy redaction, real-photo poster, warm glass UI and website SEO/enquiry checks');
 
 console.log('PASS: Excel and Supabase sync dependencies declared');
+if (html.includes('id="bill-odo"') || html.includes('bill-odo')) throw new Error('Legacy odometer field must be removed from billing.');
+if (!html.includes('id="bill-vehicle-name"') || !html.includes('id="bill-staff" multiple') || !html.includes('staffIds')) throw new Error('Vehicle model and multi-staff invoice fields are required.');
+if (!html.includes('function completeBookingForm') || !html.includes('function saveCompletedBookingInvoice') || !html.includes('sourceBookingId')) throw new Error('Booking completion must create a customer/vehicle invoice and payment record.');
+if (!html.includes('vehiclePaidVisitCount') || !html.includes('loyaltyOfferEnabled') || !html.includes('loyaltyRewardApplied')) throw new Error('Per-vehicle fifth-visit free-service tracking is missing.');
+if (!html.includes('function exportStaffAdvancedSummaryPdf') || !html.includes('lunchStart') || !html.includes('lunchEnd') || !html.includes('overtimeBonus')) throw new Error('Advanced staff attendance, lunch, overtime or PDF export is missing.');
+if (!html.includes('booking-success-modal') || !html.includes('bookingSubmitInFlight')) throw new Error('Public booking pending confirmation modal or submit lock is missing.');
+if (!cloudSource.includes('async function reconcileRemoteRevision') || cloudSource.includes("table: 'washdesk_sync'") || !cloudSource.includes("select('updated_at')") || !cloudSource.includes('setInterval(() => { void reconcileRemoteRevision(); }, 15000)')) throw new Error('Shared cloud sync must reconcile lightweight revisions, not broadcast or poll the full snapshot.');
+console.log('PASS: stability revision checks, multi-staff billing, vehicle loyalty, booking completion and advanced attendance PDF');
 console.log('Prime Auto Care validation complete.');
