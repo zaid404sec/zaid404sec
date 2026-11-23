@@ -374,3 +374,37 @@ This section records the verified state for continuing the Prime Auto Care WashD
 - The WashDesk Bookings page now includes the phone pairing panel. Generate a separate code on the Owner phone for each additional phone; each code expires after 10 minutes and can be redeemed once by an already-paired workspace member.
 - Last live access count: 34 workspace members, 1 authorised booking-notification device, 0 unused pairing codes, 0 per-device receipts. The other two phones still need to be paired by their signed-in users.
 - Latest complete CI run [#445954](https://github.com/zaid404sec/zaid404sec/actions/runs/44595450691) passed Android, Windows, Edge Function type-check and release packaging.
+
+# Prime Auto Care 2.15.0 handover addendum (2026-11-23)
+
+## Current release branch
+- Branch: `prime-auto-care-2.15.0-stability-features`
+- Target release: `2.15.0`
+- Android application ID: `com.washdesk.carwash.v33` (side-by-side install, debug-signing unless production keystore is configured).
+- Current primary Owner login remains `primeautoconsult@gmail.com`. No password is embedded in the app, repository or build.
+
+## Implementation map
+See `car-wash-erp/docs/RELEASE_2.15.0_STABILITY_FEATURES.md` for full release scope, source map, data safety and known external dependencies.
+
+Primary code:
+- `car-wash-erp/index.html`: invoices, vehicle-model input, multi-staff assignments, daily invoice status cards/filters, per-vehicle 4+1 scheme, booking completion-to-invoice, staff timekeeping and statements.
+- `car-wash-erp/src/cloud-sync.js`: stable payload comparison, debounced latest-snapshot scheduling, Realtime-first sync and metadata-only 120-second fallback.
+- `car-wash-erp/website/booking/index.html`: large public pending receipt and rapid duplicate-submit guard.
+- `car-wash-erp/supabase/functions/booking-api/index.ts`: public duplicate-pending request guard.
+- `car-wash-erp/supabase/functions/google-review-api/index.ts` and `google-review-oauth-callback/index.ts`: deployed role-based current Owner authorization mirrored into source.
+- `car-wash-erp/scripts/validate-app.mjs`: 2.15.0 source / workflow assertions.
+
+## Data safety
+- Keep `washdesk_workspaces.owner_auth_user_id` at the existing canonical data owner UUID. Do not change it as part of a user-email/Owner-role change.
+- Existing workspace membership records and the canonical `washdesk_sync` snapshot remain in place.
+- The new invoice and attendance values are stored in the existing JSON sync payload; there is no schema migration for this release.
+- Export a JSON backup before installing the new side-by-side APK.
+
+## External dependencies not yet provisioned / verified
+- Fully closed-app server push requires FCM, a Firebase Android app config, push notification plugin wiring and protected server credentials. The Local Notifications plugin alone cannot guarantee delivery after Android force-stops the app.
+- WhatsApp Accept/Reject currently opens a prefilled compose screen. A human must review and press Send. Automatic sending and automatic PDF attachment require an approved WhatsApp Business Cloud API sender, templates and credentials. Booking decision PDFs are saved locally where the native file sharer is available.
+- End-to-end validation still needs real Android and Windows devices, two active app installations, live public booking, invoice/PDF checks and WhatsApp confirmation.
+- Never call the full release "fully verified" until those checks are completed.
+
+## Build gate
+The GitHub Actions workflow must pass the 2.15.0 validator, Android APK, Windows NSIS EXE, Edge Function type checks and full release packaging. The workflow artifacts—not local debug builds—are the release source of truth.
