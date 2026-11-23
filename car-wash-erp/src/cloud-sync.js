@@ -22,6 +22,7 @@ let remoteHandler = null;
 let pushTimer = null;
 let queuedPayload = null;
 let lastPayloadString = '';
+let lastRemoteUpdatedAt = '';
 let statusText = 'Not connected';
 let syncing = false;
 let retryDelay = 1500;
@@ -481,6 +482,9 @@ async function publishPayload(payload) {
     return false;
   }
   if (syncing) { queuedPayload = payload; return false; }
+  // Avoid cloning and uploading an unchanged full-workspace snapshot.
+  const payloadText = stableStringify(payload);
+  if (payloadText === lastPayloadString) { queuedPayload = null; return true; }
   syncing = true;
   const body = clone(payload);
   setStatus(navigator.onLine ? 'Syncing changes…' : 'Offline · saved on this device');
@@ -497,6 +501,13 @@ async function publishPayload(payload) {
     stockLedgerSchemaReady = true;
     retryDelay = 1500;
     lastPayloadString = stableStringify(canonical);
+    // Store the database timestamp, not the client clock, so the lightweight
+    // version check does not repeatedly download an unchanged full payload.
+    try {
+      const { data: marker } = await supabase.from('washdesk_sync').select('updated_at')
+        .eq('user_id', workspace.owner_user_id).maybeSingle();
+      lastRemoteUpdatedAt = String(marker?.updated_at || '');
+    } catch { lastRemoteUpdatedAt = ''; }
     const local = applyRemote(canonical);
     if (local && stableStringify(local) !== lastPayloadString) queuedPayload = local;
     setStatus('Connected · all devices synced');
@@ -557,8 +568,9 @@ function schedulePush(payload) {
   // Keep only the latest live DB reference while the debounce timer runs.
   // Serializing/cloning the full business database in every save handler blocks
   // the WebView main thread and makes on-screen typing feel unstable.
+  // Keep a single live reference and debounce the snapshot once per edit burst.
   queuedPayload = payload;
-  queueQueuedPush(500);
+  queueQueuedPush(1000);
 }
 function listenForChanges() {
   if (!supabase || !user || !workspace) return;
@@ -571,6 +583,7 @@ function listenForChanges() {
       filter: 'user_id=eq.' + workspace.owner_user_id
     }, event => {
       const incoming = event.new?.payload;
+      if (event.new?.updated_at) lastRemoteUpdatedAt = String(event.new.updated_at);
       if (!incoming || !remoteHandler) return;
       try {
         const incomingText = stableStringify(incoming);
@@ -614,6 +627,7 @@ async function initialSync() {
     .maybeSingle();
   if (error) throw error;
   if (data?.payload) {
+    lastRemoteUpdatedAt = String(data.updated_at || '');
     if (Number(data.payload?.meta?.serverStockLedgerVersion) !== 1) {
       stockLedgerSchemaReady = false;
       schemaBlocked = true;
@@ -635,17 +649,24 @@ async function initialSync() {
 }
 function startSafetyRefresh() {
   clearInterval(pollingTimer);
-  // Realtime is the primary path. A light 30-second reconciliation also recovers
-  // missed events after sleep, network changes, or a temporary socket disconnect.
-  pollingTimer = setInterval(async () => {
-    if (!navigator.onLine || !user || !workspace || !supabase || syncing) return;
+  // Realtime sends full snapshots only after actual changes. The safety net
+  // checks updated_at every two minutes and downloads payload only on change.
+  const reconcile = async () => {
+    if (!navigator.onLine || !user || !workspace || !supabase || syncing || document.visibilityState === 'hidden') return;
     try {
+      const { data: marker, error: markerError } = await supabase.from('washdesk_sync')
+        .select('updated_at')
+        .eq('user_id', workspace.owner_user_id)
+        .maybeSingle();
+      if (markerError || !marker?.updated_at || !remoteHandler) return;
+      const serverUpdatedAt = String(marker.updated_at);
+      if (serverUpdatedAt === lastRemoteUpdatedAt) return;
       const { data, error } = await supabase.from('washdesk_sync')
         .select('payload,updated_at')
         .eq('user_id', workspace.owner_user_id)
         .maybeSingle();
       if (error || !data?.payload) return;
-      if (!remoteHandler) return;
+      lastRemoteUpdatedAt = String(data.updated_at || serverUpdatedAt);
       const incomingText = stableStringify(data.payload);
       if (incomingText === lastPayloadString) return;
       const merged = applyRemote(data.payload);
@@ -658,8 +679,13 @@ function startSafetyRefresh() {
     } catch (error) {
       console.warn('Prime Auto Care sync reconciliation:', error);
     }
-  }, 30000);
+  };
+  pollingTimer = setInterval(reconcile, 120000);
+  if (visibilityReconcileListener) document.removeEventListener('visibilitychange', visibilityReconcileListener);
+  visibilityReconcileListener = () => { if (document.visibilityState === 'visible') void reconcile(); };
+  document.addEventListener('visibilitychange', visibilityReconcileListener);
 }
+
 async function resume({ getLocal, onRemote }) {
   const config = readConfig();
   if (!config.url || !config.anonKey) return false;
