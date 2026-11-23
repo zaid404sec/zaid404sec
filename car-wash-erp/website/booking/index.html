@@ -90,7 +90,7 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(74,100,145,.22),transpare
   </aside>
 </div>
 <div class="booking-success-overlay" id="booking-success" role="dialog" aria-modal="true" aria-labelledby="booking-success-title" aria-hidden="true">
-  <div class="booking-success-card"><div class="booking-success-icon" aria-hidden="true">✓</div><span class="booking-pending-label">REQUEST SENT · PENDING CONFIRMATION</span><h2 id="booking-success-title">Your request has reached Prime Auto Care</h2><p>Your appointment request is received. It is <b>PENDING</b> — not yet confirmed. Our team will review your requested date and time and contact you by phone or WhatsApp.</p><div class="booking-reference" id="booking-success-reference">REFERENCE —</div><p>Please do not travel to the station until Prime Auto Care confirms your slot. You do not need to submit the same request again.</p><button type="button" id="booking-success-close">Got it</button></div>
+  <div class="booking-success-card"><div class="booking-success-icon" aria-hidden="true">✓</div><span class="booking-pending-label">REQUEST SENT · PENDING CONFIRMATION</span><h2 id="booking-success-title">Your request has reached Prime Auto Care</h2><p id="booking-success-details">Your appointment request is received. It is PENDING — not yet confirmed. Our team will review your requested date and time and contact you by phone or WhatsApp.</p><div class="booking-reference" id="booking-success-reference">REFERENCE —</div><p>Please do not travel to the station until Prime Auto Care confirms your slot. You do not need to submit the same request again.</p><button type="button" id="booking-success-close">Got it</button></div>
 </div>
 <footer class="footer">PRIME AUTO CARE · PROFESSIONAL CARE · PREMIUM SHINE<br>Surat, Gujarat, India</footer>
 </div>
@@ -117,6 +117,7 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(74,100,145,.22),transpare
   }
   function showSuccess(booking){
     $('booking-success-reference').textContent='BOOKING REFERENCE · '+String(booking?.booking_code||'RECEIVED').toUpperCase();
+    const details=$('booking-success-details');if(details)details.textContent=booking?.duplicate_submission?'We already received this exact pending request. No duplicate booking was created. Your reference is shown below; please wait for Prime Auto Care to contact you.':'Your appointment request is received. It is PENDING — not yet confirmed. Our team will review your requested date and time and contact you by phone or WhatsApp.';
     const modal=$('booking-success');modal.classList.add('show');modal.setAttribute('aria-hidden','false');$('booking-success-close').focus();
   }
   function closeSuccess(){const modal=$('booking-success');modal.classList.remove('show');modal.setAttribute('aria-hidden','true');}
