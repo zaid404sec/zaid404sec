@@ -29,6 +29,17 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(74,100,145,.22),transpare
 .notice.error{background:rgba(230,80,80,.13)!important;color:#ffb4ad!important}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 
+
+.booking-success-overlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(3,7,13,.82);backdrop-filter:blur(12px)}
+.booking-success-overlay.show{display:flex}
+.booking-success-card{width:min(100%,560px);border:1px solid rgba(231,199,131,.55);border-radius:26px;padding:clamp(24px,5vw,38px);background:linear-gradient(145deg,#1d2839,#151c28 70%,#282219);color:#fff;box-shadow:0 32px 100px #0009;text-align:center}
+.booking-success-icon{width:76px;height:76px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(140deg,#efd49a,#b88b3e);color:#1b160d;font-size:38px;font-weight:900}
+.booking-success-card h2{font-size:clamp(24px,5vw,34px);margin:0 0 10px}
+.booking-success-card p{font-size:14px;line-height:1.7;color:#e3e7ee;margin:8px 0}
+.booking-reference{display:inline-block;margin:12px auto;padding:10px 16px;border:1px solid #d9b87188;border-radius:12px;color:#f1d79b;font-weight:850;letter-spacing:.08em}
+.booking-pending-label{display:block;font-size:11px;font-weight:850;letter-spacing:.18em;color:#f1d79b;margin:0 0 8px}
+.booking-success-card button{width:100%;margin-top:16px;border:0;border-radius:13px;padding:14px;background:linear-gradient(135deg,#efd49a,#b88b3e);color:#18130b;font-weight:900}
+
 </style>
 </head>
 <body>
@@ -78,6 +89,9 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(74,100,145,.22),transpare
     <section class="trust"><span aria-hidden="true">✓</span><span><b>Private booking details.</b><br>Your name, mobile number and vehicle registration are sent securely to the Prime Auto Care booking system.</span></section>
   </aside>
 </div>
+<div class="booking-success-overlay" id="booking-success" role="dialog" aria-modal="true" aria-labelledby="booking-success-title" aria-hidden="true">
+  <div class="booking-success-card"><div class="booking-success-icon" aria-hidden="true">✓</div><span class="booking-pending-label">REQUEST SENT · PENDING CONFIRMATION</span><h2 id="booking-success-title">Your request has reached Prime Auto Care</h2><p>Your appointment request is received. It is <b>PENDING</b> — not yet confirmed. Our team will review your requested date and time and contact you by phone or WhatsApp.</p><div class="booking-reference" id="booking-success-reference">REFERENCE —</div><p>Please do not travel to the station until Prime Auto Care confirms your slot. You do not need to submit the same request again.</p><button type="button" id="booking-success-close">Got it</button></div>
+</div>
 <footer class="footer">PRIME AUTO CARE · PROFESSIONAL CARE · PREMIUM SHINE<br>Surat, Gujarat, India</footer>
 </div>
 <script>
@@ -87,7 +101,7 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(74,100,145,.22),transpare
   const PUBLIC_KEY='sb_publishable_VibeDJoJTLelcmlQl8QvhA_kr6h0BQw';
   const form=document.getElementById('booking-form');
   const $=id=>document.getElementById(id);
-  let config=null,selectedSlot='';
+  let config=null,selectedSlot='',formSubmitting=false;
   async function request(action,payload={}){
     const response=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json',apikey:PUBLIC_KEY},body:JSON.stringify({action,slug:'prime-auto-care',...payload})});
     const data=await response.json().catch(()=>({}));
@@ -101,6 +115,12 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(74,100,145,.22),transpare
   function shiftDate(value,days){
     const d=new Date(value+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10);
   }
+  function showSuccess(booking){
+    $('booking-success-reference').textContent='BOOKING REFERENCE · '+String(booking?.booking_code||'RECEIVED').toUpperCase();
+    const modal=$('booking-success');modal.classList.add('show');modal.setAttribute('aria-hidden','false');$('booking-success-close').focus();
+  }
+  function closeSuccess(){const modal=$('booking-success');modal.classList.remove('show');modal.setAttribute('aria-hidden','true');}
+  $('booking-success-close')?.addEventListener('click',closeSuccess);$('booking-success')?.addEventListener('click',e=>{if(e.target.id==='booking-success')closeSuccess()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSuccess()});
   function showMessage(text,isError=false){
     const el=$('booking-message');el.textContent=text;el.classList.toggle('error',isError);el.classList.add('show');
   }
@@ -147,10 +167,13 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(74,100,145,.22),transpare
   $('service_type').addEventListener('change',()=>{updateSummary();void refreshSlots()});
   $('booking_date').addEventListener('change',()=>{updateSummary();void refreshSlots()});
   form.addEventListener('submit',async event=>{
-    event.preventDefault();if(!config)return;
+    event.preventDefault();if(!config||formSubmitting)return;
     const data=Object.fromEntries(new FormData(form).entries());
     if(!selectedSlot){showMessage('Choose one of the available start times.',true);return}
     if(String(data.website||'').trim()){showMessage('The request could not be submitted.',true);return}
+    const signature=[data.customer_phone,data.vehicle_number,data.vehicle_type,data.service_type,data.booking_date,selectedSlot].map(x=>String(x||'').trim().toLowerCase()).join('|');
+    try{const prior=JSON.parse(sessionStorage.getItem('pac-booking-last-success')||'null');if(prior&&prior.signature===signature&&Date.now()-Number(prior.at||0)<45000){showSuccess({booking_code:prior.booking_code||'already received'});showMessage('This request was just submitted. Your reference is '+(prior.booking_code||'already received')+'.');return}}catch{}
+    formSubmitting=true;
     const submit=$('submit-btn');submit.disabled=true;submit.textContent='Sending request…';
     try{
       const result=await request('create-public',{booking:{
@@ -159,12 +182,14 @@ body{background:radial-gradient(ellipse at 12% 0%,rgba(74,100,145,.22),transpare
         start_time:selectedSlot,notes:data.notes,is_urgent:$('is_urgent').checked===true,website:data.website
       }});
       const b=result.booking||{};
+      try{sessionStorage.setItem('pac-booking-last-success',JSON.stringify({signature,booking_code:b.booking_code||'received',at:Date.now()}))}catch{}
+      showSuccess(b);
       form.reset();selectedSlot='';$('start_time').value='';$('booking_date').min=localDate();$('booking_date').value=localDate();
       $('summary-vehicle').textContent='Not selected';$('summary-service').textContent='Not selected';$('summary-date').textContent='Not selected';$('summary-time').textContent='Not selected';
       setSlots([]);
       showMessage('Request received. Your reference is '+(b.booking_code||'saved')+'. Your appointment is PENDING until Prime Auto Care confirms it by phone or WhatsApp. Please do not travel to the station until confirmation.');
     }catch(error){showMessage(error.message||'Could not submit your booking. Refresh the available times and try again.',true)}
-    finally{submit.disabled=false;submit.textContent='Send booking request'}
+    finally{formSubmitting=false;submit.disabled=false;submit.textContent='Send booking request'}
   });
   void init();
 })();
