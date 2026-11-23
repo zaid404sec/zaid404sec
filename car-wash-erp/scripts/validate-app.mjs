@@ -1159,6 +1159,7 @@ const invoiceMarkup = vm.runInNewContext(
   {
     sampleInvoice,
     db:{business:sampleInvoice.businessSnapshot,staff:[],customers:[],payments:[]},
+    getInvoiceStaffNames:i=>i.staffNameSnapshot||'Not recorded',
     sum:(rows,fn)=>rows.reduce((total,row)=>total+Number(fn?fn(row):row||0),0),
     esc:value=>String(value??''),
     INR:value=>'₹'+Number(value||0).toFixed(2),
@@ -1170,7 +1171,7 @@ const invoiceMarkup = vm.runInNewContext(
     fy:()=> '26-27'
   }
 );
-for (const field of ['GRAND TOTAL','₹100.00','Cash','₹25.00','Balance due','₹75.00','Service performed by:']) {
+for (const field of ['GRAND TOTAL','₹100.00','Cash','₹25.00','Balance due','₹75.00','Service team:']) {
   if (!invoiceMarkup.includes(field)) throw new Error('Invoice PDF is missing required field: ' + field);
 }
 console.log('PASS: invoice PDF HTML includes Grand Total, Paid, Balance Due and assigned staff');
@@ -1180,6 +1181,7 @@ const complimentaryMarkup = vm.runInNewContext(
   {
     sampleInvoice,
     db:{business:sampleInvoice.businessSnapshot,staff:[],customers:[],payments:[]},
+    getInvoiceStaffNames:i=>i.staffNameSnapshot||'Not recorded',
     sum:(rows,fn)=>rows.reduce((total,row)=>total+Number(fn?fn(row):row||0),0),
     esc:value=>String(value??''),
     INR:value=>'₹'+Number(value||0).toFixed(2),
