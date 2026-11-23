@@ -1126,6 +1126,7 @@ const invoiceMarkup = vm.runInNewContext(
     INR:value=>'₹'+Number(value||0).toFixed(2),
     invoiceTaxLines:()=>[{taxable:100,rate:0,tax:0,cgst:0,sgst:0,igst:0}],
     invoiceCustomerName:()=> 'PDF Test Customer',
+    invoiceStaffNames:i=>Array.isArray(i?.staffIds)&&i.staffIds.length?i.staffIds.map(id=>db.staff.find(st=>st.id===id)?.name).filter(Boolean).join(', '):(i?.staffNameSnapshot||'Not recorded'),
     paid:()=>25,
     invoiceDue:i=>i?.complimentary?0:75,
     invoicePaymentModeLabel:i=>i?.complimentary?'Complimentary':'Cash',
