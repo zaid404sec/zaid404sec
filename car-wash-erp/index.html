@@ -1686,7 +1686,7 @@ async function loadBookingCenter(force=false){
     db.invoices.push(invoice);if(received>0)db.payments.push({id:id(),invoiceId,date,amount:received,mode,createdAt:Date.now()});
     if(!save()){restoreDatabase(dbBefore);notify('Invoice could not be saved locally. Booking has not been marked complete.');return}
     try{await window.PrimeAutoCareBookings.updateStatus(booking.id,'completed','Invoice '+invoice.number+' created.');closeModal();await loadBookingCenter(true);setPage('invoices');openInvoice(invoice.id);notify('Customer, vehicle, invoice and payment record saved. Preparing the PDF and WhatsApp message.');void saveInvoicePdf(invoice.id).then(()=>openInvoiceCustomerChat(invoice.id));}
-    catch(error){restoreDatabase(dbBefore);save();notify(error?.message||'Booking could not be marked complete. The invoice changes were rolled back.');}
+    catch(error){restoreDatabase(dbBefore);if(!save()){notify('The booking change failed and the previous local data could not be persisted. Restore a backup before retrying.');return;}notify(error?.message||'Booking could not be marked complete. The invoice changes were rolled back.');}
   }
   async function updateBookingRecord(id,status){
     const labels={confirmed:'confirm',rejected:'reject',cancelled:'cancel'};if(!id||!status)return;
