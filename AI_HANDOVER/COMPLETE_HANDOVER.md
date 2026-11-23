@@ -408,3 +408,22 @@ Primary code:
 
 ## Build gate
 The GitHub Actions workflow must pass the 2.15.0 validator, Android APK, Windows NSIS EXE, Edge Function type checks and full release packaging. The workflow artifacts—not local debug builds—are the release source of truth.
+
+# Prime Auto Care 2.15.1 hotfix addendum (2026-11-23)
+
+## Reported startup issue
+The Owner login path could throw `ReferenceError: visibilityReconcileListener is not defined` during cloud sync startup.
+
+## Fix applied
+- `car-wash-erp/src/cloud-sync.js` now declares `let visibilityReconcileListener = null;` at module scope.
+- The existing `startSafetyRefresh()` logic can safely remove and replace the one visibility-change handler.
+- Realtime remains the primary cross-device sync route. The 120-second fallback still checks only `updated_at` before downloading the full workspace snapshot.
+- The app validator explicitly asserts that the listener declaration exists.
+
+## Build identifiers
+- Version: `2.15.1`
+- Android ID: `com.washdesk.carwash.v34`
+- Service worker cache: `prime-auto-care-shell-v38`
+- Side-by-side install; preserve the prior app and export a backup before device testing.
+
+See `car-wash-erp/docs/RELEASE_2.15.1_VISIBILITY_LISTENER_HOTFIX.md` for the focused fix note. Do not claim real-device Owner login is verified until the user tests the rebuilt APK with the registered Owner password.
