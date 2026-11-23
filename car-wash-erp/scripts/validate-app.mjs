@@ -987,10 +987,12 @@ for (const conflictToken of ['DUPLICATE_CUSTOMER_MOBILE','DUPLICATE_VEHICLE_REGI
 console.log('PASS: Prime Auto Care Supabase project URL and publishable key are preconfigured');
 if (!cloudSource.includes('queuedPayload = payload;') ||
     cloudSource.includes('queuedPayload = clone(payload)') ||
-    !cloudSource.includes('}, 30000);')) {
-  throw new Error('Cloud save path still performs repeated full-database copies or excessive safety polling.');
+    !cloudSource.includes("select('updated_at')") ||
+    !cloudSource.includes('setInterval(() => { void reconcileRemoteRevision(); }, 15000)') ||
+    cloudSource.includes("table: 'washdesk_sync'")) {
+  throw new Error('Cloud save path must coalesce local changes and use metadata-only revision polling rather than repeated full snapshot Realtime/polls.');
 }
-console.log('PASS: cloud save scheduling coalesces the latest DB snapshot without cloning on every save; Realtime remains primary');
+console.log('PASS: cloud saves coalesce, avoid per-save cloning, and reconcile 15-second metadata revisions without full-payload Realtime');
 const remoteReceiveStart = html.indexOf('function receiveCloudData(');
 const remoteReceiveEnd = html.indexOf('async function connectCloud', remoteReceiveStart);
 if (remoteReceiveStart < 0 || remoteReceiveEnd < 0) throw new Error('Remote sync handler not found.');
