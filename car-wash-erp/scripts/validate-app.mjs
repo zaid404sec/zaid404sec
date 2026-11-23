@@ -854,7 +854,7 @@ console.log('PASS: excess staff advances show a negative recovery balance withou
 const februaryPayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2027-02')",
   {
-    db: { staffAdvances:[], attendance:[{staffId:'staff-1',date:'2027-02-10',status:'Absent'}], expenses:[] },
+    db: { staff:[{id:'staff-1',shiftHours:11}], staffAdvances:[], attendance:[{staffId:'staff-1',date:'2027-02-10',status:'Absent'}], expenses:[] },
     today: () => '2027-02-28',
     monthKey: date => date ? String(date).slice(0,7) : '2027-02',
     sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
@@ -869,7 +869,7 @@ console.log('PASS: 28-day payroll uses the correct calendar-day rate');
 const halfDayPayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2026-11')",
   {
-    db: { staffAdvances:[], attendance:[
+    db: { staff:[{id:'staff-1',shiftHours:11}], staffAdvances:[], attendance:[
       {staffId:'staff-1',date:'2026-11-02',status:'Half Day',updatedAt:1},
       {staffId:'staff-1',date:'2026-11-03',status:'Absent',updatedAt:1},
       {staffId:'staff-1',date:'2026-11-04',status:'Present',updatedAt:1}
@@ -888,7 +888,7 @@ console.log('PASS: half-day attendance deducts exactly 50% of the daily salary r
 const negativePayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:10000},'2026-11')",
   {
-    db: { staffAdvances:[], attendance:[], expenses:[{category:'Salary',staffId:'staff-1',salaryMonth:'2026-11',amount:7000,advanceAdjustment:0},{category:'Salary',staffId:'staff-1',salaryMonth:'2026-11',amount:4000,advanceAdjustment:0}] },
+    db: { staff:[{id:'staff-1',shiftHours:11}], staffAdvances:[], attendance:[], expenses:[{category:'Salary',staffId:'staff-1',salaryMonth:'2026-11',amount:7000,advanceAdjustment:0},{category:'Salary',staffId:'staff-1',salaryMonth:'2026-11',amount:4000,advanceAdjustment:0}] },
     today: () => '2026-11-30',
     monthKey: date => date ? String(date).slice(0,7) : '2026-11',
     sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
