@@ -813,6 +813,7 @@ const novemberPayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:14000},'2026-11')",
   {
     db: {
+      staff: [{ id:'staff-1', shiftHours:11 }],
       staffAdvances: [{ staffId:'staff-1', amount:3000, recoveredAmount:0 }],
       attendance: [
         { staffId:'staff-1', date:'2026-11-02', status:'Absent', updatedAt:1 },
@@ -837,7 +838,7 @@ console.log('PASS: 30-day payroll deducts absence days and outstanding advances 
 const excessAdvancePayroll = vm.runInNewContext(
   payrollFunctions + String.fromCharCode(10) + "staffPayrollBreakdown({id:'staff-1',salary:1000},'2026-11')",
   {
-    db: { staffAdvances:[{staffId:'staff-1',amount:2500,recoveredAmount:0}], attendance:[], expenses:[] },
+    db: { staff:[{id:'staff-1',shiftHours:11}], staffAdvances:[{staffId:'staff-1',amount:2500,recoveredAmount:0}], attendance:[], expenses:[] },
     today: () => '2026-11-30',
     monthKey: date => date ? String(date).slice(0,7) : '2026-11',
     sum: (rows, fn) => rows.reduce((total, row) => total + Number(fn ? fn(row) : row || 0), 0)
