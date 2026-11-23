@@ -904,7 +904,7 @@ if (!html.includes("vehicleCategory(i.vehicleType)==='Commercial'") || !html.inc
 console.log('PASS: taxi is classified under four-wheelers; commercial vehicles remain separate');
 if (!html.includes('class="bar-value">\'+(d.v?INR(d.v):\'—\')') || !html.includes('Weekly sales trend')) throw new Error('Weekly sales chart must show daily rupee amounts.');
 console.log('PASS: sales trend displays daily rupee amounts');
-const staffHelpersStart = html.indexOf('function staffAttendanceForDate(');
+const staffHelpersStart = html.indexOf('function staffTimeMinutes(');
 const staffHelpersEnd = html.indexOf('function staff(){', staffHelpersStart);
 if (staffHelpersStart < 0 || staffHelpersEnd < 0) throw new Error('Staff attendance and shift helper functions were not found.');
 const staffHelpers = html.slice(staffHelpersStart, staffHelpersEnd);
